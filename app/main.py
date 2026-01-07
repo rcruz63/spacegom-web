@@ -53,8 +53,13 @@ async def create_game(game_name: Optional[str] = Form(None)):
 @app.get("/api/games/{game_id}")
 async def get_game_state(game_id: str):
     """Get current game state"""
+    from app.ship_data import get_ship_stats
     game = GameState(game_id)
-    return {"state": game.state}
+    ship_stats = get_ship_stats(game.state.get("ship_model", "Basic Starfall"))
+    return {
+        "state": game.state,
+        "ship_stats": ship_stats
+    }
 
 @app.post("/api/games/{game_id}/update")
 async def update_game_state(
@@ -88,6 +93,47 @@ async def update_game_state(
     
     game.save()
     return {"state": game.state}
+
+
+@app.post("/api/games/{game_id}/update-location")
+async def update_ship_location(
+    game_id: str,
+    location: str = Form(...)
+):
+    """
+    Update ship location on the planet (Mundo, Espaciopuerto, etc.)
+    """
+    game = GameState(game_id)
+    game.state["ship_location_on_planet"] = location
+    game.save()
+    return {"status": "success", "location": location}
+
+@app.post("/api/games/{game_id}/company-setup")
+async def company_setup(
+    game_id: str,
+    company_name: str = Form(...),
+    ship_name: str = Form(...),
+    ship_model: str = Form("Basic Starfall")
+):
+    """
+    Save player company and ship details
+    """
+    from app.ship_data import get_ship_stats
+    
+    game = GameState(game_id)
+    game.state["company_name"] = company_name
+    game.state["ship_name"] = ship_name
+    game.state["ship_model"] = ship_model
+    
+    # Initialize ship stats from model
+    stats = get_ship_stats(ship_model)
+    game.state["fuel_max"] = stats["jump"] * 30 # Simple logic: 30 fuel per jump capacity? 
+    # Actually user says storage is 40 UCN for Basic Starfall
+    game.state["storage_max"] = stats["storage"]
+    
+    game.save()
+    return {"status": "success", "state": game.state}
+
 
 @app.post("/api/games/{game_id}/setup")
 async def initial_company_setup(
@@ -252,6 +298,25 @@ async def initial_position_setup(
     }
 
 
+@app.post("/api/planets/{code}/update-bootstrap")
+async def update_planet_bootstrap(
+    code: int,
+    tech_level: str = Form(...),
+    population_over_1000: bool = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Update missing planet data for bootstrap validation"""
+    planet = db.query(Planet).filter(Planet.code == code).first()
+    if not planet:
+        raise HTTPException(status_code=404, detail=f"Planet {code} not found")
+    
+    planet.tech_level = tech_level
+    planet.population_over_1000 = population_over_1000
+    db.commit()
+    
+    return {"status": "success", "planet": {"code": code, "tech_level": tech_level, "population_over_1000": population_over_1000}}
+
+
 # ===== DICE ROLLING API =====
 
 @app.post("/api/roll-dice", response_class=HTMLResponse)
@@ -400,8 +465,36 @@ async def roll_planet_code(
                 "AE": planet.product_ae,
                 "AEI": planet.product_aei,
                 "COM": planet.product_com,
+            },
+            "bootstrap_data": {
+                "tech_level": planet.tech_level,
+                "population_over_1000": planet.population_over_1000,
+                "convenio_spacegom": planet.convenio_spacegom,
             }
-        }
+        },
+        "is_valid_start": is_valid_starting_planet(planet)
+    }
+
+
+def is_valid_starting_planet(planet: Planet) -> dict:
+    """Check if planet is valid for starting position"""
+    checks = {
+        "population": planet.population_over_1000 is True,
+        "tech_level": planet.tech_level not in [None, "PR", "RUD"],
+        "life_support": planet.life_support_1 not in ["TA", "TH"],
+        "convenio": planet.convenio_spacegom is True,
+        "has_product": any([
+            planet.product_indu, planet.product_basi, planet.product_alim,
+            planet.product_made, planet.product_agua, planet.product_mico,
+            planet.product_mira, planet.product_mipr, planet.product_pava,
+            planet.product_a, planet.product_ae, planet.product_aei,
+            planet.product_com
+        ])
+    }
+    
+    return {
+        "is_valid": all(checks.values()),
+        "checks": checks
     }
 
 
@@ -415,32 +508,40 @@ async def get_planet(code: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"Planet {code} not found")
     
     return {
-        "code": planet.code,
-        "name": planet.name,
-        "spaceport": planet.spaceport,
-        "orbital_facilities": planet.orbital_facilities,
-        "life_support": {
-            "1": planet.life_support_1,
-            "2": planet.life_support_2,
-            "3": planet.life_support_3,
-            "4": planet.life_support_4,
-            "5": planet.life_support_5,
+        "planet": {
+            "code": planet.code,
+            "name": planet.name,
+            "spaceport": planet.spaceport,
+            "orbital_facilities": planet.orbital_facilities,
+            "life_support": {
+                "1": planet.life_support_1,
+                "2": planet.life_support_2,
+                "3": planet.life_support_3,
+                "4": planet.life_support_4,
+                "5": planet.life_support_5,
+            },
+            "products": {
+                "INDU": planet.product_indu,
+                "BASI": planet.product_basi,
+                "ALIM": planet.product_alim,
+                "MADE": planet.product_made,
+                "AGUA": planet.product_agua,
+                "MICO": planet.product_mico,
+                "MIRA": planet.product_mira,
+                "MIPR": planet.product_mipr,
+                "PAVA": planet.product_pava,
+                "A": planet.product_a,
+                "AE": planet.product_ae,
+                "AEI": planet.product_aei,
+                "COM": planet.product_com,
+            },
+            "bootstrap_data": {
+                "tech_level": planet.tech_level,
+                "population_over_1000": planet.population_over_1000,
+                "convenio_spacegom": planet.convenio_spacegom,
+            }
         },
-        "products": {
-            "INDU": planet.product_indu,
-            "BASI": planet.product_basi,
-            "ALIM": planet.product_alim,
-            "MADE": planet.product_made,
-            "AGUA": planet.product_agua,
-            "MICO": planet.product_mico,
-            "MIRA": planet.product_mira,
-            "MIPR": planet.product_mipr,
-            "PAVA": planet.product_pava,
-            "A": planet.product_a,
-            "AE": planet.product_ae,
-            "AEI": planet.product_aei,
-            "COM": planet.product_com,
-        }
+        "is_valid_start": is_valid_starting_planet(planet)
     }
 
 @app.get("/api/planets")
@@ -463,6 +564,25 @@ async def search_planets(name: Optional[str] = None, db: Session = Depends(get_d
             for p in planets
         ]
     }
+
+
+@app.post("/api/games/{game_id}/set-starting-planet")
+async def set_starting_planet(game_id: str, code: int = Form(...)):
+    """Set the starting planet for the game"""
+    game = GameState(game_id)
+    game.state["current_planet_code"] = code
+    game.state["starting_planet_code"] = code
+    
+    # Also record it in the current quadrant
+    row = game.state.get("ship_row")
+    col = game.state.get("ship_col")
+    if row and col:
+        game.discover_planet(row, col, code)
+        # Mark as explored as well
+        game.explore_quadrant(row, col)
+        
+    game.save()
+    return {"status": "success", "code": code}
 
 
 # ===== EXPLORATION API =====

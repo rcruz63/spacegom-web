@@ -4,7 +4,7 @@ Game state management with JSON persistence
 import json
 import os
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 
 
@@ -42,11 +42,18 @@ class GameState:
             "ship_row": None,  # 1-6
             "ship_col": None,  # 1-6
             "ship_pos_complete": False,
+            "ship_location_on_planet": "Mundo", # Mundo, Espaciopuerto, Instalación, Estación
+            
+            # Company & Ship
+            "company_name": "Nueva Compañía",
+            "ship_name": "Fénix Dorado",
+            "ship_model": "Basic Starfall",
+            "passengers": 0,
             
             # HUD - Critical Status
             "fuel": 18,
             "fuel_max": 30,
-            "storage": 16,
+            "storage": 0,
             "storage_max": 40,
             "month": 1,
             "reputation": 0,
@@ -55,13 +62,21 @@ class GameState:
             "damages": {
                 "light": False,
                 "moderate": False,
-                "severe": False
+                "severe": False,
+                "counts": {
+                    "light": 0,
+                    "moderate": 0,
+                    "severe": 0
+                }
             },
             
             # Navigation
             "current_planet_code": None,
+            "starting_planet_code": None,
             "current_area": None,  # Current area (can change during game)
             "explored_quadrants": [],  # List of explored coordinates
+            "quadrant_planets": {},    # {"row,col": planet_code}
+            "discovered_planets": {},  # {"planet_code": {"area": int, "quadrant": "row,col"}}
             
             # Crew
             "crew": [
@@ -123,6 +138,50 @@ class GameState:
         with open(self.state_file, 'w', encoding='utf-8') as f:
             json.dump(self.state, f, indent=2, ensure_ascii=False)
     
+    def get_adjacent_coordinates(self, row: int, col: int, jump_range: int = 1) -> List[Dict[str, Any]]:
+        """
+        Get all reachable coordinates within jump_range, 
+        including area transitions (A <-> F).
+        """
+        reachable = []
+        current_area = self.state.get("area")
+        
+        # Simple implementation for jump_range 1 for now
+        # Standard grid movement (1-6 range)
+        for dr in range(-jump_range, jump_range + 1):
+            for dc in range(-jump_range, jump_range + 1):
+                if dr == 0 and dc == 0:
+                    continue
+                
+                target_r = row + dr
+                target_c = col + dc
+                target_area = current_area
+                
+                # Check column transitions
+                if target_c < 1: # Left of Column A
+                    if current_area > 2:
+                        target_area = current_area - 1
+                        target_c = 6 # Becomes Column F
+                    else:
+                        continue # Blocked (left of 2)
+                elif target_c > 6: # Right of Column F
+                    if current_area < 12:
+                        target_area = current_area + 1
+                        target_c = 1 # Becomes Column A
+                    else:
+                        continue # Blocked (right of 12)
+                
+                # Check row bounds (no row transitions between areas mentioned)
+                if 1 <= target_r <= 6:
+                    reachable.append({
+                        "area": target_area,
+                        "row": target_r,
+                        "col": target_c,
+                        "col_letter": chr(64 + target_c)
+                    })
+                    
+        return reachable
+    
     def update(self, **kwargs):
         """Update state fields"""
         for key, value in kwargs.items():
@@ -162,6 +221,23 @@ class GameState:
             self.state["explored_quadrants"].append(coord)
             self.save()
     
+    def discover_planet(self, row: int, col: int, planet_code: int):
+        """Record a planet discovery in a specific quadrant"""
+        coord = f"{row},{col}"
+        planet_code_str = str(planet_code)
+        
+        # Mapping for the quadrant
+        self.state["quadrant_planets"][coord] = planet_code
+        
+        # Mapping for the world log (Hoja de Mundos)
+        if planet_code_str not in self.state["discovered_planets"]:
+            self.state["discovered_planets"][planet_code_str] = {
+                "area": self.state.get("area"),
+                "quadrant": coord
+            }
+        
+        self.save()
+
     def is_quadrant_explored(self, row: int, col: int) -> bool:
         """Check if quadrant is explored"""
         coord = f"{row},{col}"

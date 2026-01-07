@@ -1,8 +1,54 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .star-background {
+        background-color: #0b0e14;
+        background-image:
+            radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(2px 2px at 50px 160px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 80px 120px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 110px 40px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(2px 2px at 150px 150px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 190px 20px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 210px 100px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 250px 60px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(2px 2px at 280px 140px, #ffffff, rgba(0, 0, 0, 0));
+        background-size: 300px 300px;
+    }
+
+    .location-btn.active {
+        background-color: rgba(0, 255, 157, 0.2);
+        border-color: #00ff9d;
+        color: #00ff9d;
+    }
+</style>
 <!-- Main Spacegom Dashboard -->
 <div class="space-y-6">
+    <!-- CABECERA DE COMPAÑÍA -->
+    <div
+        class="flex flex-col md:flex-row justify-between items-center gap-4 bg-space-900 border-b border-neon-blue pb-4">
+        <div class="flex items-center gap-4">
+            <div
+                class="w-16 h-16 bg-neon-blue bg-opacity-10 border-2 border-neon-blue rounded-full flex items-center justify-center text-2xl">
+                🏢
+            </div>
+            <div>
+                <h1 id="company-name-display" class="text-2xl font-orbitron text-white tracking-widest">---</h1>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 font-tech">REGISTRO:</span>
+                    <span id="game-id-display" class="text-xs text-neon-blue font-tech uppercase">---</span>
+                </div>
+            </div>
+        </div>
+        <div class="text-right">
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest">Nave Comandante</div>
+            <div id="ship-name-display" class="text-xl font-orbitron text-neon-green">---</div>
+            <div id="ship-model-display" class="text-[10px] text-gray-400 font-tech uppercase tracking-widest">---</div>
+        </div>
+    </div>
+
     <!-- HUD SUPERIOR - ESTADO CRÍTICO -->
     <div class="glass-panel tech-border p-6 rounded-lg">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -109,17 +155,17 @@
                     VISTA DE CUADRANTE
                 </h2>
                 <div class="flex gap-2">
-                    <span id="area-badge"
-                        class="px-2 py-0.5 bg-space-800 border border-neon-blue text-neon-blue text-[10px] rounded uppercase font-tech">Área:
+                    <span id="jump-badge"
+                        class="px-2 py-0.5 bg-space-800 border border-neon-blue text-neon-blue text-[10px] rounded uppercase font-tech">Salto:
                         --</span>
-                    <span id="density-badge"
-                        class="px-2 py-0.5 bg-space-800 border border-neon-green text-neon-green text-[10px] rounded uppercase font-tech">Densidad:
+                    <span id="area-badge"
+                        class="px-2 py-0.5 bg-space-800 border border-gray-700 text-gray-400 text-[10px] rounded uppercase font-tech">Área:
                         --</span>
                 </div>
             </div>
 
             <!-- Quadrant Container with Labels -->
-            <div class="relative pt-6 pl-6">
+            <div class="relative pt-6 pl-6 star-background rounded-lg border border-gray-800 p-4">
                 <!-- Column Labels (A-F) -->
                 <div
                     class="absolute top-0 left-6 right-0 grid grid-cols-6 text-center text-[10px] text-gray-500 font-tech">
@@ -161,12 +207,42 @@
                     {% set i = r * 6 + c %}
                     <div id="quad-row-{{ r+1 }}-col-{{ c+1 }}" data-row="{{ r+1 }}" data-col="{{ c+1 }}"
                         class="quadrant-cell aspect-square bg-space-800 border border-gray-700 hover:border-neon-blue cursor-pointer transition-all rounded flex items-center justify-center text-xs font-tech relative overflow-hidden"
-                        onclick="selectQuadrant({{ r+1 }}, {{ c+1 }})">
-                        <div class="fog-overlay absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm z-20"></div>
-                        <span class="text-gray-600 text-[8px] z-10">{{ chr(64 + c + 1) }}{{ r+1 }}</span>
+                        onclick="onQuadrantClick(this)">
+                        <div
+                            class="fog-overlay absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm z-20 transition-opacity">
+                        </div>
+                        <span class="text-gray-600 text-[8px] z-10 absolute top-1 left-1">{{ chr(64 + c + 1) }}{{ r+1
+                            }}</span>
+                        <div
+                            class="planet-code-label text-neon-blue font-bold z-10 absolute top-1 right-1 text-[10px] hidden">
+                            ---</div>
                     </div>
                     {% endfor %}
                     {% endfor %}
+                </div>
+
+                <!-- UBICACIÓN EN EL MUNDO -->
+                <div class="mt-4 border-t border-gray-700 pt-4">
+                    <div class="text-[10px] text-gray-500 uppercase mb-2 tracking-widest text-center">LOCALIZACIÓN NAVE
+                    </div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="updateShipLocation('Mundo')" id="loc-Mundo"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>🌍</span> MUNDO
+                        </button>
+                        <button onclick="updateShipLocation('Espaciopuerto')" id="loc-Espaciopuerto"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>✈️</span> PUERTO
+                        </button>
+                        <button onclick="updateShipLocation('Instalación')" id="loc-Instalación"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>🛰️</span> ORBITAL
+                        </button>
+                        <button onclick="updateShipLocation('Estación')" id="loc-Estación"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>⚡</span> ESTACIÓN
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -175,8 +251,8 @@
                 <div class="bg-space-800 border border-neon-blue rounded p-4">
                     <div class="flex items-start justify-between mb-3">
                         <div>
-                            <div class="text-neon-blue font-orbitron text-lg" id="planet-name">BRETOBOS</div>
-                            <div class="text-gray-500 text-xs" id="planet-code">Código: 466</div>
+                            <div class="text-neon-blue font-orbitron text-lg" id="planet-name">PLANETA</div>
+                            <div class="text-gray-500 text-xs" id="planet-code">Código: ---</div>
                         </div>
                         <button onclick="closePlanetInfo()" class="text-gray-500 hover:text-neon-red">✕</button>
                     </div>
@@ -184,23 +260,37 @@
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between border-b border-gray-700 pb-2">
                             <span class="text-gray-400">Soporte Vital:</span>
-                            <span class="text-neon-green" id="planet-life-support">RF - Respirador/Filtraje</span>
+                            <span class="text-neon-green" id="planet-life-support">-</span>
                         </div>
                         <div class="flex justify-between border-b border-gray-700 pb-2">
                             <span class="text-gray-400">Espaciopuerto:</span>
-                            <span class="text-white" id="planet-spaceport">Clase B</span>
+                            <span class="text-white" id="planet-spaceport">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Nivel Tecnológico:</span>
+                            <span class="text-neon-blue" id="planet-tech">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Población:</span>
+                            <span class="text-white" id="planet-population">-</span>
                         </div>
                         <div class="border-t border-gray-700 pt-2 mt-2">
                             <div class="text-gray-400 text-xs mb-2">Instalaciones Orbitales:</div>
                             <div id="planet-facilities" class="flex flex-wrap gap-1">
-                                <span
-                                    class="px-2 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue rounded text-xs">Centro
-                                    Cartografía</span>
-                                <span
-                                    class="px-2 py-1 bg-neon-green bg-opacity-20 border border-neon-green rounded text-xs">Academia</span>
+                                <span class="text-gray-500 italic">Ninguna</span>
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- ARCHIVOS ESTELARES - HOJA DE MUNDOS -->
+            <div class="mt-6 bg-space-900 border border-gray-700 rounded-lg p-4">
+                <h3 class="text-xs font-orbitron text-gray-400 mb-3 tracking-widest uppercase flex items-center">
+                    <span class="mr-2">📁</span> ARCHIVOS ESTELARES - HOJA DE MUNDOS
+                </h3>
+                <div class="space-y-1 max-h-48 overflow-y-auto pr-2 custom-scrollbar" id="world-log">
+                    <div class="text-xs text-gray-600 italic py-2">No se han registrado mundos todavía...</div>
                 </div>
             </div>
         </div>
@@ -517,7 +607,7 @@
     }
 
     function adjustStorage(delta) {
-        gameState.storage = Math.max(0, Math.min(40, gameState.storage + delta));
+        gameState.storage = Math.max(0, Math.min(gameState.storage_max || 40, gameState.storage + delta));
         updateStorageDisplay();
     }
 
@@ -546,7 +636,8 @@
     }
 
     function updateStorageDisplay() {
-        const percentage = (gameState.storage / 40) * 100;
+        const max = gameState.storage_max || 40;
+        const percentage = (gameState.storage / max) * 100;
         document.getElementById('storage-level').style.height = percentage + '%';
         document.getElementById('storage-value').textContent = gameState.storage;
     }
@@ -601,6 +692,13 @@
             const response = await fetch(`/api/games/${gameId}`);
             const data = await response.json();
             gameState = data.state;
+            const shipStats = data.ship_stats;
+
+            // Update Company Header
+            document.getElementById('company-name-display').textContent = gameState.company_name || 'Nueva Compañía';
+            document.getElementById('game-id-display').textContent = gameId;
+            document.getElementById('ship-name-display').textContent = gameState.ship_name || 'Fénix Dorado';
+            document.getElementById('ship-model-display').textContent = gameState.ship_model || 'Basic Starfall';
 
             console.log("Game state loaded:", gameState);
 
@@ -615,7 +713,17 @@
                 document.getElementById('area-badge').textContent = `Área: ${gameState.area}`;
             }
             if (gameState.world_density) {
-                document.getElementById('density-badge').textContent = `Densidad: ${gameState.world_density}`;
+                // density-badge was replaced by jump-badge in some versions, ensuring it exists
+                const densityBadge = document.getElementById('density-badge');
+                if (densityBadge) densityBadge.textContent = `Densidad: ${gameState.world_density}`;
+            }
+
+            if (shipStats) {
+                document.getElementById('jump-badge').textContent = `Salto: ${shipStats.jump} Cuad.`;
+                document.getElementById('storage-value').nextElementSibling.textContent = `/${shipStats.storage}`;
+
+                // Update passenger capacity (future proofing)
+                // For now just show in logs or info
             }
 
             // Update Ship Position
@@ -623,23 +731,97 @@
                 updateGridPosition(gameState.ship_row, gameState.ship_col);
             }
 
+            // Load Starting Planet Info
+            if (gameState.starting_planet_code) {
+                console.log("Starting planet detected:", gameState.starting_planet_code);
+                // We could automatically show the planet info panel here if desired
+                showPlanetDetails(gameState.starting_planet_code);
+            }
+
             // Show Explored Quadrants
             if (gameState.explored_quadrants) {
                 gameState.explored_quadrants.forEach(coord => {
                     const [r, c] = coord.split(',').map(Number);
-                    const cell = document.querySelector(`[data-row="${r + 1}"][data-col="${c + 1}"]`);
+                    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
                     if (cell) {
                         const fog = cell.querySelector('.fog-overlay');
-                        if (fog) fog.remove();
+                        if (fog) {
+                            fog.classList.add('opacity-0');
+                            setTimeout(() => fog.remove(), 300);
+                        }
                         cell.classList.add('border-neon-green');
                         cell.style.backgroundColor = 'rgba(31, 38, 64, 0.4)';
                     }
                 });
             }
 
+            // Update quadrant planet codes
+            if (gameState.quadrant_planets) {
+                Object.entries(gameState.quadrant_planets).forEach(([coord, code]) => {
+                    const [r, c] = coord.split(',').map(Number);
+                    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    if (cell) {
+                        const label = cell.querySelector('.planet-code-label');
+                        if (label) {
+                            label.textContent = code;
+                            label.classList.remove('hidden');
+                        }
+                    }
+                });
+            }
+
+            // Load World Log
+            updateWorldLog();
+
+            // Set Ship Location UI
+            updateLocationUI(gameState.ship_location_on_planet || 'Mundo');
+
         } catch (error) {
             console.error("Error loading game state:", error);
         }
+    }
+
+    async function updateWorldLog() {
+        const logContainer = document.getElementById('world-log');
+        if (!gameState.discovered_planets || Object.keys(gameState.discovered_planets).length === 0) {
+            return;
+        }
+
+        logContainer.innerHTML = '';
+
+        // Fetch details for all discovered planets to show names
+        for (const [code, info] of Object.entries(gameState.discovered_planets)) {
+            try {
+                const response = await fetch(`/api/planets/${code}`);
+                const data = await response.json();
+                const planet = data.planet;
+
+                const colLetter = String.fromCharCode(64 + parseInt(info.quadrant.split(',')[1]));
+                const rowNum = info.quadrant.split(',')[0];
+
+                const entry = document.createElement('div');
+                entry.className = 'flex items-center justify-between py-1 border-b border-gray-800 hover:bg-space-800 cursor-pointer px-1 rounded transition-colors';
+                entry.onclick = () => showPlanetDetails(code);
+                entry.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-neon-blue font-bold min-w-[30px]">${code}</span>
+                        <span class="text-white uppercase text-[10px]">${planet.name}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-500 font-tech">
+                        AREA ${info.area} <span class="text-neon-blue ml-1">${colLetter}${rowNum}</span>
+                    </div>
+                `;
+                logContainer.appendChild(entry);
+            } catch (e) {
+                console.error(`Error loading planet log entry ${code}:`, e);
+            }
+        }
+    }
+
+    function onQuadrantClick(cell) {
+        const row = parseInt(cell.getAttribute('data-row'));
+        const col = parseInt(cell.getAttribute('data-col'));
+        selectQuadrant(row, col);
     }
 
     async function selectQuadrant(row, col) {
@@ -648,16 +830,14 @@
 
         if (!gameId) return;
 
-        // Visual update only for now if move is intended, 
-        // but user only asked to "actualizar marcadores y mover nuestra figurita" 
-        // when moving. For now, selection marks position.
+        // Visual update only for now if move is intended
         updateGridPosition(row, col);
 
         try {
             // Save exploration to API
             const formData = new FormData();
-            formData.append('row', row - 1);
-            formData.append('col', col - 1);
+            formData.append('row', row);
+            formData.append('col', col);
 
             await fetch(`/api/games/${gameId}/explore`, {
                 method: 'POST',
@@ -697,10 +877,48 @@
 
     window.onload = initDashboard;
 
+    async function showPlanetDetails(code) {
+        try {
+            const response = await fetch(`/api/planets/${code}`);
+            const data = await response.json();
+            const planet = data.planet;
+
+            document.getElementById('planet-info').classList.remove('hidden');
+            document.getElementById('planet-name').textContent = planet.name.toUpperCase();
+            document.getElementById('planet-code').textContent = 'Código: ' + planet.code;
+            document.getElementById('planet-life-support').textContent = planet.life_support_1 || 'Ninguno';
+            document.getElementById('planet-spaceport').textContent = planet.spaceport || 'N/A';
+            document.getElementById('planet-tech').textContent = planet.bootstrap_data.tech_level || 'Desconocido';
+            document.getElementById('planet-population').textContent = planet.bootstrap_data.population_over_1000 ? '> 1000 hab.' : '< 1000 hab.';
+
+            // Facilities attributes
+            const facilityMap = {
+                'CC': 'Centro Cartografía',
+                'PI': 'Piratas Informaticos',
+                'DS': 'Depósitos Suministros',
+                'AA': 'Academia'
+            };
+
+            const facilitiesEl = document.getElementById('planet-facilities');
+            facilitiesEl.innerHTML = '';
+            if (planet.orbital_facilities) {
+                planet.orbital_facilities.split(',').forEach(f => {
+                    const code = f.trim();
+                    const name = facilityMap[code] || code;
+                    facilitiesEl.insertAdjacentHTML('beforeend', `<span class="px-2 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue rounded text-xs">${name}</span>`);
+                });
+            } else {
+                facilitiesEl.innerHTML = '<span class="text-gray-500 italic">Ninguna</span>';
+            }
+
+        } catch (error) {
+            console.error("Error fetching planet details:", error);
+        }
+    }
+
     function showPlanetInfo(planet) {
-        document.getElementById('planet-info').classList.remove('hidden');
-        document.getElementById('planet-name').textContent = planet.planet.toUpperCase();
-        document.getElementById('planet-code').textContent = 'Código: ' + planet.code;
+        // Legacy or simple view
+        showPlanetDetails(planet.code);
     }
 
     function closePlanetInfo() {
@@ -712,6 +930,42 @@
         const modifier = parseFloat(select.value);
         const finalPrice = Math.round(basePrices[index] * modifier);
         document.getElementById('price-' + index).textContent = finalPrice + ' CR';
+    }
+
+    async function updateShipLocation(location) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+        if (!gameId) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('location', location);
+
+            const response = await fetch(`/api/games/${gameId}/update-location`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                gameState.ship_location_on_planet = location;
+                updateLocationUI(location);
+            }
+        } catch (error) {
+            console.error("Error updating ship location:", error);
+        }
+    }
+
+    function updateLocationUI(location) {
+        // Remove active class from all
+        document.querySelectorAll('.location-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Add active class to current
+        const activeBtn = document.getElementById('loc-' + location);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
     }
 </script>
 {% endblock %}

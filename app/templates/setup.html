@@ -21,8 +21,63 @@
         </h2>
 
         <div id="setup-form" class="space-y-6">
+            <!-- Company & Ship Identification -->
+            <div class="bg-space-800 border border-gray-700 rounded-lg p-5" id="company-section">
+                <h3 class="text-lg font-orbitron text-neon-blue mb-3 flex items-center">
+                    <span class="text-2xl mr-2">🏢</span> IDENTIFICACIÓN DE COMPAÑÍA
+                </h3>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Nombre de la
+                            Compañía</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="company-name" placeholder="Ej: Starblack Corp"
+                                class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech">
+                            <button onclick="suggestCompanyName()"
+                                class="text-[10px] bg-gray-700 hover:bg-gray-600 px-2 rounded text-gray-300">Sugerir</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Nombre de la
+                            Nave</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="ship-name" placeholder="Ej: Fénix Dorado"
+                                class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech">
+                            <button onclick="suggestShipName()"
+                                class="text-[10px] bg-gray-700 hover:bg-gray-600 px-2 rounded text-gray-300">Sugerir</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Modelo de Nave</label>
+                        <select id="ship-model"
+                            class="w-full bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech">
+                            <option value="Basic Starfall">Basic Starfall (1 Cuad, 40 UCN)</option>
+                            <option value="Spacegom Fortune">Spacegom Fortune (1 Cuad, 70 UCN)</option>
+                            <option value="Warehouse Ravana">Warehouse Ravana (1 Cuad, 100 UCN)</option>
+                            <option value="Long Explorer">Long Explorer (2 Cuad, 80 UCN)</option>
+                            <option value="Space Challenger">Space Challenger (2 Cuad, 100 UCN)</option>
+                            <option value="High Milkway">High Milkway (2 Cuad, 150 UCN)</option>
+                            <option value="Fast Paladin Store">Fast Paladin Store (2 Cuad, 200 UCN)</option>
+                            <option value="Tenacity triquadrant">Tenacity triquadrant (3 Cuad, 120 UCN)</option>
+                            <option value="Defiant Navigator">Defiant Navigator (3 Cuad, 250 UCN)</option>
+                            <option value="Space Glory">Space Glory (4 Cuad, 300 UCN)</option>
+                        </select>
+                        <p class="text-[10px] text-gray-500 mt-1 italic">Como heredero, empiezas con un modelo Basic
+                            Starfall o similar según la herencia.</p>
+                    </div>
+
+                    <button onclick="saveCompanyDetails()" id="btn-save-company"
+                        class="w-full bg-neon-blue bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-blue text-neon-blue py-3 rounded font-tech uppercase transition-all">
+                        Confirmar Identidad
+                    </button>
+                </div>
+            </div>
+
             <!-- Area Determination -->
-            <div class="bg-space-800 border border-gray-700 rounded-lg p-5">
+            <div class="bg-space-800 border border-gray-700 rounded-lg p-5" id="area-section" style="display: none;">
                 <h3 class="text-lg font-orbitron text-neon-blue mb-3 flex items-center">
                     <span class="text-2xl mr-2">🎲</span> ÁREA DEL ESPACIO
                 </h3>
@@ -177,6 +232,119 @@
                 </div>
             </div>
 
+            <!-- Starting Planet Determination -->
+            <div class="bg-space-800 border border-gray-700 rounded-lg p-5" id="planet-section" style="display: none;">
+                <h3 class="text-lg font-orbitron text-neon-blue mb-3 flex items-center">
+                    <span class="text-2xl mr-2">🪐</span> PLANETA DE ORIGEN
+                </h3>
+                <p class="text-sm text-gray-400 mb-4">Tira 3d6 uno tras otro para obtener el CÓDIGO MUNDO (111-666)</p>
+
+                <div class="flex gap-3 mb-3">
+                    <button onclick="rollPlanet(false)"
+                        class="flex-1 bg-neon-blue bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-blue text-neon-blue px-4 py-3 rounded font-tech uppercase tracking-wider transition-all hover:shadow-[0_0_15px_rgba(0,243,255,0.4)]">
+                        🎲 Tirada Automática
+                    </button>
+                    <button onclick="showManualPlanet()"
+                        class="flex-1 bg-gray-700 hover:bg-gray-600 border-2 border-gray-600 text-gray-300 px-4 py-3 rounded font-tech uppercase tracking-wider transition-all">
+                        ✍️ Introducir Manual
+                    </button>
+                </div>
+
+                <div id="manual-planet-input" class="hidden mb-3">
+                    <div class="flex gap-2">
+                        <input type="number" id="planet-die1" min="1" max="6" placeholder="D1"
+                            class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech text-center">
+                        <input type="number" id="planet-die2" min="1" max="6" placeholder="D2"
+                            class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech text-center">
+                        <input type="number" id="planet-die3" min="1" max="6" placeholder="D3"
+                            class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech text-center">
+                        <button onclick="rollPlanet(true)"
+                            class="bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green px-6 rounded hover:bg-opacity-30">
+                            BUSCAR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Planet Stats & Validation -->
+                <div id="planet-result" class="hidden space-y-4">
+                    <div id="planet-basic-info" class="bg-space-900 border border-gray-700 rounded p-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="text-2xl font-orbitron text-white" id="res-planet-name">-</h4>
+                                <div class="text-neon-blue font-tech" id="res-planet-code">#---</div>
+                            </div>
+                            <div id="val-badge" class="px-3 py-1 rounded text-xs font-tech uppercase">Cargando...</div>
+                        </div>
+
+                        <div id="missing-data-form"
+                            class="mt-4 p-4 border border-orange-500 bg-orange-500 bg-opacity-10 rounded hidden">
+                            <p class="text-orange-400 text-xs mb-3 font-bold">⚠️ FALTAN DATOS EN ARCHIVOS ESTELARES</p>
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs text-gray-300">Nivel Tecnológico:</label>
+                                    <select id="input-tech"
+                                        class="bg-space-800 border border-gray-600 rounded text-xs px-2 py-1">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="PR">PRIMITIVO</option>
+                                        <option value="RUD">RUDIMENTARIO</option>
+                                        <option value="ES">ESPACIAL</option>
+                                        <option value="INT">INTERESTELAR</option>
+                                        <option value="POL">POSINTERESTELAR</option>
+                                        <option value="N.S">NIVEL SUPERIOR</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <label class="text-xs text-gray-300">Población > 1000:</label>
+                                    <input type="checkbox" id="input-pop" class="rounded border-gray-600 bg-space-800">
+                                </div>
+                                <button onclick="updatePlanetData()"
+                                    class="w-full py-2 bg-orange-500 text-white rounded text-xs font-bold hover:bg-orange-600">ACTUALIZAR
+                                    BASE DE DATOS</button>
+                            </div>
+                        </div>
+
+                        <div id="validation-checks"
+                            class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] font-tech">
+                            <div class="flex items-center gap-2">
+                                <span id="check-pop" class="text-gray-500">○</span>
+                                <span class="text-gray-400">Población > 1000</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="check-tech" class="text-gray-500">○</span>
+                                <span class="text-gray-400">Tecnología apta (No PR/RUD)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="check-support" class="text-gray-500">○</span>
+                                <span class="text-gray-400">Soporte Vital Básico</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="check-conv" class="text-gray-500">○</span>
+                                <span class="text-gray-400">Convenio Spacegom</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span id="check-prod" class="text-gray-500">○</span>
+                                <span class="text-gray-400">Tiene productos</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="planet-action" class="hidden">
+                        <button id="btn-select-planet" onclick="selectStartingPlanet()"
+                            class="w-full py-4 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded font-orbitron hover:bg-opacity-30">
+                            ESTABLECER COMO ORIGEN
+                        </button>
+                    </div>
+
+                    <div id="planet-retry" class="hidden">
+                        <p class="text-neon-red text-center text-xs mb-3">Este planeta no cumple los requisitos para ser
+                            tu origen.</p>
+                        <button onclick="rollPlanet(false)"
+                            class="w-full py-3 bg-gray-700 border-2 border-gray-600 text-gray-300 rounded font-tech hover:bg-gray-600">VOLVER
+                            A TIRAR (3d6)</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Complete Setup Button -->
             <div id="complete-section" class="hidden text-center pt-4">
                 <div class="bg-green-900 bg-opacity-20 border-2 border-neon-green rounded-lg p-6 mb-4">
@@ -197,6 +365,70 @@
     let gameId = new URLSearchParams(window.location.search).get('game_id');
     let areaData = null;
     let densityData = null;
+
+    const companySuggestions = [
+        "Compañía Starblack", "Black Hole LTD", "StarKiller & Co",
+        "Nebula Traders", "Galactic Ventures", "Orion Logistics"
+    ];
+    const shipSuggestions = [
+        "Fénix Dorado", "Black Eagle", "Halcón Milenario",
+        "Estrella Fugaz", "Sombra Plateada", "Vanguardia Estelar"
+    ];
+
+    function suggestCompanyName() {
+        const name = companySuggestions[Math.floor(Math.random() * companySuggestions.length)];
+        document.getElementById('company-name').value = name;
+    }
+
+    function suggestShipName() {
+        const name = shipSuggestions[Math.floor(Math.random() * shipSuggestions.length)];
+        document.getElementById('ship-name').value = name;
+    }
+
+    async function saveCompanyDetails() {
+        const companyName = document.getElementById('company-name').value;
+        const shipName = document.getElementById('ship-name').value;
+        const shipModel = document.getElementById('ship-model').value;
+
+        if (!companyName || !shipName) {
+            alert("Por favor introduce los nombres de tu compañía y nave.");
+            return;
+        }
+
+        try {
+            // First create game if not exists
+            if (!gameId) {
+                const gameName = companyName.toLowerCase().replace(/\s+/g, '_');
+                const createResp = await fetch('/api/games/new', {
+                    method: 'POST',
+                    body: new URLSearchParams({ game_name: gameName })
+                });
+                const gameData = await createResp.json();
+                gameId = gameData.game_id;
+                window.history.pushState({}, '', `?game_id=${gameId}`);
+            }
+
+            // Then save company details
+            const formData = new FormData();
+            formData.append('company_name', companyName);
+            formData.append('ship_name', shipName);
+            formData.append('ship_model', shipModel);
+
+            await fetch(`/api/games/${gameId}/company-setup`, {
+                method: 'POST',
+                body: formData
+            });
+
+            // Transition UI
+            document.getElementById('company-section').classList.add('opacity-50', 'pointer-events-none');
+            document.getElementById('area-section').style.display = 'block';
+            document.getElementById('btn-save-company').textContent = "Identidad Confirmada ✓";
+            document.getElementById('btn-save-company').disabled = true;
+
+        } catch (error) {
+            alert('Error inicializando empresa: ' + error.message);
+        }
+    }
 
     // Manual input toggles
     function showManualArea() {
@@ -224,19 +456,6 @@
         }
 
         try {
-            // If no game_id, create new game first
-            if (!gameId) {
-                const gameName = 'partida_' + new Date().getTime();
-                const createResp = await fetch('/api/games/new', {
-                    method: 'POST',
-                    body: new URLSearchParams({ game_name: gameName })
-                });
-                const gameData = await createResp.json();
-                gameId = gameData.game_id;
-                // Update URL
-                window.history.pushState({}, '', `?game_id=${gameId}`);
-            }
-
             const response = await fetch(`/api/games/${gameId}/setup`, {
                 method: 'POST',
                 body: formData
@@ -337,16 +556,129 @@
             document.getElementById('pos-quadrant').textContent = data.col_letter + data.row;
             document.getElementById('position-result').classList.remove('hidden');
 
-            // Show completion
-            document.getElementById('complete-section').classList.remove('hidden');
+            // Show planet section
+            document.getElementById('planet-section').style.display = 'block';
 
             // Hide manual input if shown
             document.getElementById('manual-position-input').classList.add('hidden');
-
-            // Update "Panel de Control" link with game_id
-            document.querySelector('#complete-section a').href = `/dashboard?game_id=${gameId}`;
         } catch (error) {
             alert('Error: ' + error.message);
+        }
+    }
+
+    // Roll to find starting planet
+    let currentPlanetCode = null;
+
+    async function rollPlanet(isManual) {
+        let code = "";
+        if (isManual) {
+            const d1 = document.getElementById('planet-die1').value;
+            const d2 = document.getElementById('planet-die2').value;
+            const d3 = document.getElementById('planet-die3').value;
+            if (!d1 || !d2 || !d3 || d1 < 1 || d1 > 6 || d2 < 1 || d2 > 6 || d3 < 1 || d3 > 6) {
+                alert("Por favor introduce valores válidos (1-6) para los 3 dados");
+                return;
+            }
+            code = "" + d1 + d2 + d3;
+        } else {
+            code = "" + (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1) + (Math.floor(Math.random() * 6) + 1);
+        }
+
+        currentPlanetCode = parseInt(code);
+        fetchPlanetData(currentPlanetCode);
+    }
+
+    function showManualPlanet() {
+        document.getElementById('manual-planet-input').classList.remove('hidden');
+    }
+
+    async function fetchPlanetData(code) {
+        try {
+            const response = await fetch(`/api/planets/${code}`);
+            const data = await response.json();
+            const planet = data.planet;
+            const validation = data.is_valid_start;
+
+            document.getElementById('res-planet-name').textContent = planet.name;
+            document.getElementById('res-planet-code').textContent = "#" + planet.code;
+            document.getElementById('planet-result').classList.remove('hidden');
+            document.getElementById('manual-planet-input').classList.add('hidden');
+
+            // Handle validation check list
+            const updateCheck = (id, status) => {
+                const el = document.getElementById(id);
+                el.innerHTML = status ? "✓" : "✗";
+                el.className = status ? "text-neon-green" : "text-neon-red";
+            };
+
+            updateCheck('check-pop', validation.checks.population);
+            updateCheck('check-tech', validation.checks.tech_level);
+            updateCheck('check-support', validation.checks.life_support);
+            updateCheck('check-conv', validation.checks.convenio);
+            updateCheck('check-prod', validation.checks.has_product);
+
+            // Handle badge and actions
+            const badge = document.getElementById('val-badge');
+            if (planet.bootstrap_data.tech_level === null || planet.bootstrap_data.population_over_1000 === null) {
+                badge.textContent = "DATOS PENDIENTES";
+                badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-orange-500 bg-opacity-20 text-orange-400";
+                document.getElementById('missing-data-form').classList.remove('hidden');
+                document.getElementById('planet-action').classList.add('hidden');
+                document.getElementById('planet-retry').classList.add('hidden');
+            } else if (validation.is_valid) {
+                badge.textContent = "PLANETA APTO";
+                badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-neon-green bg-opacity-20 text-neon-green";
+                document.getElementById('missing-data-form').classList.add('hidden');
+                document.getElementById('planet-action').classList.remove('hidden');
+                document.getElementById('planet-retry').classList.add('hidden');
+            } else {
+                badge.textContent = "NO APTO";
+                badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-neon-red bg-opacity-20 text-neon-red";
+                document.getElementById('missing-data-form').classList.add('hidden');
+                document.getElementById('planet-action').classList.add('hidden');
+                document.getElementById('planet-retry').classList.remove('hidden');
+            }
+
+        } catch (error) {
+            alert('Error buscando planeta: ' + error.message);
+        }
+    }
+
+    async function updatePlanetData() {
+        const tech = document.getElementById('input-tech').value;
+        const pop = document.getElementById('input-pop').checked;
+        if (!tech) return alert("Selecciona el nivel tecnológico");
+
+        const formData = new FormData();
+        formData.append('tech_level', tech);
+        formData.append('population_over_1000', pop ? "true" : "false");
+
+        try {
+            await fetch(`/api/planets/${currentPlanetCode}/update-bootstrap`, {
+                method: 'POST',
+                body: formData
+            });
+            // Re-fetch to update UI
+            fetchPlanetData(currentPlanetCode);
+        } catch (error) {
+            alert('Error actualizando datos: ' + error.message);
+        }
+    }
+
+    async function selectStartingPlanet() {
+        const formData = new FormData();
+        formData.append('code', currentPlanetCode);
+
+        try {
+            await fetch(`/api/games/${gameId}/set-starting-planet`, {
+                method: 'POST',
+                body: formData
+            });
+            // Show final completion
+            document.getElementById('complete-section').classList.remove('hidden');
+            document.querySelector('#complete-section a').href = `/dashboard?game_id=${gameId}`;
+        } catch (error) {
+            alert('Error estableciendo planeta: ' + error.message);
         }
     }
 </script>
