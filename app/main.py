@@ -5,13 +5,14 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 import random
 
-from database import get_db, Planet, init_db
-from game_state import GameState
-from dice import DiceRoller
+from app.database import get_db, Planet, init_db
+from app.game_state import GameState
+from app.dice import DiceRoller
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory="app/templates")
+templates.env.globals.update(chr=chr)
 
 # Initialize database on startup
 @app.on_event("startup")
@@ -182,6 +183,71 @@ async def initial_company_setup(
             "is_manual": density_is_manual
         },
         "setup_complete": True,
+        "state": game.state
+    }
+
+
+@app.post("/api/games/{game_id}/setup-position")
+async def initial_position_setup(
+    game_id: str,
+    row_manual: Optional[int] = Form(None),
+    col_manual: Optional[int] = Form(None)
+):
+    """
+    Initial ship position setup
+    Roll 1d6 for row (1-6) and 1d6 for col (1-6)
+    """
+    game = GameState(game_id)
+    
+    # Row setup
+    row_is_manual = False
+    if row_manual is not None:
+        if 1 <= row_manual <= 6:
+            row_results = [row_manual]
+            row_is_manual = True
+        else:
+            raise HTTPException(status_code=400, detail="Row dice must be between 1 and 6")
+    else:
+        row_results = DiceRoller.roll_dice(num_dice=1)
+    
+    row_val = row_results[0]
+    game.record_dice_roll(1, row_results, row_is_manual, "initial_row")
+    
+    # Col setup
+    col_is_manual = False
+    if col_manual is not None:
+        if 1 <= col_manual <= 6:
+            col_results = [col_manual]
+            col_is_manual = True
+        else:
+            raise HTTPException(status_code=400, detail="Col dice must be between 1 and 6")
+    else:
+        col_results = DiceRoller.roll_dice(num_dice=1)
+        
+    col_val = col_results[0]
+    game.record_dice_roll(1, col_results, col_is_manual, "initial_col")
+    
+    # Update game state (offset 0-5 for internal grid if needed, but keeping 1-6 as per user request)
+    game.state["ship_row"] = row_val
+    game.state["ship_col"] = col_val
+    game.state["ship_pos_complete"] = True
+    
+    # First exploration of current quadrant
+    game.explore_quadrant(row_val - 1, col_val - 1)
+    
+    game.add_event(
+        "initial_position",
+        f"Posición inicial establecida en Cuadrante {chr(64+col_val)}{row_val}",
+        {"row": row_val, "col": col_val}
+    )
+    
+    game.save()
+    
+    return {
+        "row": row_val,
+        "col": col_val,
+        "col_letter": chr(64+col_val),
+        "ship_pos_complete": True,
         "state": game.state
     }
 

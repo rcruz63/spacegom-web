@@ -2,7 +2,7 @@
 Script to import planets from Excel to SQLite database
 """
 import pandas as pd
-from database import init_db, SessionLocal, Planet
+from app.database import init_db, SessionLocal, Planet
 
 
 def import_planets_from_excel(excel_path: str):
@@ -73,6 +73,9 @@ def import_planets_from_excel(excel_path: str):
                 field_8=str(row.get('*8', '')).strip() if not pd.isna(row.get('*8')) else None,
                 field_9=str(row.get('*9', '')).strip() if not pd.isna(row.get('*9')) else None,
                 field_10=str(row.get('*10', '')).strip() if not pd.isna(row.get('*10')) else None,
+                convenio_spacegom=str(row.get('*4', '')).strip().upper() in ['SÍ', 'SI', 'X', 'YES'],
+                tech_level=None,  # To be filled during setup
+                population_over_1000=None,
                 is_custom=False
             )
             

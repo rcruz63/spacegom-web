@@ -59,6 +59,11 @@ class Planet(Base):
     field_9 = Column(String)
     field_10 = Column(String)
     
+    # Campos para validación inicial (Bootstrap)
+    tech_level = Column(String)  # PR, RUD, ES, INT, POL, N.S
+    population_over_1000 = Column(Boolean, default=True)
+    convenio_spacegom = Column(Boolean, default=True)
+    
     # Campo para planetas personalizados creados durante la partida
     is_custom = Column(Boolean, default=False)
     

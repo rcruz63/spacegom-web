@@ -39,6 +39,9 @@ class GameState:
             "area": None,  # Space area (2-12 from 2d6)
             "world_density": None,  # "Baja", "Media", "Alta"
             "setup_complete": False,
+            "ship_row": None,  # 1-6
+            "ship_col": None,  # 1-6
+            "ship_pos_complete": False,
             
             # HUD - Critical Status
             "fuel": 18,
