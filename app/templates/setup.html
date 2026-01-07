@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Story/Lore Banner -->
+    <div class="glass-panel tech-border p-6 rounded-lg mb-6 border-l-4 border-neon-blue">
+        <h2 class="text-2xl font-orbitron text-neon-blue mb-3">HERENCIA FAMILIAR</h2>
+        <p class="text-gray-300 leading-relaxed mb-2">
+            Tu madre ha fallecido, dejándote como único heredero de su empresa espacial.
+            Junto con la compañía, heredas una nave, una tripulación leal y algo de capital inicial.
+        </p>
+        <p class="text-neon-green text-sm font-tech">
+            Es hora de establecer tu emplazamiento en el espacio y empezar tu legado...
+        </p>
+    </div>
+
+    <!-- Setup Form -->
+    <div class="glass-panel tech-border p-8 rounded-lg">
+        <h2 class="text-3xl font-orbitron text-white mb-6 border-b border-gray-700 pb-3">
+            <span class="text-neon-blue">EMPLAZAMIENTO</span> INICIAL
+        </h2>
+
+        <div id="setup-form" class="space-y-6">
+            <!-- Area Determination -->
+            <div class="bg-space-800 border border-gray-700 rounded-lg p-5">
+                <h3 class="text-lg font-orbitron text-neon-blue mb-3 flex items-center">
+                    <span class="text-2xl mr-2">🎲</span> ÁREA DEL ESPACIO
+                </h3>
+                <p class="text-sm text-gray-400 mb-4">Tira 2d6 para determinar el área donde estableces tu empresa
+                    (2-12)</p>
+
+                <div class="flex gap-3 mb-3">
+                    <button onclick="rollArea(false)"
+                        class="flex-1 bg-neon-blue bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-blue text-neon-blue px-4 py-3 rounded font-tech uppercase tracking-wider transition-all hover:shadow-[0_0_15px_rgba(0,243,255,0.4)]">
+                        🎲 Tirada Automática
+                    </button>
+                    <button onclick="showManualArea()"
+                        class="flex-1 bg-gray-700 hover:bg-gray-600 border-2 border-gray-600 text-gray-300 px-4 py-3 rounded font-tech uppercase tracking-wider transition-all">
+                        ✍️ Introducir Manual
+                    </button>
+                </div>
+
+                <div id="manual-area-input" class="hidden mb-3">
+                    <div class="flex gap-2">
+                        <input type="number" id="area-die1" min="1" max="6" placeholder="Dado 1"
+                            class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech text-center">
+                        <span class="text-gray-500 text-2xl">+</span>
+                        <input type="number" id="area-die2" min="1" max="6" placeholder="Dado 2"
+                            class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech text-center">
+                        <button onclick="rollArea(true)"
+                            class="bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green px-6 rounded hover:bg-opacity-30">
+                            CONFIRMAR
+                        </button>
+                    </div>
+                </div>
+
+                <div id="area-result" class="hidden">
+                    <div class="bg-neon-blue bg-opacity-10 border-2 border-neon-blue rounded p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-xs text-gray-400 uppercase mb-1">Dados</div>
+                                <div class="text-white font-tech" id="area-dice">-</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-400 uppercase mb-1">Área Asignada</div>
+                                <div class="text-5xl font-orbitron text-neon-blue font-bold" id="area-value">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- World Density Determination -->
+            <div class="bg-space-800 border border-gray-700 rounded-lg p-5" id="density-section" style="display: none;">
+                <h3 class="text-lg font-orbitron text-neon-green mb-3 flex items-center">
+                    <span class="text-2xl mr-2">🌍</span> DENSIDAD DE MUNDOS
+                </h3>
+                <p class="text-sm text-gray-400 mb-4">Tira 2d6 para determinar la densidad de planetas en tu área</p>
+
+                <div class="flex gap-3 mb-3">
+                    <button onclick="rollDensity(false)"
+                        class="flex-1 bg-neon-green bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-green text-neon-green px-4 py-3 rounded font-tech uppercase tracking-wider transition-all hover:shadow-[0_0_15px_rgba(0,255,157,0.4)]">
+                        🎲 Tirada Automática
+                    </button>
+                    <button onclick="showManualDensity()"
+                        class="flex-1 bg-gray-700 hover:bg-gray-600 border-2 border-gray-600 text-gray-300 px-4 py-3 rounded font-tech uppercase tracking-wider transition-all">
+                        ✍️ Introducir Manual
+                    </button>
+                </div>
+
+                <div id="manual-density-input" class="hidden mb-3">
+                    <div class="flex gap-2">
+                        <input type="number" id="density-die1" min="1" max="6" placeholder="Dado 1"
+                            class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech text-center">
+                        <span class="text-gray-500 text-2xl">+</span>
+                        <input type="number" id="density-die2" min="1" max="6" placeholder="Dado 2"
+                            class="flex-1 bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech text-center">
+                        <button onclick="rollDensity(true)"
+                            class="bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green px-6 rounded hover:bg-opacity-30">
+                            CONFIRMAR
+                        </button>
+                    </div>
+                </div>
+
+                <div id="density-result" class="hidden">
+                    <div class="bg-neon-green bg-opacity-10 border-2 border-neon-green rounded p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="text-xs text-gray-400 uppercase mb-1">Dados</div>
+                                <div class="text-white font-tech" id="density-dice">-</div>
+                            </div>
+                            <div class="text-center flex-1">
+                                <div class="text-xs text-gray-400 uppercase mb-1">Total</div>
+                                <div class="text-2xl font-orbitron text-white" id="density-total">-</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-400 uppercase mb-1">Densidad</div>
+                                <div class="text-3xl font-orbitron text-neon-green font-bold" id="density-level">-</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-xs text-gray-500 border-t border-gray-700 pt-3">
+                            <strong>Baja:</strong> 2-4 | <strong>Media:</strong> 5-9 | <strong>Alta:</strong> 10-12
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Complete Setup Button -->
+            <div id="complete-section" class="hidden text-center pt-4">
+                <div class="bg-green-900 bg-opacity-20 border-2 border-neon-green rounded-lg p-6 mb-4">
+                    <div class="text-neon-green text-xl font-orbitron mb-2">✓ SETUP COMPLETADO</div>
+                    <p class="text-gray-300 text-sm">Tu empresa está establecida y lista para operar</p>
+                </div>
+                <a href="/dashboard"
+                    class="inline-block bg-neon-blue bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-blue text-neon-blue px-8 py-4 rounded font-orbitron uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(0,243,255,0.5)] text-lg">
+                    ▶ ACCEDER AL PANEL DE CONTROL
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Get game_id from URL parameter or create new game
+    let gameId = new URLSearchParams(window.location.search).get('game_id');
+    let areaData = null;
+    let densityData = null;
+
+    // Manual input toggles
+    function showManualArea() {
+        document.getElementById('manual-area-input').classList.remove('hidden');
+    }
+
+    function showManualDensity() {
+        document.getElementById('manual-density-input').classList.remove('hidden');
+    }
+
+    // Roll for area
+    async function rollArea(isManual) {
+        let formData = new FormData();
+
+        if (isManual) {
+            const die1 = document.getElementById('area-die1').value;
+            const die2 = document.getElementById('area-die2').value;
+
+            if (!die1 || !die2 || die1 < 1 || die1 > 6 || die2 < 1 || die2 > 6) {
+                alert('Por favor introduce valores válidos (1-6) para ambos dados');
+                return;
+            }
+
+            formData.append('area_manual', `${die1},${die2}`);
+        }
+
+        try {
+            // If no game_id, create new game first
+            if (!gameId) {
+                const gameName = 'partida_' + new Date().getTime();
+                const createResp = await fetch('/api/games/new', {
+                    method: 'POST',
+                    body: new URLSearchParams({ game_name: gameName })
+                });
+                const gameData = await createResp.json();
+                gameId = gameData.game_id;
+                // Update URL
+                window.history.pushState({}, '', `?game_id=${gameId}`);
+            }
+
+            const response = await fetch(`/api/games/${gameId}/setup`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            areaData = data.area;
+
+            // Display results
+            document.getElementById('area-dice').textContent = areaData.dice.join(' + ');
+            document.getElementById('area-value').textContent = areaData.value;
+            document.getElementById('area-result').classList.remove('hidden');
+
+            // Show density section
+            document.getElementById('density-section').style.display = 'block';
+
+            // Hide manual input if shown
+            document.getElementById('manual-area-input').classList.add('hidden');
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+
+    // Roll for density
+    async function rollDensity(isManual) {
+        let formData = new FormData();
+
+        // Add area data (already rolled)
+        if (areaData) {
+            formData.append('area_manual', areaData.dice.join(','));
+        }
+
+        if (isManual) {
+            const die1 = document.getElementById('density-die1').value;
+            const die2 = document.getElementById('density-die2').value;
+
+            if (!die1 || !die2 || die1 < 1 || die1 > 6 || die2 < 1 || die2 > 6) {
+                alert('Por favor introduce valores válidos (1-6) para ambos dados');
+                return;
+            }
+
+            formData.append('density_manual', `${die1},${die2}`);
+        }
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/setup`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            densityData = data.world_density;
+
+            // Display results
+            document.getElementById('density-dice').textContent = densityData.dice.join(' + ');
+            document.getElementById('density-total').textContent = densityData.total;
+            document.getElementById('density-level').textContent = densityData.level;
+            document.getElementById('density-result').classList.remove('hidden');
+
+            // Show completion
+            document.getElementById('complete-section').classList.remove('hidden');
+
+            // Hide manual input if shown
+            document.getElementById('manual-density-input').classList.add('hidden');
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+</script>
+{% endblock %}
