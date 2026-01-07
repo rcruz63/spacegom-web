@@ -102,5 +102,5 @@ def import_planets_from_excel(excel_path: str):
 
 
 if __name__ == "__main__":
-    excel_path = "/Users/rcruz2/Downloads/Base_de_datos_de_planetas.xlsx"
+    excel_path = "data/Base_de_datos_de_planetas.xlsx"
     import_planets_from_excel(excel_path)
