@@ -1,0 +1,63 @@
+<div class="glass-panel tech-border p-6 rounded-lg">
+    <h3 class="font-orbitron text-neon-red mb-4 text-lg tracking-wider flex justify-between items-center">
+        <span>DICE MODULE</span>
+        <span class="text-xs bg-red-900/30 text-red-400 px-2 py-1 rounded">ACTIVE</span>
+    </h3>
+
+    <div id="dice-result-area"
+        class="mb-6 h-24 flex flex-col items-center justify-center bg-space-900 rounded border border-gray-800 relative overflow-hidden group">
+        <!-- Default State -->
+        <span
+            class="text-gray-600 font-tech uppercase text-sm tracking-widest group-hover:text-gray-500 transition-colors">Ready
+            to Roll</span>
+        <div class="absolute inset-0 bg-scanline opacity-10 pointer-events-none"></div>
+    </div>
+
+    <!-- Toggle / Tabs -->
+    <div class="flex border-b border-gray-700 mb-4 text-sm" role="tablist">
+        <button
+            class="px-4 py-2 hover:text-neon-blue border-b-2 border-transparent hover:border-neon-blue transition-colors text-white"
+            onclick="document.getElementById('auto-roll').classList.remove('hidden'); document.getElementById('manual-roll').classList.add('hidden');">
+            AUTO
+        </button>
+        <button
+            class="px-4 py-2 hover:text-neon-blue border-b-2 border-transparent hover:border-neon-blue transition-colors text-gray-400 hover:text-white"
+            onclick="document.getElementById('auto-roll').classList.add('hidden'); document.getElementById('manual-roll').classList.remove('hidden');">
+            MANUAL
+        </button>
+    </div>
+
+    <!-- Auto Roll Form -->
+    <div id="auto-roll">
+        <form hx-post="/api/roll-dice" hx-target="#dice-result-area" hx-swap="innerHTML">
+            <div class="mb-4">
+                <label class="block text-xs uppercase text-gray-500 mb-1">Number of Dice (d6)</label>
+                <div class="flex items-center space-x-2">
+                    <input type="number" name="num_dices" value="2" min="1" max="10"
+                        class="bg-space-800 border border-gray-700 text-white rounded px-3 py-2 w-full focus:border-neon-blue focus:outline-none font-orbitron">
+                </div>
+            </div>
+            <button type="submit"
+                class="w-full bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/50 py-3 rounded font-orbitron font-bold tracking-widest uppercase transition-all duration-200 hover:shadow-[0_0_15px_rgba(0,243,255,0.3)]">
+                INITIATE ROLL
+            </button>
+        </form>
+    </div>
+
+    <!-- Manual Roll Form -->
+    <div id="manual-roll" class="hidden">
+        <form hx-post="/api/roll-dice" hx-target="#dice-result-area" hx-swap="innerHTML">
+            <input type="hidden" name="num_dices" value="0">
+            <div class="mb-4">
+                <label class="block text-xs uppercase text-gray-500 mb-1">Manual Result Input</label>
+                <input type="text" name="manual_result" placeholder="e.g. 7"
+                    class="bg-space-800 border border-gray-700 text-white rounded px-3 py-2 w-full focus:border-neon-green focus:outline-none font-orbitron">
+                <p class="text-xs text-gray-600 mt-1">Enter total value from physical dice</p>
+            </div>
+            <button type="submit"
+                class="w-full bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/50 py-3 rounded font-orbitron font-bold tracking-widest uppercase transition-all duration-200 hover:shadow-[0_0_15px_rgba(0,255,157,0.3)]">
+                LOG RESULT
+            </button>
+        </form>
+    </div>
+</div>

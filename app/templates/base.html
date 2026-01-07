@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spacegom Companion</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'orbitron': ['"Orbitron"', 'sans-serif'],
+                        'tech': ['"Share Tech Mono"', 'monospace'],
+                    },
+                    colors: {
+                        space: {
+                            900: '#0b0d17',
+                            800: '#15192b',
+                            700: '#1f2640',
+                        },
+                        neon: {
+                            blue: '#00f3ff',
+                            green: '#00ff9d',
+                            red: '#ff2a6d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .glass-panel {
+            background: rgba(11, 13, 23, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+        }
+        .tech-border {
+            position: relative;
+        }
+        .tech-border::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px;
+            width: 10px; height: 10px;
+            border-top: 2px solid #00f3ff;
+            border-left: 2px solid #00f3ff;
+        }
+        .tech-border::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px;
+            width: 10px; height: 10px;
+            border-bottom: 2px solid #00f3ff;
+            border-right: 2px solid #00f3ff;
+        }
+    </style>
+</head>
+<body class="text-gray-300 font-tech min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-end">
+            <div>
+                <h1 class="text-4xl font-orbitron font-bold text-neon-blue tracking-wider uppercase drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]">
+                    Spacegom <span class="text-white text-xl align-top opacity-80">Companion</span>
+                </h1>
+                <p class="text-neon-green text-sm tracking-widest mt-1">SYSTEM ONLINE // CAPTAIN ACCESS GRANTED</p>
+            </div>
+            <div class="text-right hidden md:block">
+                <div class="text-xs text-gray-500 uppercase tracking-widest">Stardate</div>
+                <div class="text-neon-blue font-orbitron">2026.01.07</div>
+            </div>
+        </header>
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="mt-12 text-center text-xs text-gray-600 border-t border-gray-900 pt-4 font-mono">
+            SPACEGOM COMPANION SYSTEM v0.1 // CONNECTION SECURE
+        </footer>
+    </div>
+</body>
+</html>

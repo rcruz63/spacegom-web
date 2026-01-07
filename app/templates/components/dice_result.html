@@ -1,0 +1,35 @@
+<div class="text-center animate-pulse-once">
+    <div class="text-xs text-gray-500 uppercase mb-1">
+        {% if is_manual %}USER INPUT{% else %}GENERATED{% endif %}
+    </div>
+    <div class="text-4xl font-orbitron font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+        {{ result }}
+    </div>
+    {% if details %}
+    <div class="text-xs text-gray-600 font-mono mt-1">
+        {{ details }}
+    </div>
+    {% endif %}
+</div>
+<style>
+    @keyframes pulse-once {
+        0% {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+
+        50% {
+            transform: scale(1.05);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    .animate-pulse-once {
+        animation: pulse-once 0.3s ease-out forwards;
+    }
+</style>

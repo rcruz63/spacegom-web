@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Main Dashboard Area -->
+    <div class="md:col-span-2">
+        <div class="glass-panel tech-border p-6 rounded-lg mb-8">
+            <h2 class="text-2xl font-orbitron text-white mb-4 border-b border-gray-700 pb-2">
+                <span class="text-neon-blue">COMMAND</span> CENTER
+            </h2>
+            <p class="mb-4">Welcome back, Commander. Status is GREEN. Awaiting orders.</p>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div class="bg-space-800 p-3 rounded border border-gray-700">
+                    <div class="text-xs text-gray-500 uppercase">Hull Integrity</div>
+                    <div class="text-neon-green font-orbitron text-xl">100%</div>
+                </div>
+                <div class="bg-space-800 p-3 rounded border border-gray-700">
+                    <div class="text-xs text-gray-500 uppercase">Fuel Levels</div>
+                    <div class="text-neon-blue font-orbitron text-xl">87%</div>
+                </div>
+                <div class="bg-space-800 p-3 rounded border border-gray-700">
+                    <div class="text-xs text-gray-500 uppercase">Oxygen</div>
+                    <div class="text-neon-green font-orbitron text-xl">NORMAL</div>
+                </div>
+                <div class="bg-space-800 p-3 rounded border border-gray-700">
+                    <div class="text-xs text-gray-500 uppercase">Alert Level</div>
+                    <div class="text-gray-400 font-orbitron text-xl">NONE</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dice Widget Area -->
+    <div class="md:col-span-1">
+        {% include "components/dice_widget.html" %}
+    </div>
+
+    <!-- Log / Auxiliary Area -->
+    <div class="md:col-span-1">
+        <div class="glass-panel tech-border p-6 rounded-lg h-full">
+            <h3 class="font-orbitron text-neon-blue mb-4 text-sm tracking-wider">MISSION LOG</h3>
+            <div class="h-64 overflow-y-auto font-mono text-xs space-y-2 text-gray-400" id="mission-log">
+                <div class="border-l-2 border-neon-green pl-2 mb-2">
+                    <span class="text-neon-green">[01:20:00]</span> System initialized.
+                </div>
+                <div class="border-l-2 border-gray-700 pl-2">
+                    <span class="text-gray-500">[01:20:05]</span> Connecting to main database... OK.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
