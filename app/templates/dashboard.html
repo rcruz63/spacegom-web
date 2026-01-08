@@ -142,8 +142,53 @@
                     </div>
                     <div class="text-xs text-gray-500 text-center mt-1">-5 a +5</div>
                 </div>
+
+                <!-- TESORERÍA -->
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider mt-4">TESORERÍA</div>
+                <div class="bg-space-800 border border-gray-700 rounded p-3">
+                    <div class="text-center">
+                        <span class="text-3xl font-orbitron text-neon-green" id="treasury-value">0</span>
+                        <span class="text-sm text-gray-400 ml-1">SC</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center mt-1">Créditos Spacegom</div>
+                </div>
+
+                <!-- GASTOS MENSUALES -->
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider mt-4">GASTOS/MES</div>
+                <div class="bg-space-800 border border-gray-700 rounded p-3">
+                    <div class="text-center">
+                        <span class="text-xl font-tech text-neon-red" id="monthly-expenses-value">0</span>
+                        <span class="text-sm text-gray-400 ml-1">SC</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center mt-1">Salarios + Préstamos</div>
+                </div>
             </div>
         </div>
+    </div>
+
+    <!-- QUICK NAVIGATION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <a href="#" id="nav-personnel"
+            class="glass-panel tech-border p-6 rounded-lg hover:border-neon-green transition-all cursor-pointer group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-orbitron text-neon-green mb-1">PERSONAL</h3>
+                    <p class="text-sm text-gray-400">Gestionar empleados y salarios</p>
+                </div>
+                <div class="text-3xl group-hover:translate-x-1 transition-transform">👥</div>
+            </div>
+        </a>
+
+        <a href="#" id="nav-treasury"
+            class="glass-panel tech-border p-6 rounded-lg hover:border-neon-blue transition-all cursor-pointer group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-orbitron text-neon-blue mb-1">TESORERÍA</h3>
+                    <p class="text-sm text-gray-400">Ver saldo y transacciones</p>
+                </div>
+                <div class="text-3xl group-hover:translate-x-1 transition-transform">💰</div>
+            </div>
+        </a>
     </div>
 
     <!-- GRID: Navegación y Plantilla -->
@@ -688,6 +733,9 @@
             return;
         }
 
+        // Setup navigation links
+        setupNavigation(gameId);
+
         try {
             const response = await fetch(`/api/games/${gameId}`);
             const data = await response.json();
@@ -775,6 +823,9 @@
 
             // Set Ship Location UI
             updateLocationUI(gameState.ship_location_on_planet || 'Mundo');
+
+            // Load Treasury Data
+            await loadTreasuryData(gameId);
 
         } catch (error) {
             console.error("Error loading game state:", error);
@@ -969,6 +1020,33 @@
         if (activeBtn) {
             activeBtn.classList.add('active');
         }
+    }
+
+    async function loadTreasuryData(gameId) {
+        try {
+            const response = await fetch(`/api/games/${gameId}/treasury`);
+            const data = await response.json();
+
+            // Update treasury value
+            document.getElementById('treasury-value').textContent = data.current_balance || 0;
+
+            // Update monthly expenses
+            const monthlyExpenses = data.monthly_expenses?.total || 0;
+            document.getElementById('monthly-expenses-value').textContent = monthlyExpenses;
+
+            // Store in gameState for reference
+            gameState.treasury = data.current_balance;
+            gameState.monthly_expenses = monthlyExpenses;
+
+        } catch (error) {
+            console.error("Error loading treasury:", error);
+        }
+    }
+
+    // Setup navigation links with game_id
+    function setupNavigation(gameId) {
+        document.getElementById('nav-personnel').href = `/personnel?game_id=${gameId}`;
+        document.getElementById('nav-treasury').href = `/treasury?game_id=${gameId}`;
     }
 </script>
 {% endblock %}

@@ -328,6 +328,38 @@
                         </button>
                     </div>
 
+                    <!-- DIFFICULTY SELECTION (shown after planet is selected) -->
+                    <div id="difficulty-section" class="hidden mt-6">
+                        <div class="mb-4">
+                            <h4 class="text-neon-blue font-orbitron text-lg mb-2">Selecciona Dificultad</h4>
+                            <p class="text-gray-400 text-sm">El nivel de dificultad determina tu capital inicial</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3">
+                            <button onclick="completSetupWithDifficulty('easy')"
+                                class="p-4 bg-space-800 border-2 border-green-500 rounded hover:bg-green-500 hover:bg-opacity-10 transition-all">
+                                <div class="font-orbitron text-green-400 text-lg">FÁCIL</div>
+                                <div class="text-gray-400 text-sm">Fondos iniciales: 600 SC</div>
+                            </button>
+
+                            <button onclick="completeSetupWithDifficulty('normal')"
+                                class="p-4 bg-space-800 border-2 border-neon-blue rounded hover:bg-neon-blue hover:bg-opacity-10 transition-all">
+                                <div class="font-orbitron text-neon-blue text-lg">NORMAL</div>
+                                <div class="text-gray-400 text-sm">Fondos iniciales: 500 SC</div>
+                            </button>
+
+                            <button onclick="completeSetupWithDifficulty('hard')"
+                                class="p-4 bg-space-800 border-2 border-neon-red rounded hover:bg-neon-red hover:bg-opacity-10 transition-all">
+                                <div class="font-orbitron text-neon-red text-lg">DIFÍCIL</div>
+                                <div class="text-gray-400 text-sm">Fondos iniciales: 400 SC</div>
+                            </button>
+                        </div>
+
+                        <div id="setup-progress" class="hidden mt-4 text-center">
+                            <div class="text-neon-blue">⏳ Creando personal inicial...</div>
+                        </div>
+                    </div>
+
                     <div id="planet-retry" class="hidden">
                         <p class="text-neon-red text-center text-xs mb-3">Este planeta no cumple los requisitos para ser
                             tu origen.</p>
@@ -710,11 +742,50 @@
                 method: 'POST',
                 body: formData
             });
-            // Show final completion
-            document.getElementById('complete-section').classList.remove('hidden');
-            document.querySelector('#complete-section a').href = `/dashboard?game_id=${gameId}`;
+
+            // Hide planet selection and show difficulty selection
+            document.getElementById('planet-action').classList.add('hidden');
+            document.getElementById('difficulty-section').classList.remove('hidden');
+
         } catch (error) {
             alert('Error estableciendo planeta: ' + error.message);
+        }
+    }
+
+    async function completeSetupWithDifficulty(difficulty) {
+        document.getElementById('setup-progress').classList.remove('hidden');
+
+        try {
+            const formData = new FormData();
+            formData.append('difficulty', difficulty);
+
+            const response = await fetch(`/api/games/${gameId}/complete-setup`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                // Show success message
+                document.getElementById('setup-progress').innerHTML = `
+                    <div class="text-neon-green">✅ Setup completado!</div>
+                    <div class="text-gray-400 text-sm mt-2">
+                        Personal inicial: ${data.personnel_count} empleados<br>
+                        Salarios mensuales: ${data.monthly_salaries} SC<br>
+                        Fondos iniciales: ${data.starting_funds} SC
+                    </div>
+                `;
+
+                // Wait a moment then show dashboard button
+                setTimeout(() => {
+                    document.getElementById('complete-section').classList.remove('hidden');
+                    document.querySelector('#complete-section a').href = `/dashboard?game_id=${gameId}`;
+                }, 1500);
+            }
+        } catch (error) {
+            alert('Error completando setup: ' + error.message);
+            document.getElementById('setup-progress').classList.add('hidden');
         }
     }
 </script>

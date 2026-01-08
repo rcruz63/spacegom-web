@@ -197,6 +197,67 @@ PRODUCT_DESCRIPTIONS = {
 }
 
 
+class Personnel(Base):
+    """
+    Modelo de personal/empleados para gestión de tripulación
+    
+    Cada juego tiene su propia lista de empleados. Los empleados pueden ser
+    contratados, despedidos o modificados durante la partida.
+    """
+    __tablename__ = "personnel"
+    
+    # Identificación
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    game_id = Column(String, nullable=False, index=True)  # FK al game_id
+    
+    # Información del empleado
+    position = Column(String, nullable=False)  # Puesto de trabajo
+    name = Column(String, nullable=False)  # Nombre completo
+    monthly_salary = Column(Integer, nullable=False)  # Salario en SC (Créditos Spacegom)
+    
+    # Características
+    experience = Column(String, nullable=False)  # N=Novato, E=Experto, V=Veterano
+    morale = Column(String, nullable=False)  # B=Baja, M=Media, A=Alta
+    
+    # Gestión
+    hire_date = Column(String)  # Fecha de contratación (formato: "2026-01-08")
+    is_active = Column(Boolean, default=True)  # True si está activo, False si fue despedido
+    notes = Column(Text, default="")  # Notas adicionales
+    
+    def __repr__(self):
+        status = "Activo" if self.is_active else "Inactivo"
+        return f"<Personnel {self.id}: {self.name} - {self.position} ({status})>"
+
+
+# Diccionarios de referencia para personal
+EXPERIENCE_LEVELS = {
+    "N": "Novato",
+    "E": "Experto",
+    "V": "Veterano"
+}
+
+MORALE_LEVELS = {
+    "B": "Baja",
+    "M": "Media",
+    "A": "Alta"
+}
+
+# Personal inicial (creado automáticamente al completar setup)
+INITIAL_PERSONNEL = [
+    {"position": "Director gerente", "name": "Widaker Farq", "salary": 20, "exp": "V", "morale": "A"},
+    {"position": "Comandante de hipersaltos", "name": "Samantha Warm", "salary": 15, "exp": "V", "morale": "M"},
+    {"position": "Ingeniero computacional", "name": "Thomas Muller", "salary": 4, "exp": "N", "morale": "B"},
+    {"position": "Ingeniero de astronavegación", "name": "Walter Lopez", "salary": 8, "exp": "N", "morale": "B"},
+    {"position": "Técnico de repostaje y análisis", "name": "Jeffrey Cook", "salary": 8, "exp": "E", "morale": "B"},
+    {"position": "Piloto", "name": "Danielle Rivers", "salary": 10, "exp": "E", "morale": "B"},
+    {"position": "Operario de logística y almacén", "name": "Isaac Peterson", "salary": 1, "exp": "N", "morale": "B"},
+    {"position": "Contabilidad y burocracia", "name": "Katherine Smith", "salary": 3, "exp": "E", "morale": "M"},
+    {"position": "Suministros de mantenimiento", "name": "Jason Wilson", "salary": 3, "exp": "E", "morale": "B"},
+    {"position": "Cocinero", "name": "Sam Hernández", "salary": 3, "exp": "E", "morale": "M"},
+    {"position": "Asistente doméstico", "name": "Alexandra Adams", "salary": 1, "exp": "E", "morale": "B"},
+]
+
+
 # Create tables
 def init_db():
     """Initialize database tables"""

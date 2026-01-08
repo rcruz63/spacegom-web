@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Personal - Spacegom{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-space-900 p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-orbitron text-neon-blue">GESTIÓN DE PERSONAL</h1>
+            <p class="text-gray-400 text-sm mt-1" id="game-id-display">Game ID: <span id="current-game-id"></span></p>
+        </div>
+        <a href="/dashboard" id="back-dashboard"
+            class="px-4 py-2 bg-space-800 border border-gray-700 rounded text-gray-300 hover:border-neon-blue">
+            ← Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Total Personal</div>
+            <div class="text-3xl font-orbitron text-neon-blue" id="total-personnel">0</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Salarios Mensuales</div>
+            <div class="text-3xl font-orbitron text-neon-red" id="total-salaries">0</div>
+            <div class="text-xs text-gray-400">SC/mes</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Moral Promedio</div>
+            <div class="text-3xl font-orbitron text-neon-green" id="avg-morale">Media</div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mb-4">
+        <button onclick="showHireForm()"
+            class="px-6 py-3 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
+            + CONTRATAR PERSONAL
+        </button>
+    </div>
+
+    <!-- Hire Form (hidden by default) -->
+    <div id="hire-form" class="hidden glass-panel tech-border p-6 rounded mb-6">
+        <h3 class="text-xl font-orbitron text-neon-blue mb-4">Contrat nuevo empleado</h3>
+        <form id="hire-employee-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Nombre</label>
+                <input type="text" name="name" required
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Puesto</label>
+                <input type="text" name="position" required
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Salario Mensual (SC)</label>
+                <input type="number" name="monthly_salary" required min="0"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Experiencia</label>
+                <select name="experience" required
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+                    <option value="N">Novato</option>
+                    <option value="E">Experto</option>
+                    <option value="V">Veterano</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Moral</label>
+                <select name="morale" required
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+                    <option value="B">Baja</option>
+                    <option value="M" selected>Media</option>
+                    <option value="A">Alta</option>
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm text-gray-400 mb-2">Notas</label>
+                <textarea name="notes" rows="2"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white"></textarea>
+            </div>
+            <div class="md:col-span-2 flex gap-3">
+                <button type="submit"
+                    class="px-6 py-2 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded hover:bg-opacity-30">
+                    Contratar
+                </button>
+                <button type="button" onclick="hideHireForm()"
+                    class="px-6 py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Personnel Table -->
+    <div class="glass-panel tech-border rounded overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-space-800 border-b border-gray-700">
+                <tr>
+                    <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">ID</th>
+                    <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">Nombre</th>
+                    <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">Puesto</th>
+                    <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Salario</th>
+                    <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Exp</th>
+                    <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Moral</th>
+                    <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="personnel-table-body" class="divide-y divide-gray-800">
+                <!-- Rows loaded via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let gameId = null;
+
+    window.onload = async function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        gameId = urlParams.get('game_id');
+
+        if (!gameId) {
+            alert('No game ID provided');
+            window.location.href = '/';
+            return;
+        }
+
+        document.getElementById('current-game-id').textContent = gameId;
+        document.getElementById('back-dashboard').href = `/dashboard?game_id=${gameId}`;
+
+        await loadPersonnel();
+    };
+
+    async function loadPersonnel() {
+        try {
+            const response = await fetch(`/api/games/${gameId}/personnel`);
+            const data = await response.json();
+
+            document.getElementById('total-personnel').textContent = data.count;
+            document.getElementById('total-salaries').textContent = data.total_monthly_salaries;
+
+            const tbody = document.getElementById('personnel-table-body');
+            tbody.innerHTML = '';
+
+            if (data.personnel.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-500">No hay personal registrado</td></tr>';
+                return;
+            }
+
+            data.personnel.forEach(emp => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-space-800';
+                row.innerHTML = `
+                    <td class="py-3 px-4 text-gray-400">${emp.id}</td>
+                    <td class="py-3 px-4 text-white">${emp.name}</td>
+                    <td class="py-3 px-4 text-gray-300">${emp.position}</td>
+                    <td class="py-3 px-4 text-center text-neon-green">${emp.monthly_salary} SC</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-1 rounded text-xs ${getExpClass(emp.experience)}">${getExpLabel(emp.experience)}</span>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-1 rounded text-xs ${getMoraleClass(emp.morale)}">${getMoraleLabel(emp.morale)}</span>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <button onclick="fireEmployee(${emp.id}, '${emp.name}')" 
+                            class="px-3 py-1 bg-neon-red bg-opacity-20 border border-neon-red text-neon-red rounded text-xs hover:bg-opacity-30">
+                            Despedir
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error('Error loading personnel:', error);
+        }
+    }
+
+    function getExpClass(exp) {
+        const classes = {
+            'N': 'bg-green-500 bg-opacity-20 border border-green-500 text-green-400',
+            'E': 'bg-blue-500 bg-opacity-20 border border-blue-500 text-blue-400',
+            'V': 'bg-purple-500 bg-opacity-20 border border-purple-500 text-purple-400'
+        };
+        return classes[exp] || classes['N'];
+    }
+
+    function getExpLabel(exp) {
+        return { 'N': 'Novato', 'E': 'Experto', 'V': 'Veterano' }[exp] || exp;
+    }
+
+    function getMoraleClass(morale) {
+        const classes = {
+            'B': 'bg-neon-red bg-opacity-20 border border-neon-red text-neon-red',
+            'M': 'bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400',
+            'A': 'bg-neon-green bg-opacity-20 border border-neon-green text-neon-green'
+        };
+        return classes[morale] || classes['M'];
+    }
+
+    function getMoraleLabel(morale) {
+        return { 'B': 'Baja', 'M': 'Media', 'A': 'Alta' }[morale] || morale;
+    }
+
+    function showHireForm() {
+        document.getElementById('hire-form').classList.remove('hidden');
+    }
+
+    function hideHireForm() {
+        document.getElementById('hire-form').classList.add('hidden');
+        document.getElementById('hire-employee-form').reset();
+    }
+
+    document.getElementById('hire-employee-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/personnel`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                hideHireForm();
+                await loadPersonnel();
+            } else {
+                alert('Error contratando personal');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error contratando personal');
+        }
+    });
+
+    async function fireEmployee(id, name) {
+        if (!confirm(`¿Despedir a ${name}?`)) return;
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/personnel/${id}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                await loadPersonnel();
+            } else {
+                alert('Error despidiendo personal');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error despidiendo personal');
+        }
+    }
+</script>
+{% endblock %}

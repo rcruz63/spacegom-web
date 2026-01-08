@@ -78,45 +78,16 @@ class GameState:
             "quadrant_planets": {},    # {"row,col": planet_code}
             "discovered_planets": {},  # {"planet_code": {"area": int, "quadrant": "row,col"}}
             
-            # Crew
-            "crew": [
-                {
-                    "id": 1,
-                    "name": "Elena Voss",
-                    "position": "PILOTO",
-                    "salary": 1200,
-                    "experience": "VETERANA",
-                    "morale": 2  # 0=Baja, 1=Media, 2=Alta
-                },
-                {
-                    "id": 2,
-                    "name": "Marcus Chen",
-                    "position": "INGENIERO",
-                    "salary": 950,
-                    "experience": "ESTÁNDAR",
-                    "morale": 2
-                },
-                {
-                    "id": 3,
-                    "name": "Zara Kaine",
-                    "position": "NEGOCIADORA",
-                    "salary": 800,
-                    "experience": "NOVATA",
-                    "morale": 0
-                }
-            ],
-            "health_level": "MEDIA",
+            # Difficulty & Treasury (set during setup)
+            "difficulty": None,  # "easy", "normal", "hard"
+            "treasury": 0,  # Saldo en Créditos Spacegom (SC)
+            "reputation": 0,  # Reputación inicial
             
-            # Finance
-            "credits": 45230,
-            "weekly_expenses": {
-                "salaries": 2950,
-                "maintenance": 500
-            },
-            "monthly_loans": {
-                "galactic_bank": 5000,
-                "ship_upgrades": 2000
-            },
+            # Transactions history
+            "transactions": [],  # [{date, amount, description, category}]
+            
+            # Personnel managed in database (Personnel table)
+            # Crew data is queried from DB, not stored in state
             
             # Trade
             "cargo": {},  # {product_code: quantity}

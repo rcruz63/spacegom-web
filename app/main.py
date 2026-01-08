@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 import random
 
-from app.database import get_db, Planet, init_db
+from app.database import get_db, Planet, Personnel, INITIAL_PERSONNEL, init_db
 from app.game_state import GameState
 from app.dice import DiceRoller
 from app.name_suggestions import get_random_company_name, get_random_ship_name
@@ -34,6 +34,14 @@ async def dashboard(request: Request):
 @app.get("/setup", response_class=HTMLResponse)
 async def setup_page(request: Request):
     return templates.TemplateResponse("setup.html", {"request": request})
+
+@app.get("/personnel", response_class=HTMLResponse)
+async def personnel_page(request: Request):
+    return templates.TemplateResponse("personnel.html", {"request": request})
+
+@app.get("/treasury", response_class=HTMLResponse)
+async def treasury_page(request: Request):
+    return templates.TemplateResponse("treasury.html", {"request": request})
 
 
 # ===== GAME MANAGEMENT API =====
@@ -692,3 +700,264 @@ async def explore_quadrant(
         "explored_quadrants": game.state["explored_quadrants"]
     }
 
+# ===== PERSONNEL API =====
+
+@app.get("/api/games/{game_id}/personnel")
+async def get_personnel(game_id: str, db: Session = Depends(get_db)):
+    """
+    Get all personnel for a game
+    
+    Returns:
+        List of active personnel with total monthly salaries
+    """
+    personnel = db.query(Personnel).filter(
+        Personnel.game_id == game_id,
+        Personnel.is_active == True
+    ).all()
+    
+    personnel_list = [{
+        "id": p.id,
+        "position": p.position,
+        "name": p.name,
+        "monthly_salary": p.monthly_salary,
+        "experience": p.experience,
+        "morale": p.morale,
+        "hire_date": p.hire_date,
+        "notes": p.notes
+    } for p in personnel]
+    
+    total_monthly_salaries = sum(p.monthly_salary for p in personnel)
+    
+    return {
+        "personnel": personnel_list,
+        "total_monthly_salaries": total_monthly_salaries,
+        "count": len(personnel)
+    }
+
+
+@app.post("/api/games/{game_id}/personnel")
+async def hire_personnel(
+    game_id: str,
+    position: str = Form(...),
+    name: str = Form(...),
+    monthly_salary: int = Form(...),
+    experience: str = Form(...),
+    morale: str = Form(...),
+    notes: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    """Hire new personnel"""
+    from datetime import date
+    
+    new_employee = Personnel(
+        game_id=game_id,
+        position=position,
+        name=name,
+        monthly_salary=monthly_salary,
+        experience=experience,
+        morale=morale,
+        hire_date=date.today().isoformat(),
+        is_active=True,
+        notes=notes
+    )
+    
+    db.add(new_employee)
+    db.commit()
+    db.refresh(new_employee)
+    
+    return {
+        "status": "success",
+        "employee": {
+            "id": new_employee.id,
+            "name": new_employee.name,
+            "position": new_employee.position
+        }
+    }
+
+
+@app.put("/api/games/{game_id}/personnel/{employee_id}")
+async def update_personnel(
+    game_id: str,
+    employee_id: int,
+    position: Optional[str] = Form(None),
+    name: Optional[str] = Form(None),
+    monthly_salary: Optional[int] = Form(None),
+    experience: Optional[str] = Form(None),
+    morale: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Update personnel information"""
+    employee = db.query(Personnel).filter(
+        Personnel.id == employee_id,
+        Personnel.game_id == game_id
+    ).first()
+    
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    if position is not None:
+        employee.position = position
+    if name is not None:
+        employee.name = name
+    if monthly_salary is not None:
+        employee.monthly_salary = monthly_salary
+    if experience is not None:
+        employee.experience = experience
+    if morale is not None:
+        employee.morale = morale
+    if notes is not None:
+        employee.notes = notes
+    
+    db.commit()
+    db.refresh(employee)
+    
+    return {"status": "success", "employee": {"id": employee.id, "name": employee.name}}
+
+
+@app.delete("/api/games/{game_id}/personnel/{employee_id}")
+async def fire_personnel(
+    game_id: str,
+    employee_id: int,
+    db: Session = Depends(get_db)
+):
+    """Fire personnel (mark as inactive)"""
+    employee = db.query(Personnel).filter(
+        Personnel.id == employee_id,
+        Personnel.game_id == game_id
+    ).first()
+    
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    employee.is_active = False
+    db.commit()
+    
+    return {"status": "success", "message": f"{employee.name} has been dismissed"}
+
+
+# ===== TREASURY API =====
+
+@app.get("/api/games/{game_id}/treasury")
+async def get_treasury(game_id: str, db: Session = Depends(get_db)):
+    """Get treasury information"""
+    game = GameState(game_id)
+    
+    # Calculate monthly salaries from personnel
+    personnel = db.query(Personnel).filter(
+        Personnel.game_id == game_id,
+        Personnel.is_active == True
+    ).all()
+    total_salaries = sum(p.monthly_salary for p in personnel)
+    
+    return {
+        "current_balance": game.state.get("treasury", 0),
+        "difficulty": game.state.get("difficulty"),
+        "reputation": game.state.get("reputation", 0),
+        "monthly_expenses": {
+            "salaries": total_salaries,
+            "loans": 0,  # TODO: implement loans system
+            "total": total_salaries
+        },
+        "recent_transactions": game.state.get("transactions", [])[-10:]  # Last 10
+    }
+
+
+@app.post("/api/games/{game_id}/treasury/transaction")
+async def add_transaction(
+    game_id: str,
+    amount: int = Form(...),
+    description: str = Form(...),
+    category: str = Form("other"),
+):
+    """Add a treasury transaction"""
+    from datetime import datetime
+    
+    game = GameState(game_id)
+    
+    transaction = {
+        "date": datetime.now().isoformat(),
+        "amount": amount,
+        "description": description,
+        "category": category
+    }
+    
+    # Add transaction to history
+    if "transactions" not in game.state:
+        game.state["transactions"] = []
+    game.state["transactions"].append(transaction)
+    
+    # Update treasury balance
+    game.state["treasury"] = game.state.get("treasury", 0) + amount
+    
+    game.save()
+    
+    return {
+        "status": "success",
+        "new_balance": game.state["treasury"],
+        "transaction": transaction
+    }
+
+
+# ===== SETUP COMPLETION WITH DIFFICULTY =====
+
+@app.post("/api/games/{game_id}/complete-setup")
+async def complete_setup(
+    game_id: str,
+    difficulty: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Complete game setup with difficulty selection
+    
+    This creates initial personnel and sets starting treasury
+    """
+    from datetime import date
+    
+    game = GameState(game_id)
+    
+    # Validate difficulty
+    difficulty_funds = {
+        "easy": 600,
+        "normal": 500,
+        "hard": 400
+    }
+    
+    if difficulty not in difficulty_funds:
+        raise HTTPException(status_code=400, detail="Invalid difficulty level")
+    
+    # Set difficulty and initial funds
+    game.state["difficulty"] = difficulty
+    game.state["treasury"] = difficulty_funds[difficulty]
+    game.state["reputation"] = 0
+    game.state["setup_complete"] = True
+    game.save()
+    
+    # Create initial personnel
+    hire_date = date.today().isoformat()
+    
+    for emp_data in INITIAL_PERSONNEL:
+        employee = Personnel(
+            game_id=game_id,
+            position=emp_data["position"],
+            name=emp_data["name"],
+            monthly_salary=emp_data["salary"],
+            experience=emp_data["exp"],
+            morale=emp_data["morale"],
+            hire_date=hire_date,
+            is_active=True
+        )
+        db.add(employee)
+    
+    db.commit()
+    
+    # Calculate total salaries
+    total_salaries = sum(emp["salary"] for emp in INITIAL_PERSONNEL)
+    
+    return {
+        "status": "success",
+        "difficulty": difficulty,
+        "starting_funds": difficulty_funds[difficulty],
+        "personnel_count": len(INITIAL_PERSONNEL),
+        "monthly_salaries": total_salaries
+    }
