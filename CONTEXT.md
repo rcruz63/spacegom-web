@@ -29,7 +29,7 @@ Aplicación web tipo "Companion" para el juego Spacegom, desarrollada con FastAP
     *   Implementación de localizaciones en el planeta (Mundo, Puerto, Orbital, Estación).
     *   Lógica de navegación entre Áreas (Columnas A ↔ F) respetando límites.
 
-## Mecánicas del Juego (Basadas en @aux/)
+## Mecánicas del Juego (Basadas en @files/)
 
 ### Calendario Spacegom
 - **Meses**: 12 meses al año
@@ -97,11 +97,9 @@ Si el código 3d6 inicial no es apto para el inicio, se debe consultar el **sigu
 *   `data/games/{game_id}/state.json`: Estado persistente de cada partida.
 
 ### Documentación de Referencia
-*   `aux/`: Materiales originales del juego de mesa:
-    - Calendario de Campaña
-    - Ficha de Compañía
-    - Hoja de Mundos
-    - Tesorería
+*   `files/`: Materiales originales del juego de mesa y archivos de datos:
+    - PDFs: Calendario de Campaña, Ficha de Compañía, Hoja de Mundos, Tesorería
+    - CSV: nombres_megacorp.csv (470), nombres_naves.csv (500), nombres_personal.csv (1000)
     - Pack completo con todos los descargables
 
 ## Decisiones de Diseño

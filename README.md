@@ -167,25 +167,36 @@ spacegom-web/
 │   ├── spacegom.db          # Base de datos SQLite
 │   ├── Base_de_datos_de_planetas.xlsx
 │   └── games/               # Estados guardados
-├── aux/                     # Materiales de referencia del juego
-│   ├── Calendario de Campaña.pdf
-│   ├── Ficha de Compañía.pdf
-│   ├── Hoja de Mundos.pdf
-│   └── Tesorería.pdf
+├── files/                   # Materiales de referencia del juego y archivos de datos
+│   ├── Calendario_de_Campana.pdf
+│   ├── Ficha_de_Compania.pdf
+│   ├── Hoja_de_Mundos.pdf
+│   ├── Tesoreria.pdf
+│   ├── nombres_megacorp.csv    # 470 nombres de compañías
+│   ├── nombres_naves.csv       # 500 nombres de naves
+│   └── nombres_personal.csv    # 1000 nombres de personal
 ├── pyproject.toml
 ├── README.md
 ├── API.md                   # Documentación de la API
+├── DATABASE.md              # Documentación de la base de datos
 └── CONTEXT.md               # Contexto del proyecto
 ```
 
 ## 📚 Documentación de Referencia
 
-El proyecto incluye materiales originales del juego de mesa en la carpeta `aux/`:
+El proyecto incluye materiales originales del juego de mesa en la carpeta `files/`:
+
+### Documentos PDF
 - **Calendario de Campaña**: Sistema de 35 días por mes
 - **Ficha de Compañía**: Plantilla oficial para gestión de empresa
 - **Hoja de Mundos**: Listado completo de planetas con códigos 3d6
 - **Tesorería**: Control financiero detallado
 - **Pack Completo**: Todos los descargables del juego
+
+### Archivos CSV de Nombres
+- **nombres_megacorp.csv**: 470 nombres de megacorporaciones
+- **nombres_naves.csv**: 500 nombres de naves espaciales inspirados en ficción, historia y mitología
+- **nombres_personal.csv**: 1000 nombres de personal para futura gestión de tripulación
 
 ## 🔮 Próximas Mejoras
 
@@ -228,6 +239,14 @@ source .venv/bin/activate
 # Ejecutar script de importación
 python -m app.import_planets
 ```
+
+## 📖 Documentación Adicional
+
+Para más información sobre el proyecto:
+
+- **[API.md](API.md)**: Documentación completa de todos los endpoints de la API REST
+- **[DATABASE.md](DATABASE.md)**: Esquema detallado de la base de datos, campos de la tabla `planets`, ejemplos y consultas útiles
+- **[CONTEXT.md](CONTEXT.md)**: Contexto del proyecto, decisiones de diseño y próximos pasos
 
 ## 📝 Licencia
 

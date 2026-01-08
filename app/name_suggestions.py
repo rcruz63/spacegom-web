@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import List
 
 # Rutas a los archivos CSV
-AUX_DIR = Path(__file__).parent.parent / "aux"
-NOMBRES_PERSONAL_CSV = AUX_DIR / "nombres_personal.csv"
-NOMBRES_MEGACORP_CSV = AUX_DIR / "nombres_megacorp.csv"
-NOMBRES_NAVES_CSV = AUX_DIR / "nombres_naves.csv"
+FILES_DIR = Path(__file__).parent.parent / "files"
+NOMBRES_PERSONAL_CSV = FILES_DIR / "nombres_personal.csv"
+NOMBRES_MEGACORP_CSV = FILES_DIR / "nombres_megacorp.csv"
+NOMBRES_NAVES_CSV = FILES_DIR / "nombres_naves.csv"
 
 
 def load_names_from_csv(csv_path: Path) -> List[str]:
