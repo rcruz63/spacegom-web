@@ -11,21 +11,37 @@ Aplicación web tipo "Companion" para el juego Spacegom, desarrollada con FastAP
     *   ✅ **Nave Inicial Bloqueada**: El modelo de nave está fijo a `Basic Starfall` para nuevas aventuras (herencia).
     *   ✅ **Búsqueda Consecutiva de Planetas**: Implementada la lógica de búsqueda secuencial (111 → 112 → 113...) según reglas del manual.
     *   ✅ **Validación de Planetas**: Verificación automática de requisitos (Tecnología, Población, Convenio, Soporte Vital, Productos).
-    *   ✅ **Bug Fixes**: Corregida fuga de datos y problema de "planetas fantasma" en el estado del juego.
+    *   ✅ **NUEVO: Selección de Dificultad**: Fácil (600 SC), Normal (500 SC), Difícil (400 SC)
+    *   ✅ **NUEVO: Personal Inicial**: 11 empleados creados automáticamente (76 SC/mes total)
 
 2.  **Backend & Datos**:
     *   Importación de 216 planetas desde Excel a SQLite.
-    *   Sistema de persistencia de partidas (`GameState`) en archivos JSON.
+    *   **NUEVO: Tabla `personnel`** para gestión de empleados por partida.
+    *   Sistema de persistencia de partidas (`GameState`) en archivos JSON con campos nuevos: `difficulty`, `treasury`, `reputation`, `transactions`.
     *   Definición de modelos de naves y sus estadísticas en `app/ship_data.py`.
-    *   Nuevo endpoint: `GET /api/planets/next/{current_code}` para búsqueda consecutiva.
+    *   **NUEVO: 7 endpoints API** para gestión de personal y tesorería.
 
 3.  **Dashboard**:
-    *   HUD funcional: Combustible, Almacén, Calendario y Reputación.
+    *   HUD funcional: Combustible, Almacén, Calendario, Reputación
+    *   **NUEVO: Tesorería** (saldo en SC) y **Gastos/Mes** (salarios)
+    *   **NUEVO: Navegación rápida** con botones a Personal (👥) y Tesorería (💰)
     *   Cuadrícula de navegación (6x6) con fondo de estrellas generado por CSS.
     *   Historial de Mundos (Archivos Estelares) que permite ver detalles de planetas descubiertos.
     *   Mapeo único de planetas: Cada mundo se "ancla" a un cuadrante específico por partida.
 
-4.  **Lógica de Juego**:
+4.  **NUEVO: Sistema de Personal** (/personnel):
+    *   Lista de empleados activos
+    *   Contratar/Despedir personal
+    *   Ver experiencia (N/E/V) y moral (B/M/A)
+    *   Cálculo automático de salarios totales
+
+5.  **NUEVO: Sistema de Tesorería** (/treasury):
+    *   Visualización de saldo actual
+    *   Registro de transacciones (ingresos/gastos)
+    *   Categorías: Comercio, Misión, Suministros, Reparaciones, etc.
+    *   Historial completo de movimientos
+
+6.  **Lógica de Juego**:
     *   Implementación de localizaciones en el planeta (Mundo, Puerto, Orbital, Estación).
     *   Lógica de navegación entre Áreas (Columnas A ↔ F) respetando límites.
 

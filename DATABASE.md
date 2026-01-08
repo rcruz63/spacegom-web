@@ -243,7 +243,100 @@ curl -X POST http://localhost:8000/api/planets/111/update-notes \
 sqlite3 data/spacegom.db ".schema planets"
 ```
 
+
+---
+
+## Tabla: `personnel`
+
+La tabla `personnel` contiene todos los empleados de cada partida. Cada juego tiene su propia plantilla de personal que se crea automáticamente al completar el setup.
+
+### Esquema de la Tabla
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INTEGER | Clave primaria (autoincremental) |
+| `game_id` | VARCHAR | ID del juego al que pertenece el empleado |
+| `position` | VARCHAR | Puesto de trabajo del empleado |
+| `name` | VARCHAR | Nombre completo del empleado |
+| `monthly_salary` | INTEGER | Salario mensual en SC (Créditos Spacegom) |
+| `experience` | VARCHAR | Nivel de experiencia: N (Novato), E (Experto), V (Veterano) |
+| `morale` | VARCHAR | Nivel de moral: B (Baja), M (Media), A (Alta) |
+| `hire_date` | VARCHAR | Fecha de contratación (formato ISO: YYYY-MM-DD) |
+| `is_active` | BOOLEAN | True si está activo, False si fue despedido |
+| `notes` | TEXT | Notas adicionales sobre el empleado |
+
+### Personal Inicial
+
+Al completar el setup, se crean automáticamente 11 empleados:
+
+| ID | Puesto | Nombre | Salario | Exp | Moral |
+|----|--------|--------|---------|-----|-------|
+| 1 | Director gerente | Widaker Farq | 20 SC | V | A |
+| 2 | Comandante de hipersaltos | Samantha Warm | 15 SC | V | M |
+| 3 | Ingeniero computacional | Thomas Muller | 4 SC | N | B |
+| 4 | Ingeniero de astronavegación | Walter Lopez | 8 SC | N | B |
+| 5 | Técnico de repostaje y análisis | Jeffrey Cook | 8 SC | E | B |
+| 6 | Piloto | Danielle Rivers | 10 SC | E | B |
+| 7 | Operario de logística y almacén | Isaac Peterson | 1 SC | N | B |
+| 8 | Contabilidad y burocracia | Katherine Smith | 3 SC | E | M |
+| 9 | Suministros de mantenimiento | Jason Wilson | 3 SC | E | B |
+| 10 | Cocinero | Sam Hernández | 3 SC | E | M |
+| 11 | Asistente doméstico | Alexandra Adams | 1 SC | E | B |
+
+**Total salarios mensuales iniciales**: 76 SC
+
+### Ejemplo de Registro
+
+```sql
+SELECT * FROM personnel WHERE game_id = 'test_game' AND id = 1;
+```
+
+```
+id: 1
+game_id: test_game
+position: Director gerente
+name: Widaker Farq
+monthly_salary: 20
+experience: V
+morale: A
+hire_date: 2026-01-08
+is_active: 1 (true)
+notes: ""
+```
+
+### Consultas Útiles
+
+**Listar personal activo de un juego**:
+```sql
+SELECT name, position, monthly_salary, experience, morale
+FROM personnel
+WHERE game_id = 'test_game' AND is_active = 1
+ORDER BY monthly_salary DESC;
+```
+
+**Calcular salarios totales**:
+```sql
+SELECT SUM(monthly_salary) as total_salaries
+FROM personnel
+WHERE game_id = 'test_game' AND is_active = 1;
+```
+
+**Personal por nivel de experiencia**:
+```sql
+SELECT experience, COUNT(*) as count, SUM(monthly_salary) as total_cost
+FROM personnel
+WHERE game_id = 'test_game' AND is_active = 1
+GROUP BY experience;
+```
+
+**Empleados con baja moral**:
+```sql
+SELECT name, position, morale
+FROM personnel
+WHERE game_id = 'test_game' AND is_active = 1 AND morale = 'B';
+```
+
 ---
 
 **Última actualización**: 2026-01-08  
-**Versión del esquema**: v2.0 (Refactorizado)
+**Versión del esquema**: v2.0 (Refactorizado + Personnel)

@@ -50,13 +50,32 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
 - **Monitor de Salubridad**: Indicador de riesgos para la tripulación
 
 ### 💰 Terminal Comercial y Tesorería
-- **Tabla de Compraventa de Mercancías**:
+- **Sistema de Tesorería Completo** (/treasury):
+  - Saldo actual en Créditos Spacegom (SC)
+  - Registro de ingresos y gastos
+  - Historial detallado de transacciones
+  - Categorías: Comercio, Misión, Suministros, Reparaciones, Combustible, etc.
+  - Resumen de gastos mensuales (salarios + préstamos)
+- **Tabla de Compraventa de Mercancías** (próximamente):
   - Modificadores de precio dinámicos (x0.8, x1.0, x1.2)
   - Basado en habilidades del Negociador
-- **Resumen Financiero**:
-  - Tesorería actual
-  - Gastos semanales (salarios, mantenimiento)
-  - Préstamos mensuales
+
+### 👥 Gestión de Personal
+- **Sistema de Empleados** (/personnel):
+  - 11 empleados iniciales (creados automáticamente en setup)
+  - Contratar nuevo personal con datos completos
+  - Despedir empleados (marca como inactivos)
+  - Experiencia: Novato (N), Experto (E), Veterano (V)
+  - Moral: Baja (B), Media (M), Alta (A)
+  - Salarios mensuales: 76 SC/mes iniciales
+  - Notas personalizadas por empleado
+
+### 🎯 Sistema de Dificultad
+- **Tres niveles al iniciar partida**:
+  - Fácil: 600 SC iniciales
+  - Normal: 500 SC iniciales
+  - Difícil: 400 SC iniciales
+- Afecta el capital inicial disponible
 
 ## 🎨 Estética Visual
 
@@ -120,13 +139,20 @@ La aplicación estará disponible en: `http://localhost:8000`
 ## 🎮 Uso del Panel de Control
 
 ### Setup Inicial
-1. **Identificación**: Introduce los nombres de tu compañía y nave (o usa las sugerencias)
+1. **Identificación**: Introduce los nombres de tu compañía y nave (o usa las sugerencias automáticas)
 2. **Área y Densidad**: El sistema tira automáticamente 2d6 para determinar el área y densidad
 3. **Posición**: Se determina tu cuadrante inicial en el grid 6x6
 4. **Planeta**: Tira 3d6 para tu planeta de origen
    - Si no es apto, el sistema buscará automáticamente el siguiente código válido
    - Completa datos faltantes si es necesario
-5. **Finalizar**: Accede al dashboard para comenzar tu aventura
+5. **Dificultad**: Elige entre Fácil (600 SC), Normal (500 SC) o Difícil (400 SC)
+   - Se crean automáticamente 11 empleados iniciales (76 SC/mes)
+6. **Finalizar**: Accede al dashboard para comenzar tu aventura
+
+### Páginas Disponibles
+- **Dashboard** (`/dashboard?game_id=X`): Panel principal con HUD, navegación y cuadrante
+- **Personal** (`/personnel?game_id=X`): Gestión de empleados (acceso desde botón 👥 en dashboard)
+- **Tesorería** (`/treasury?game_id=X`): Finanzas y transacciones (acceso desde botón 💰 en dashboard)
 
 ### HUD Superior
 - **Combustible/Almacén**: Usa los botones `+/-` para ajustar valores
