@@ -72,6 +72,42 @@ class DiceRoller:
             return "Media"
         else:
             return "Alta"
+            
+    @staticmethod
+    def get_next_planet_code(code: int) -> int:
+        """
+        Obtiene el siguiente código de planeta válido en la secuencia 3d6 (111 → 112 ... 116 → 121 ...)
+        
+        Esta función implementa la búsqueda consecutiva del manual de juego.
+        Si un planeta no es apto para inicio, se consulta el siguiente código en orden.
+        
+        Ejemplo: 111, 112, 113, 114, 115, 116, 121, 122, ...
+        
+        Args:
+            code: Código de planeta actual (111-666)
+            
+        Returns:
+            Siguiente código de planeta en la secuencia
+        """
+        s = str(code)
+        if len(s) != 3:
+            return 111  # Código mínimo por defecto
+            
+        # Extraer cada dígito (cada dado representa 1-6)
+        d1, d2, d3 = int(s[0]), int(s[1]), int(s[2])
+        
+        # Incrementar el tercer dado
+        d3 += 1
+        if d3 > 6:
+            d3 = 1  # Reiniciar a 1
+            d2 += 1  # Avanzar el segundo dado
+            if d2 > 6:
+                d2 = 1  # Reiniciar a 1
+                d1 += 1  # Avanzar el primer dado
+                if d1 > 6:
+                    d1 = 1  # Wrap around (volver al inicio)
+                    
+        return d1 * 100 + d2 * 10 + d3
 
 
 class DiceHistoryEntry:

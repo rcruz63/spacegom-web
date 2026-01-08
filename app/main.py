@@ -8,6 +8,7 @@ import random
 from app.database import get_db, Planet, init_db
 from app.game_state import GameState
 from app.dice import DiceRoller
+from app.name_suggestions import get_random_company_name, get_random_ship_name
 
 app = FastAPI()
 
@@ -439,49 +440,86 @@ async def roll_planet_code(
     return {
         "code": code,
         "dice": results,
-        "planet": {
-            "code": planet.code,
-            "name": planet.name,
-            "spaceport": planet.spaceport,
-            "orbital_facilities": planet.orbital_facilities,
-            "life_support": {
-                "1": planet.life_support_1,
-                "2": planet.life_support_2,
-                "3": planet.life_support_3,
-                "4": planet.life_support_4,
-                "5": planet.life_support_5,
-            },
-            "products": {
-                "INDU": planet.product_indu,
-                "BASI": planet.product_basi,
-                "ALIM": planet.product_alim,
-                "MADE": planet.product_made,
-                "AGUA": planet.product_agua,
-                "MICO": planet.product_mico,
-                "MIRA": planet.product_mira,
-                "MIPR": planet.product_mipr,
-                "PAVA": planet.product_pava,
-                "A": planet.product_a,
-                "AE": planet.product_ae,
-                "AEI": planet.product_aei,
-                "COM": planet.product_com,
-            },
-            "bootstrap_data": {
-                "tech_level": planet.tech_level,
-                "population_over_1000": planet.population_over_1000,
-                "convenio_spacegom": planet.convenio_spacegom,
-            }
-        },
+        "planet": format_planet_data(planet),
         "is_valid_start": is_valid_starting_planet(planet)
     }
 
 
+def format_planet_data(planet: Planet) -> dict:
+    """
+    Format planet data for API responses using new schema
+    
+    Args:
+        planet: Planet object from database
+        
+    Returns:
+        Formatted dictionary with all planet information
+    """
+    return {
+        "code": planet.code,
+        "name": planet.name,
+        "life_support": {
+            "type": planet.life_support,
+            "local_contagion_risk": planet.local_contagion_risk,
+            "days_to_hyperspace": planet.days_to_hyperspace,
+            "legal_order_threshold": planet.legal_order_threshold
+        },
+        "spaceport": {
+            "quality": planet.spaceport_quality,
+            "fuel_density": planet.fuel_density,
+            "docking_price": planet.docking_price
+        },
+        "orbital_facilities": {
+            "cartography_center": planet.orbital_cartography_center,
+            "hackers": planet.orbital_hackers,
+            "supply_depot": planet.orbital_supply_depot,
+            "astro_academy": planet.orbital_astro_academy
+        },
+        "products": {
+            "INDU": planet.product_indu,
+            "BASI": planet.product_basi,
+            "ALIM": planet.product_alim,
+            "MADE": planet.product_made,
+            "AGUA": planet.product_agua,
+            "MICO": planet.product_mico,
+            "MIRA": planet.product_mira,
+            "MIPR": planet.product_mipr,
+            "PAVA": planet.product_pava,
+            "A": planet.product_a,
+            "AE": planet.product_ae,
+            "AEI": planet.product_aei,
+            "COM": planet.product_com
+        },
+        "trade_info": {
+            "self_sufficiency_level": planet.self_sufficiency_level,
+            "ucn_per_order": planet.ucn_per_order,
+            "max_passengers": planet.max_passengers,
+            "mission_threshold": planet.mission_threshold
+        },
+        "bootstrap_data": {
+            "tech_level": planet.tech_level,
+            "population_over_1000": planet.population_over_1000,
+            "convenio_spacegom": planet.convenio_spacegom
+        },
+        "notes": planet.notes
+    }
+
+
 def is_valid_starting_planet(planet: Planet) -> dict:
-    """Check if planet is valid for starting position"""
+    """
+    Check if planet is valid for starting position
+    
+    Requirements:
+    - Population > 1000
+    - Tech level not PR (Primitivo) or RUD (Rudimentario)
+    - Life support not TA (Traje Avanzado) or TH (Traje Hiperavanzado)
+    - Convenio Spacegom = True
+    - At least one product available
+    """
     checks = {
         "population": planet.population_over_1000 is True,
         "tech_level": planet.tech_level not in [None, "PR", "RUD"],
-        "life_support": planet.life_support_1 not in ["TA", "TH"],
+        "life_support": planet.life_support not in ["TA", "TH"],
         "convenio": planet.convenio_spacegom is True,
         "has_product": any([
             planet.product_indu, planet.product_basi, planet.product_alim,
@@ -508,39 +546,7 @@ async def get_planet(code: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail=f"Planet {code} not found")
     
     return {
-        "planet": {
-            "code": planet.code,
-            "name": planet.name,
-            "spaceport": planet.spaceport,
-            "orbital_facilities": planet.orbital_facilities,
-            "life_support": {
-                "1": planet.life_support_1,
-                "2": planet.life_support_2,
-                "3": planet.life_support_3,
-                "4": planet.life_support_4,
-                "5": planet.life_support_5,
-            },
-            "products": {
-                "INDU": planet.product_indu,
-                "BASI": planet.product_basi,
-                "ALIM": planet.product_alim,
-                "MADE": planet.product_made,
-                "AGUA": planet.product_agua,
-                "MICO": planet.product_mico,
-                "MIRA": planet.product_mira,
-                "MIPR": planet.product_mipr,
-                "PAVA": planet.product_pava,
-                "A": planet.product_a,
-                "AE": planet.product_ae,
-                "AEI": planet.product_aei,
-                "COM": planet.product_com,
-            },
-            "bootstrap_data": {
-                "tech_level": planet.tech_level,
-                "population_over_1000": planet.population_over_1000,
-                "convenio_spacegom": planet.convenio_spacegom,
-            }
-        },
+        "planet": format_planet_data(planet),
         "is_valid_start": is_valid_starting_planet(planet)
     }
 
@@ -583,6 +589,89 @@ async def set_starting_planet(game_id: str, code: int = Form(...)):
         
     game.save()
     return {"status": "success", "code": code}
+
+
+
+@app.get("/api/planets/next/{current_code}")
+async def get_next_planet(current_code: int, db: Session = Depends(get_db)):
+    """
+    Obtiene el siguiente planeta en la secuencia 3d6 (búsqueda consecutiva)
+    
+    Este endpoint implementa la lógica del manual de juego:
+    Si el planeta no es apto para inicio, se busca el siguiente código
+    en orden (111 → 112 → 113...) hasta encontrar uno válido.
+    
+    Args:
+        current_code: Código del planeta actual (111-666)
+        
+    Returns:
+        JSON con información del siguiente planeta y validación de inicio
+    """
+    # Calcular el siguiente código en la secuencia
+    next_code = DiceRoller.get_next_planet_code(current_code)
+    planet = db.query(Planet).filter(Planet.code == next_code).first()
+    
+    if not planet:
+        raise HTTPException(status_code=404, detail=f"Planet {next_code} not found")
+        
+    return {
+        "planet": format_planet_data(planet),
+        "is_valid_start": is_valid_starting_planet(planet)
+    }
+
+
+@app.post("/api/planets/{code}/update-notes")
+async def update_planet_notes(
+    code: int,
+    notes: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Actualizar notas de un planeta
+    
+    Args:
+        code: Código del planeta
+        notes: Texto de las notas
+        
+    Returns:
+        El planeta actualizado
+    """
+    planet = db.query(Planet).filter(Planet.code == code).first()
+    if not planet:
+        raise HTTPException(status_code=404, detail=f"Planet {code} not found")
+    
+    planet.notes = notes
+    db.commit()
+    db.refresh(planet)
+    
+    return {
+        "status": "success",
+        "planet": format_planet_data(planet)
+    }
+
+
+# ===== NAME SUGGESTIONS API =====
+
+@app.get("/api/suggestions/company-name")
+async def suggest_company_name():
+    """
+    Retorna un nombre de compañía aleatorio desde el CSV
+    
+    Returns:
+        JSON con el nombre sugerido
+    """
+    return {"name": get_random_company_name()}
+
+
+@app.get("/api/suggestions/ship-name")
+async def suggest_ship_name():
+    """
+    Retorna un nombre de nave aleatorio desde el CSV
+    
+    Returns:
+        JSON con el nombre sugerido
+    """
+    return {"name": get_random_ship_name()}
 
 
 # ===== EXPLORATION API =====

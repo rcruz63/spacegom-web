@@ -9,21 +9,37 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
 
 ## 🌌 Características
 
+### 🚀 Setup de Partida
+- **Identificación de Compañía y Nave**: Nombres personalizables con sugerencias aleatorias
+- **Determinación de Área**: Tirada de 2d6 para determinar el área espacial (2-12)
+- **Densidad de Mundos**: Tirada de 2d6 con clasificación automática (Baja/Media/Alta)
+- **Posición Inicial**: Determinación de cuadrante inicial (grid 6x6)
+- **Planeta de Origen**:
+  - Tirada de 3d6 para código de planeta (111-666)
+  - **Validación Automática**: Verifica requisitos de inicio (tecnología, población, convenio, soporte vital, productos)
+  - **Búsqueda Consecutiva**: Si el planeta no es apto, busca el siguiente código secuencial automáticamente (111 → 112 → 113...)
+  - Actualización de datos faltantes desde el mismo setup
+- **Nave Inicial Bloqueada**: Para nuevas aventuras (herencia), la nave es siempre **Basic Starfall**
+
 ### 🎯 HUD Superior - Estado Crítico
 - **Reserva de Combustible**: Indicador visual animado (0-30 unidades)
-- **Capacidad del Almacén**: Monitor de carga (máximo 40 UCN)
+- **Capacidad de Carga de la Nave**: Monitor de bodega (40 UCN para Basic Starfall)
+- **Almacén de la Compañía**: Depósito de mercancías en el planeta base (capacidad por definir)
 - **Sistema de Daños**: Tres niveles (Leves, Moderados, Graves)
   - Alerta crítica "HIPERSALTO DESTRUIDO" en daños graves
-- **Calendario de Campaña**: Seguimiento de meses (1-12)
-- **Reputación**: Rango dinámico de -5 a +5 con codificación por colores
+  - Progresión: Leve (3) → Moderado (2) → Grave (2)
+- **Calendario de Campaña**: Seguimiento de meses con **35 días por mes**
+- **Reputación**: Rango dinámico de **-5 a +5** con codificación por colores
 
 ### 🗺️ Vista de Cuadrante - Navegación
 - **Grid Interactivo 6x6**: Representa el área de exploración
 - **Niebla de Guerra**: Cuadrantes sombreados hasta ser explorados
+- **Marcador de Posición**: Indicador visual de la ubicación actual de la nave
 - **Información Planetaria**: Panel lateral con detalles al seleccionar planetas
   - Soporte Vital (ej. RF - Respirador con filtraje)
   - Calidad del Espaciopuerto
   - Instalaciones Orbitales (Centro de cartografía, Academia, etc.)
+  - Productos disponibles
 
 ### 👥 Gestión de Tripulación - Bio-Métricas
 - **Tarjetas de Tripulantes**:
@@ -57,16 +73,19 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
 
 ## 🚀 Tecnologías
 
-- **Backend**: FastAPI (Python)
+- **Backend**: FastAPI (Python 3.12+)
 - **Frontend**: HTML + TailwindCSS + HTMX
+- **Base de Datos**: SQLite (216 planetas importados)
+- **Persistencia**: JSON para estado del juego
 - **Fonts**: Orbitron, Share Tech Mono (Google Fonts)
 - **Interactividad**: JavaScript vanilla para lógica de juego
+- **Package Manager**: uv
 
 ## 📦 Instalación y Uso
 
 ### Requisitos Previos
-- Python 3.11+
-- uv (gestor de paquetes)
+- Python 3.12+
+- uv (gestor de paquetes): `pip install uv`
 
 ### Instalación
 
@@ -83,20 +102,31 @@ uv sync
 
 ```bash
 # Opción 1: Usando uvicorn directamente
-uv run uvicorn app.main:app --reload
+source .venv/bin/activate
+uvicorn main:app --app-dir app --reload --port 8000
 
-# Opción 2: Usando el script run.py
-uv run python app/run.py
+# Opción 2: Scripting con uv
+uv run uvicorn main:app --app-dir app --reload
 ```
 
 La aplicación estará disponible en: `http://localhost:8000`
 
-### Acceder al Dashboard
+### Acceder a la Aplicación
 
-1. Página principal: `http://localhost:8000/`
-2. Panel de Control: `http://localhost:8000/dashboard`
+1. **Página principal**: `http://localhost:8000/`
+2. **Nueva Partida**: `http://localhost:8000/setup`
+3. **Panel de Control**: `http://localhost:8000/dashboard`
 
 ## 🎮 Uso del Panel de Control
+
+### Setup Inicial
+1. **Identificación**: Introduce los nombres de tu compañía y nave (o usa las sugerencias)
+2. **Área y Densidad**: El sistema tira automáticamente 2d6 para determinar el área y densidad
+3. **Posición**: Se determina tu cuadrante inicial en el grid 6x6
+4. **Planeta**: Tira 3d6 para tu planeta de origen
+   - Si no es apto, el sistema buscará automáticamente el siguiente código válido
+   - Completa datos faltantes si es necesario
+5. **Finalizar**: Accede al dashboard para comenzar tu aventura
 
 ### HUD Superior
 - **Combustible/Almacén**: Usa los botones `+/-` para ajustar valores
@@ -111,7 +141,6 @@ La aplicación estará disponible en: `http://localhost:8000`
 ### Tripulación
 - Visualiza el estado de cada miembro
 - Monitor de salubridad general
-- Botón para reclutar nuevos tripulantes
 
 ### Terminal Comercial
 - Ajusta modificadores de precio según negociación
@@ -123,28 +152,53 @@ La aplicación estará disponible en: `http://localhost:8000`
 ```
 spacegom-web/
 ├── app/
-│   ├── main.py              # FastAPI app y rutas
-│   ├── models.py            # Modelos de datos
-│   ├── run.py               # Script de ejecución
+│   ├── main.py              # FastAPI app y API endpoints
+│   ├── game_state.py        # Lógica de persistencia del estado
+│   ├── ship_data.py         # Modelos de naves y estadísticas
+│   ├── dice.py              # Utilidades de dados
+│   ├── database.py          # Modelos SQLAlchemy
+│   ├── import_planets.py    # Script de importación de datos
 │   └── templates/
 │       ├── base.html        # Template base con estilos
 │       ├── index.html       # Página de inicio
-│       ├── dashboard.html   # Panel de control principal
-│       └── components/      # Componentes reutilizables
+│       ├── setup.html       # Setup de nueva partida
+│       └── dashboard.html   # Panel de control principal
+├── data/
+│   ├── spacegom.db          # Base de datos SQLite
+│   ├── Base_de_datos_de_planetas.xlsx
+│   └── games/               # Estados guardados
+├── aux/                     # Materiales de referencia del juego
+│   ├── Calendario de Campaña.pdf
+│   ├── Ficha de Compañía.pdf
+│   ├── Hoja de Mundos.pdf
+│   └── Tesorería.pdf
 ├── pyproject.toml
-└── README.md
+├── README.md
+├── API.md                   # Documentación de la API
+└── CONTEXT.md               # Contexto del proyecto
 ```
+
+## 📚 Documentación de Referencia
+
+El proyecto incluye materiales originales del juego de mesa en la carpeta `aux/`:
+- **Calendario de Campaña**: Sistema de 35 días por mes
+- **Ficha de Compañía**: Plantilla oficial para gestión de empresa
+- **Hoja de Mundos**: Listado completo de planetas con códigos 3d6
+- **Tesorería**: Control financiero detallado
+- **Pack Completo**: Todos los descargables del juego
 
 ## 🔮 Próximas Mejoras
 
-- [ ] Persistencia de datos (SQLite/PostgreSQL)
-- [ ] Sistema de guardado/carga de partidas
-- [ ] Modo multijugador
-- [ ] Generación procedural de planetas
-- [ ] Sistema de misiones y eventos aleatorios
-- [ ] Integración con backend Python para lógica compleja
+- [ ] Sistema de eventos aleatorios (diarios/de viaje)
 - [ ] Sistema de combate espacial
+- [ ] Calendario dinámico con meses de 35 días
+- [ ] Mejora y reparación de naves en astilleros
+- [ ] Sistema de misiones y contratos procedurales
+- [ ] Gestión detallada de carga (peso/volumen)
+- [ ] Modo multijugador
+- [ ] Generación procedural de planetas adicionales
 - [ ] Gráficos de estadísticas y progreso
+- [ ] Exportación de partidas a PDF
 
 ## 🛠️ Desarrollo
 
@@ -161,9 +215,19 @@ async def nueva_ruta(request: Request):
 ### Personalizar Estilos
 
 Los estilos base están en `app/templates/base.html`. Puedes modificar:
-- Colores personalizados en `tailwind.config`
+- Colores personalizados en las clases de Tailwind
 - Estilos CSS adicionales en la sección `<style>`
 - Variables de color neón
+
+### Importar Datos de Planetas
+
+```bash
+# Activar entorno virtual
+source .venv/bin/activate
+
+# Ejecutar script de importación
+python -m app.import_planets
+```
 
 ## 📝 Licencia
 
@@ -172,6 +236,8 @@ Los estilos base están en `app/templates/base.html`. Puedes modificar:
 ## 👨‍🚀 Créditos
 
 Desarrollado para la comunidad de Spacegom.
+
+**Mecánicas de juego** basadas en el manual oficial de Spacegom.
 
 ---
 

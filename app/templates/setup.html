@@ -52,21 +52,14 @@
 
                     <div>
                         <label class="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Modelo de Nave</label>
-                        <select id="ship-model"
-                            class="w-full bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech">
-                            <option value="Basic Starfall">Basic Starfall (1 Cuad, 40 UCN)</option>
-                            <option value="Spacegom Fortune">Spacegom Fortune (1 Cuad, 70 UCN)</option>
-                            <option value="Warehouse Ravana">Warehouse Ravana (1 Cuad, 100 UCN)</option>
-                            <option value="Long Explorer">Long Explorer (2 Cuad, 80 UCN)</option>
-                            <option value="Space Challenger">Space Challenger (2 Cuad, 100 UCN)</option>
-                            <option value="High Milkway">High Milkway (2 Cuad, 150 UCN)</option>
-                            <option value="Fast Paladin Store">Fast Paladin Store (2 Cuad, 200 UCN)</option>
-                            <option value="Tenacity triquadrant">Tenacity triquadrant (3 Cuad, 120 UCN)</option>
-                            <option value="Defiant Navigator">Defiant Navigator (3 Cuad, 250 UCN)</option>
-                            <option value="Space Glory">Space Glory (4 Cuad, 300 UCN)</option>
+                        <select id="ship-model" disabled
+                            class="w-full bg-space-900 border border-gray-600 rounded px-3 py-2 text-white font-tech opacity-70">
+                            <option value="Basic Starfall" selected>Basic Starfall (1 Cuad, 40 UCN)</option>
                         </select>
-                        <p class="text-[10px] text-gray-500 mt-1 italic">Como heredero, empiezas con un modelo Basic
-                            Starfall o similar según la herencia.</p>
+                        <p class="text-[10px] text-gray-500 mt-2 italic">
+                            🚀 Para el inicio de la aventura (herencia), tu nave es fija al modelo <strong>Basic
+                                Starfall</strong>.
+                        </p>
                     </div>
 
                     <button onclick="saveCompanyDetails()" id="btn-save-company"
@@ -338,9 +331,10 @@
                     <div id="planet-retry" class="hidden">
                         <p class="text-neon-red text-center text-xs mb-3">Este planeta no cumple los requisitos para ser
                             tu origen.</p>
-                        <button onclick="rollPlanet(false)"
-                            class="w-full py-3 bg-gray-700 border-2 border-gray-600 text-gray-300 rounded font-tech hover:bg-gray-600">VOLVER
-                            A TIRAR (3d6)</button>
+                        <button onclick="nextPlanet()"
+                            class="w-full py-3 bg-gray-700 border-2 border-gray-600 text-gray-300 rounded font-tech hover:bg-gray-600">
+                            CONSULTAR SIGUIENTE CÓDIGO (Reglas 📕)
+                        </button>
                     </div>
                 </div>
             </div>
@@ -366,23 +360,45 @@
     let areaData = null;
     let densityData = null;
 
-    const companySuggestions = [
-        "Compañía Starblack", "Black Hole LTD", "StarKiller & Co",
-        "Nebula Traders", "Galactic Ventures", "Orion Logistics"
-    ];
-    const shipSuggestions = [
-        "Fénix Dorado", "Black Eagle", "Halcón Milenario",
-        "Estrella Fugaz", "Sombra Plateada", "Vanguardia Estelar"
-    ];
+    // Cargar nombres iniciales al cargar la página
+    window.addEventListener('DOMContentLoaded', async () => {
+        await loadInitialNames();
+    });
 
-    function suggestCompanyName() {
-        const name = companySuggestions[Math.floor(Math.random() * companySuggestions.length)];
-        document.getElementById('company-name').value = name;
+    async function loadInitialNames() {
+        try {
+            // Cargar nombre de compañía
+            const companyResp = await fetch('/api/suggestions/company-name');
+            const companyData = await companyResp.json();
+            document.getElementById('company-name').value = companyData.name;
+
+            // Cargar nombre de nave
+            const shipResp = await fetch('/api/suggestions/ship-name');
+            const shipData = await shipResp.json();
+            document.getElementById('ship-name').value = shipData.name;
+        } catch (error) {
+            console.error('Error cargando nombres iniciales:', error);
+        }
     }
 
-    function suggestShipName() {
-        const name = shipSuggestions[Math.floor(Math.random() * shipSuggestions.length)];
-        document.getElementById('ship-name').value = name;
+    async function suggestCompanyName() {
+        try {
+            const response = await fetch('/api/suggestions/company-name');
+            const data = await response.json();
+            document.getElementById('company-name').value = data.name;
+        } catch (error) {
+            console.error('Error sugiriendo nombre de compañía:', error);
+        }
+    }
+
+    async function suggestShipName() {
+        try {
+            const response = await fetch('/api/suggestions/ship-name');
+            const data = await response.json();
+            document.getElementById('ship-name').value = data.name;
+        } catch (error) {
+            console.error('Error sugiriendo nombre de nave:', error);
+        }
     }
 
     async function saveCompanyDetails() {
@@ -588,6 +604,19 @@
         fetchPlanetData(currentPlanetCode);
     }
 
+    async function nextPlanet() {
+        if (!currentPlanetCode) return;
+
+        try {
+            const response = await fetch(`/api/planets/next/${currentPlanetCode}`);
+            const data = await response.json();
+            currentPlanetCode = data.planet.code;
+            processPlanetData(data);
+        } catch (error) {
+            alert('Error buscando siguiente planeta: ' + error.message);
+        }
+    }
+
     function showManualPlanet() {
         document.getElementById('manual-planet-input').classList.remove('hidden');
     }
@@ -596,51 +625,58 @@
         try {
             const response = await fetch(`/api/planets/${code}`);
             const data = await response.json();
-            const planet = data.planet;
-            const validation = data.is_valid_start;
-
-            document.getElementById('res-planet-name').textContent = planet.name;
-            document.getElementById('res-planet-code').textContent = "#" + planet.code;
-            document.getElementById('planet-result').classList.remove('hidden');
-            document.getElementById('manual-planet-input').classList.add('hidden');
-
-            // Handle validation check list
-            const updateCheck = (id, status) => {
-                const el = document.getElementById(id);
-                el.innerHTML = status ? "✓" : "✗";
-                el.className = status ? "text-neon-green" : "text-neon-red";
-            };
-
-            updateCheck('check-pop', validation.checks.population);
-            updateCheck('check-tech', validation.checks.tech_level);
-            updateCheck('check-support', validation.checks.life_support);
-            updateCheck('check-conv', validation.checks.convenio);
-            updateCheck('check-prod', validation.checks.has_product);
-
-            // Handle badge and actions
-            const badge = document.getElementById('val-badge');
-            if (planet.bootstrap_data.tech_level === null || planet.bootstrap_data.population_over_1000 === null) {
-                badge.textContent = "DATOS PENDIENTES";
-                badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-orange-500 bg-opacity-20 text-orange-400";
-                document.getElementById('missing-data-form').classList.remove('hidden');
-                document.getElementById('planet-action').classList.add('hidden');
-                document.getElementById('planet-retry').classList.add('hidden');
-            } else if (validation.is_valid) {
-                badge.textContent = "PLANETA APTO";
-                badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-neon-green bg-opacity-20 text-neon-green";
-                document.getElementById('missing-data-form').classList.add('hidden');
-                document.getElementById('planet-action').classList.remove('hidden');
-                document.getElementById('planet-retry').classList.add('hidden');
-            } else {
-                badge.textContent = "NO APTO";
-                badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-neon-red bg-opacity-20 text-neon-red";
-                document.getElementById('missing-data-form').classList.add('hidden');
-                document.getElementById('planet-action').classList.add('hidden');
-                document.getElementById('planet-retry').classList.remove('hidden');
-            }
-
+            processPlanetData(data);
         } catch (error) {
             alert('Error buscando planeta: ' + error.message);
+        }
+    }
+
+    function processPlanetData(data) {
+        const planet = data.planet;
+        const validation = data.is_valid_start;
+
+        document.getElementById('res-planet-name').textContent = planet.name;
+        document.getElementById('res-planet-code').textContent = "#" + planet.code;
+        document.getElementById('planet-result').classList.remove('hidden');
+        document.getElementById('manual-planet-input').classList.add('hidden');
+
+        // Handle validation check list
+        const updateCheck = (id, status) => {
+            const el = document.getElementById(id);
+            el.innerHTML = status ? "✓" : "✗";
+            el.className = status ? "text-neon-green" : "text-neon-red";
+        };
+
+        updateCheck('check-pop', validation.checks.population);
+        updateCheck('check-tech', validation.checks.tech_level);
+        updateCheck('check-support', validation.checks.life_support);
+        updateCheck('check-conv', validation.checks.convenio);
+        updateCheck('check-prod', validation.checks.has_product);
+
+        // Clear data leak
+        document.getElementById('input-tech').value = planet.bootstrap_data.tech_level || "";
+        document.getElementById('input-pop').checked = planet.bootstrap_data.population_over_1000 === true;
+
+        // Handle badge and actions
+        const badge = document.getElementById('val-badge');
+        if (planet.bootstrap_data.tech_level === null || planet.bootstrap_data.population_over_1000 === null) {
+            badge.textContent = "DATOS PENDIENTES";
+            badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-orange-500 bg-opacity-20 text-orange-400";
+            document.getElementById('missing-data-form').classList.remove('hidden');
+            document.getElementById('planet-action').classList.add('hidden');
+            document.getElementById('planet-retry').classList.add('hidden');
+        } else if (validation.is_valid) {
+            badge.textContent = "PLANETA APTO";
+            badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-neon-green bg-opacity-20 text-neon-green";
+            document.getElementById('missing-data-form').classList.add('hidden');
+            document.getElementById('planet-action').classList.remove('hidden');
+            document.getElementById('planet-retry').classList.add('hidden');
+        } else {
+            badge.textContent = "NO APTO";
+            badge.className = "px-3 py-1 rounded text-xs font-tech uppercase bg-neon-red bg-opacity-20 text-neon-red";
+            document.getElementById('missing-data-form').classList.add('hidden');
+            document.getElementById('planet-action').classList.add('hidden');
+            document.getElementById('planet-retry').classList.remove('hidden');
         }
     }
 

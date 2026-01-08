@@ -1,7 +1,7 @@
 """
 Database configuration and models for Spacegom
 """
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
@@ -21,54 +21,180 @@ Base = declarative_base()
 
 
 class Planet(Base):
-    """Planet model based on the Excel database"""
+    """
+    Modelo de planeta para Spacegom
+    
+    Basado en el manual del juego y el archivo Excel de referencia.
+    Todos los campos están documentados según las reglas oficiales.
+    """
     __tablename__ = "planets"
 
-    code = Column(Integer, primary_key=True)  # 111-666
-    name = Column(String, nullable=False)
+    # Identificación
+    code = Column(Integer, primary_key=True)  # Código 3d6 (111-666)
+    name = Column(String, nullable=False)     # Nombre del planeta
     
-    # Soporte vital (*1 a *6)
-    life_support_1 = Column(String)  # NO/NO*/SÍ
-    life_support_2 = Column(String)
-    life_support_3 = Column(String)
-    life_support_4 = Column(String)  # Número
-    life_support_5 = Column(String)  # Número con +
+    # === SOPORTE VITAL ===
+    # Tipo de soporte vital necesario
+    # Valores: NO, SO, MF, RE, RF, TE, TA, TH
+    life_support = Column(String, nullable=False)
     
-    # Espaciopuerto e instalaciones
-    spaceport = Column(String)  # MED-DB-2, NOT-DM-9, etc.
-    orbital_facilities = Column(String)  # CC, PI, DS, AA
+    # Riesgo de contagio local (SI/NO)
+    local_contagion_risk = Column(String, nullable=False)
     
-    # Productos disponibles (INDU, BASI, ALIM, MADE, AGUA, MICO, MIRA, MIPR, PAVA, A, AE, AEI, COM)
+    # Días hasta estación de hiperdisparo
+    days_to_hyperspace = Column(Float, nullable=False)
+    
+    # Ordenamiento legal (valor a igualar o superar, ej: "7+")
+    legal_order_threshold = Column(String, nullable=False)
+    
+    # === ESPACIOPUERTO ===
+    # Calidad del espaciopuerto
+    # Valores: EXC (Excelente), NOT (Notable), MED (Medio), 
+    #         BAS (Básico), RUD (Rudimentario), SIN (Sin espaciopuerto)
+    spaceport_quality = Column(String, nullable=False)
+    
+    # Tipo de combustible disponible
+    # Valores: DB (Densidad Baja), DM (Densidad Media), 
+    #         DA (Densidad Alta), N (Ninguno)
+    fuel_density = Column(String, nullable=False)
+    
+    # Precio de amarre (número)
+    docking_price = Column(Integer, nullable=False)
+    
+    # === INSTALACIONES ORBITALES ===
+    # CC - Centro de Cartografía
+    orbital_cartography_center = Column(Boolean, default=False)
+    
+    # PI - Piratas Informáticos
+    orbital_hackers = Column(Boolean, default=False)
+    
+    # DS - Depósito de Suministros
+    orbital_supply_depot = Column(Boolean, default=False)
+    
+    # AA - Academia de Astronavegación
+    orbital_astro_academy = Column(Boolean, default=False)
+    
+    # === PRODUCTOS DISPONIBLES ===
+    # INDU - Productos industriales y manufacturados comunes
     product_indu = Column(Boolean, default=False)
+    
+    # BASI - Metal, plásticos, productos químicos y otros materiales básicos elaborados
     product_basi = Column(Boolean, default=False)
+    
+    # ALIM - Productos de alimentación
     product_alim = Column(Boolean, default=False)
+    
+    # MADE - Madera y derivados
     product_made = Column(Boolean, default=False)
+    
+    # AGUA - Agua potable
     product_agua = Column(Boolean, default=False)
+    
+    # MICO - Minerales comunes
     product_mico = Column(Boolean, default=False)
+    
+    # MIRA - Minerales raros y materias primas poco comunes
     product_mira = Column(Boolean, default=False)
+    
+    # MIPR - Metales preciosos, diamantes, gemas
     product_mipr = Column(Boolean, default=False)
+    
+    # PAVA - Productos avanzados, computadores modernos, robótica y otros equipos
     product_pava = Column(Boolean, default=False)
+    
+    # A - Armas hasta etapa espacial
     product_a = Column(Boolean, default=False)
+    
+    # AE - Armas a partir de etapa espacial
     product_ae = Column(Boolean, default=False)
+    
+    # AEI - Armas modernas a partir de etapa interestelar
     product_aei = Column(Boolean, default=False)
+    
+    # COM - Combustible para astronavegación
     product_com = Column(Boolean, default=False)
     
-    # Campos adicionales (*7 a *10)
-    field_7 = Column(String)
-    field_8 = Column(String)
-    field_9 = Column(String)
-    field_10 = Column(String)
+    # === INFORMACIÓN COMERCIAL ===
+    # Nivel de autosuficiencia
+    # Positivo: produce más de lo que necesita
+    # Negativo: necesita más de lo que produce
+    self_sufficiency_level = Column(Float, nullable=False)
     
-    # Campos para validación inicial (Bootstrap)
-    tech_level = Column(String)  # PR, RUD, ES, INT, POL, N.S
+    # UCN por pedido
+    ucn_per_order = Column(Float, nullable=False)
+    
+    # Número máximo de pasajeros
+    max_passengers = Column(Float, nullable=False)
+    
+    # Umbral de misiones (valor a igualar o superar en 2d6, ej: "7+")
+    mission_threshold = Column(String, nullable=False)
+    
+    # === VALIDACIÓN PARA INICIO ===
+    # Nivel tecnológico
+    # Valores: PR (Primitivo), RUD (Rudimentario), ES (Estándar), 
+    #         INT (Intermedio), POL (Pólvora), N.S (No Significativo)
+    tech_level = Column(String)
+    
+    # Población mayor a 1000 habitantes
     population_over_1000 = Column(Boolean, default=True)
+    
+    # Adscrito al Convenio Universal Spacegom
     convenio_spacegom = Column(Boolean, default=True)
     
-    # Campo para planetas personalizados creados durante la partida
+    # === NOTAS Y PERSONALIZACIÓN ===
+    # Notas editables desde el frontend
+    notes = Column(Text, default="")
+    
+    # Indica si es un planeta personalizado creado durante la partida
     is_custom = Column(Boolean, default=False)
     
     def __repr__(self):
         return f"<Planet {self.code}: {self.name}>"
+
+
+# Diccionarios de referencia para documentación
+LIFE_SUPPORT_TYPES = {
+    "NO": "No es necesario",
+    "SO": "Suministro básico de oxígeno",
+    "MF": "Máscara con Filtraje",
+    "RE": "Respirador",
+    "RF": "Respirador con Filtraje",
+    "TE": "Traje espacial estándar",
+    "TA": "Traje espacial avanzado",
+    "TH": "Traje espacial hiperavanzado"
+}
+
+SPACEPORT_QUALITY = {
+    "EXC": "Excelente",
+    "NOT": "Notable",
+    "MED": "Medio",
+    "BAS": "Básico",
+    "RUD": "Rudimentario",
+    "SIN": "Sin espaciopuerto"
+}
+
+FUEL_DENSITY = {
+    "DB": "Densidad Baja",
+    "DM": "Densidad Media",
+    "DA": "Densidad Alta",
+    "N": "Ninguno"
+}
+
+PRODUCT_DESCRIPTIONS = {
+    "INDU": "Productos industriales y manufacturados comunes",
+    "BASI": "Metal, plásticos, productos químicos y otros materiales básicos elaborados",
+    "ALIM": "Productos de alimentación",
+    "MADE": "Madera y derivados",
+    "AGUA": "Agua potable",
+    "MICO": "Minerales comunes",
+    "MIRA": "Minerales raros y materias primas poco comunes",
+    "MIPR": "Metales preciosos, diamantes, gemas",
+    "PAVA": "Productos avanzados, computadores modernos, robótica y otros equipos",
+    "A": "Armas hasta etapa espacial",
+    "AE": "Armas a partir de etapa espacial",
+    "AEI": "Armas modernas a partir de etapa interestelar",
+    "COM": "Combustible para astronavegación"
+}
 
 
 # Create tables

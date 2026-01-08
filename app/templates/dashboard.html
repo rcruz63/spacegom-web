@@ -886,26 +886,29 @@
             document.getElementById('planet-info').classList.remove('hidden');
             document.getElementById('planet-name').textContent = planet.name.toUpperCase();
             document.getElementById('planet-code').textContent = 'Código: ' + planet.code;
-            document.getElementById('planet-life-support').textContent = planet.life_support_1 || 'Ninguno';
-            document.getElementById('planet-spaceport').textContent = planet.spaceport || 'N/A';
+
+            // Use new schema fields
+            document.getElementById('planet-life-support').textContent = planet.life_support.type || 'Ninguno';
+            document.getElementById('planet-spaceport').textContent =
+                `${planet.spaceport.quality}-${planet.spaceport.fuel_density}-${planet.spaceport.docking_price}`;
             document.getElementById('planet-tech').textContent = planet.bootstrap_data.tech_level || 'Desconocido';
-            document.getElementById('planet-population').textContent = planet.bootstrap_data.population_over_1000 ? '> 1000 hab.' : '< 1000 hab.';
+            document.getElementById('planet-population').textContent =
+                planet.bootstrap_data.population_over_1000 ? '> 1000 hab.' : '< 1000 hab.';
 
-            // Facilities attributes
-            const facilityMap = {
-                'CC': 'Centro Cartografía',
-                'PI': 'Piratas Informaticos',
-                'DS': 'Depósitos Suministros',
-                'AA': 'Academia'
-            };
-
+            // Handle orbital facilities as booleans
             const facilitiesEl = document.getElementById('planet-facilities');
             facilitiesEl.innerHTML = '';
-            if (planet.orbital_facilities) {
-                planet.orbital_facilities.split(',').forEach(f => {
-                    const code = f.trim();
-                    const name = facilityMap[code] || code;
-                    facilitiesEl.insertAdjacentHTML('beforeend', `<span class="px-2 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue rounded text-xs">${name}</span>`);
+
+            const facilities = [];
+            if (planet.orbital_facilities.cartography_center) facilities.push('Centro Cartografía');
+            if (planet.orbital_facilities.hackers) facilities.push('Piratas Informáticos');
+            if (planet.orbital_facilities.supply_depot) facilities.push('Depósitos Suministros');
+            if (planet.orbital_facilities.astro_academy) facilities.push('Academia Astronavegación');
+
+            if (facilities.length > 0) {
+                facilities.forEach(name => {
+                    facilitiesEl.insertAdjacentHTML('beforeend',
+                        `<span class="px-2 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue rounded text-xs">${name}</span>`);
                 });
             } else {
                 facilitiesEl.innerHTML = '<span class="text-gray-500 italic">Ninguna</span>';
