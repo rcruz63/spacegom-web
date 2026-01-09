@@ -258,6 +258,267 @@ INITIAL_PERSONNEL = [
 ]
 
 
+class Mission(Base):
+    """
+    Modelo de misiones para tracking de objetivos de campaña y misiones especiales
+    
+    Tipos de misiones:
+    - campaign: Objetivos de campaña (ej: Objetivo #1 - Contratar personal)
+    - special: Misiones especiales del libro (ej: Misión M-47, Página 234)
+    """
+    __tablename__ = "missions"
+    
+    # Identificación
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    game_id = Column(String, nullable=False, index=True)  # FK al game_id
+    
+    # Tipo de misión
+    mission_type = Column(String, nullable=False)  # "campaign" o "special"
+    
+    # Campos comunes
+    origin_world = Column(String)  # Código/nombre del planeta donde se aceptó
+    execution_place = Column(String)  # Dónde debe ejecutarse
+    max_date = Column(String)  # Fecha máxima (formato: "YYYY-MM-DD" o del juego)
+    result = Column(String, default="")  # "", "exito", "fracaso"
+    
+    # Específico de Objetivos de Campaña
+    objective_number = Column(Integer)  # Número del objetivo (1, 2, 3...)
+    
+    # Específico de Misiones Especiales
+    mission_code = Column(String)  # Código de la misión (ej: "M-47")
+    book_page = Column(Integer)  # Página del libro donde se detalla
+    
+    # Metadata
+    created_date = Column(String)  # Cuando se acepta (fecha del juego)
+    completed_date = Column(String)  # Cuando se completa
+    notes = Column(Text, default="")  # Notas adicionales
+    
+    def __repr__(self):
+        if self.mission_type == "campaign":
+            type_str = f"Objetivo #{self.objective_number}"
+        else:
+            type_str = f"Misión {self.mission_code}"
+        status = self.result or "Activa"
+        return f"<Mission {type_str} - {status}>"
+
+
+# Definición del Primer Objetivo de Campaña
+FIRST_OBJECTIVE = {
+    "objective_number": 1,
+    "description": "Contratar personal específico",
+    "requirements": [
+        "1 Responsable de soporte a pasajeros",
+        "1 Auxiliar de vuelo",
+        "1 Negociador de compraventa de mercadería",
+        "1 Técnico de mantenimiento de astronaves",
+        "1 Técnico de soportes vitales",
+        "1 Abogado"
+    ]
+}
+
+
+class EmployeeTask(Base):
+    """
+    Cola de tareas para empleados (principalmente Director Gerente)
+    Gestiona búsquedas de personal con cola ordenada
+    """
+    __tablename__ = "employee_tasks"
+    
+    # Identificación
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    game_id = Column(String, nullable=False, index=True)
+    employee_id = Column(Integer, nullable=False)  # FK a personnel.id
+    
+    # Tipo y estado
+    task_type = Column(String, nullable=False)  # "hire_search", futuras: "mission", etc.
+    status = Column(String, default="pending")  # "pending", "in_progress", "completed", "failed"
+    
+    # Orden en la cola
+    queue_position = Column(Integer, nullable=False)  # 1, 2, 3...
+    
+    # Datos específicos (JSON)
+    task_data = Column(Text)  # JSON: {position, experience_level, search_days, etc}
+    
+    # Fechas (formato del juego: "1-01-05")
+    created_date = Column(String)  # Cuando se creó
+    started_date = Column(String)  # Cuando comenzó (pasa a in_progress)
+    completion_date = Column(String)  # Cuando debe terminar
+    finished_date = Column(String)  # Cuando terminó realmente
+    
+    # Resultado (JSON, solo para completed/failed)
+    result_data = Column(Text)  # {dice, modifiers, final_result, success, employee_id}
+    
+    def __repr__(self):
+        return f"<Task {self.task_type} - {self.status} (Pos: {self.queue_position})>"
+
+
+# Catálogo de Puestos de Trabajo
+POSITIONS_CATALOG = {
+    # Nivel RUDIMENTARIO (>1000 hab + nivel RUD o superior)
+    "Abogado": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 5,
+        "hire_threshold": 8,
+    },
+    "Agente secreto": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "2d6",
+        "base_salary": 25,
+        "hire_threshold": 8,
+    },
+    "Asistente doméstico": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1",  # 1 día fijo
+        "base_salary": 1,
+        "hire_threshold": 4,
+    },
+    "Auxiliar de vuelo": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1",
+        "base_salary": 2,
+        "hire_threshold": 7,
+    },
+    "Cocinero": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 3,
+        "hire_threshold": 8,
+    },
+    "Negociador de compraventa de mercadería": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 10,
+        "hire_threshold": 8,
+    },
+    "Operario de logística y almacén": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1",
+        "base_salary": 1,
+        "hire_threshold": 6,
+    },
+    "Político demagogo": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "2d6",
+        "base_salary": 30,
+        "hire_threshold": 9,
+    },
+    "Psicólogo": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 5,
+        "hire_threshold": 8,
+    },
+    "Responsable de contabilidad y burocracia": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 3,
+        "hire_threshold": 7,
+    },
+    "Responsable de soporte a pasajeros": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 4,
+        "hire_threshold": 7,
+    },
+    "Responsable de suministros de manutención": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 3,
+        "hire_threshold": 7,
+    },
+    "Soldado mercenario": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "2",
+        "base_salary": 5,
+        "hire_threshold": 7,
+    },
+    "Recursos Humanos": {
+        "tech_level": "RUDIMENTARIO",
+        "search_time_dice": "1d6",
+        "base_salary": 5,
+        "hire_threshold": 7,
+    },
+    
+    # Nivel ESPACIAL (>1000 hab + nivel ES o superior)
+    "Ingeniero de astronavegación": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "2d6",
+        "base_salary": 8,
+        "hire_threshold": 9,
+    },
+    "Ingeniero computacional": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "2d6",
+        "base_salary": 15,
+        "hire_threshold": 8,
+    },
+    "Médico": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "1d6",
+        "base_salary": 7,
+        "hire_threshold": 8,
+    },
+    "Piloto": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "2d6",
+        "base_salary": 10,
+        "hire_threshold": 7,
+    },
+    "Técnico de mantenimiento de astronaves": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "1d6",
+        "base_salary": 6,
+        "hire_threshold": 8,
+    },
+    "Técnico de repostaje y análisis de combustibles": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "1d6",
+        "base_salary": 7,
+        "hire_threshold": 8,
+    },
+    "Técnico de soportes vitales": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "1d6",
+        "base_salary": 5,
+        "hire_threshold": 7,
+    },
+    "Vicedirector gerente": {
+        "tech_level": "ESPACIAL",
+        "search_time_dice": "1d6",
+        "base_salary": 20,
+        "hire_threshold": 7,
+    },
+    
+    # Nivel AVANZADO (>1000 hab + nivel INT, POL o N.SUP)
+    "Comandante de hipersaltos": {
+        "tech_level": "AVANZADO",
+        "search_time_dice": "3d6",
+        "base_salary": 15,
+        "hire_threshold": 9,
+    },
+    "Científico de terraformación": {
+        "tech_level": "AVANZADO",
+        "search_time_dice": "2d6",
+        "base_salary": 8,
+        "hire_threshold": 9,
+    },
+    "Director gerente": {
+        "tech_level": "AVANZADO",
+        "search_time_dice": "2d6",
+        "base_salary": 20,
+        "hire_threshold": 7,
+    },
+}
+
+# Mapeo de niveles tecnológicos
+TECH_LEVEL_REQUIREMENTS = {
+    "RUDIMENTARIO": ["RUD", "ES", "INT", "POL", "N.S"],
+    "ESPACIAL": ["ES", "INT", "POL", "N.S"],
+    "AVANZADO": ["INT", "POL", "N.S"]
+}
+
+
 # Create tables
 def init_db():
     """Initialize database tables"""

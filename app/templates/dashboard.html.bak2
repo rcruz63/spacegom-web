@@ -353,6 +353,167 @@
 
 </div>
 
+<!-- TERMINAL COMERCIAL Y TESORERÍA -->
+<div class="glass-panel tech-border p-6 rounded-lg">
+    <h2 class="text-xl font-orbitron text-neon-blue mb-4 border-b border-gray-700 pb-2">
+        TERMINAL COMERCIAL
+    </h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Tabla de Mercancías -->
+        <div class="lg:col-span-2">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left py-2 text-xs text-gray-400 font-tech uppercase">Mercancía</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Precio Base</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Modificador</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Precio Final</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-table" class="font-tech">
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Minerales Básicos</td>
+                            <td class="text-center text-neon-blue">500 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 0)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-0">500 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Componentes Electrónicos</td>
+                            <td class="text-center text-neon-blue">1,200 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 1)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-1">1,200 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Medicamentos</td>
+                            <td class="text-center text-neon-blue">800 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 2)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-2">800 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Armas y Munición</td>
+                            <td class="text-center text-neon-blue">2,500 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 3)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-3">2,500 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Resumen Financiero -->
+        <div class="space-y-4">
+            <!-- Tesorería Actual -->
+            <div class="bg-space-800 border border-neon-blue rounded p-4">
+                <div class="text-xs text-gray-400 uppercase mb-2">Tesorería</div>
+                <div class="text-3xl font-orbitron text-neon-blue">45,230</div>
+                <div class="text-xs text-gray-500">Créditos</div>
+            </div>
+
+            <!-- Administración Semanal -->
+            <div class="bg-space-800 border border-gray-700 rounded p-4">
+                <div class="text-xs text-neon-green uppercase mb-3 border-b border-gray-700 pb-2">Gastos Semanales
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Salarios:</span>
+                        <span class="text-neon-red">-2,950 CR</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Mantenimiento:</span>
+                        <span class="text-neon-red">-500 CR</span>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-700 pt-2 font-bold">
+                        <span>Total:</span>
+                        <span class="text-neon-red">-3,450 CR</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Administración Mensual -->
+            <div class="bg-space-800 border border-gray-700 rounded p-4">
+                <div class="text-xs text-orange-400 uppercase mb-3 border-b border-gray-700 pb-2">Préstamos
+                    Mensuales</div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Banco Galáctico:</span>
+                        <span class="text-neon-red">-5,000 CR</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Mejoras Nave:</span>
+                        <span class="text-neon-red">-2,000 CR</span>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-700 pt-2 font-bold">
+                        <span>Total:</span>
+                        <span class="text-neon-red">-7,000 CR</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 
 <script>

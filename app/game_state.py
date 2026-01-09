@@ -58,6 +58,11 @@ class GameState:
             "month": 1,
             "reputation": 0,
             
+            # Calendar System (35 días/mes, 12 meses/año)
+            "year": 1,
+            "day": 1,  # month is already in HUD
+            "event_queue": [],  # Cola ordenada de eventos [{type, date, data}]
+            
             # Damage System
             "damages": {
                 "light": False,

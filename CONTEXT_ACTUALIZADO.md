@@ -1,8 +1,8 @@
-# SPACEGOM-WEB - Contexto Actualizado (2026-01-08)
+# SPACEGOM-WEB - Contexto Actualizado (2026-01-09)
 
 ## 📝 Resumen Ejecutivo
 
-Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI y persistencia en JSON + SQLite. Estado actual: **Sistema de Personal y Tesorería completamente implementado y funcional**.
+Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema de Personal con Contratación Automatizada + Gestión Temporal + UX Mejorado - Completamente Funcional**.
 
 ---
 
@@ -11,74 +11,95 @@ Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrol
 ### ✅ Implementado y Funcional
 
 1. **Setup Inicial Completo**
-   - Identidad de compañía y nave (con sugerencias automáticas de 470 nombres megacorp y 500 nombres de naves)
-   - Generación de área espacial (2d6)
-   - Selección de densidad de mundos
-   - Búsqueda de planeta inicial válido
-   - **NUEVO**: Selección de dificultad (Fácil/Normal/Difícil)
-   - **NUEVO**: Creación automática de 11 empleados iniciales
+   - Identidad compañía/nave
+   - Área, densidad, planeta inicial
+   - Dificultad (Fácil/Normal/Difícil)
+   - 11 empleados iniciales automáticos
 
 2. **Dashboard Principal**
-   - HUD con indicadores: Combustible, Almacén, Daños, Mes, Reputación
-   - **NUEVO**: Tesorería (saldo en SC)
-   - **NUEVO**: Gastos mensuales (salarios)
-   - Vista de cuadrante 6x6 (Columnas A-F, Filas 1-6)
-   - Sistema de exploración y descubrimiento de planetas
-   - Navegación entre áreas
-   - Gestión de ubicación en planeta (Mundo/Espaciopuerto/Instalación/Estación)
-   - Información detallada de planetas
-   - **NUEVO**: Botones de navegación a Personal y Tesorería
+   - HUD: Combustible, Almacén, Daños, Mes, Reputación, Tesorería
+   - Vista cuadrante 6x6 con exploración
+   - Navegación a Personal/Tesorería/Misiones
+   - **LIMPIO**: Eliminados componentes obsoletos (Tripulación, Terminal Comercial)
 
-3. **Sistema de Personal** (/personnel)
-   - Lista completa de empleados activos
-   - Contratar nuevo personal (formulario completo)
-   - Despedir empleados (marca como inactivo)
-   - Resumen: Total empleados, Salarios totales
-   - Campos: Nombre, Puesto, Salario, Experiencia (N/E/V), Moral (B/M/A), Notas
+3. **Sistema de Personal** (/personnel) ⭐ NUEVO
+   - **Contratación Automatizada**:
+     - Modal con 29 puestos catalogados
+     - Filtrado por nivel tecnológico del planeta
+     - 3 niveles experiencia (Novato/Estándar/Veterano)
+     - Cálculo automático tiempo/salario
+   - **Cola de Tareas del Director Gerente**:
+     - Vista actual + pendientes + completadas
+     - Eliminar tareas pendientes
+     - Auto-inicio de siguiente tarea
+   - **Avance Temporal**:
+     - Botón "⏩ AVANZAR TIEMPO"
+     - Resolución con tiradas 2d6 + modificadores
+     - Creación automática de empleados
+     - Evolución de moral/experiencia del Director
 
-4. **Sistema de Tesorería** (/treasury)
-   - Visualización de saldo actual
-   - Registro de transacciones (ingresos/gastos)
-   - Historial completo de transacciones
-   - Categorías: Comercio, Misión, Suministros, Reparaciones, Combustible, Salarios, Préstamos
-   - Resumen de gastos mensuales
+4. **Sistema de Notificaciones** ⭐ NUEVO
+   - **Toast Notifications** (esquina superior derecha):
+     - 4 tipos: success, error, info, warning
+     - Animaciones slide-in/out
+   - **Panel Lateral de Resultados**:
+     - Slide-in desde derecha
+     - Dados visuales con colores
+     - Detalles completos de contratación
+     - Info de siguiente tarea auto-iniciada
 
-5. **Base de Datos**
-   - 216 planetas (códigos 3d6) con esquema refactorizado
-   - Tabla `personnel` para gestión de empleados
-   - Game state en JSON con difficulty, treasury, reputation, transactions
+5. **Sistema Temporal** (`time_manager.py` - 323 líneas) ⭐ NUEVO
+   - **GameCalendar**: 35 días/mes, 12 meses/año
+   - **EventQueue**: Cola ordenada de eventos
+   - Funciones: `calculate_hire_time()`, `calculate_hire_salary()`
+
+6. **Sistema de Tesorería** (/treasury)
+   - Saldo, transacciones, historial
+   - Categorías de gastos
+
+7. **Sistema de Misiones** (/missions)
+   - Objetivos de campaña
+   - Misiones especiales
+   - Estado y tracking
+
+8. **Base de Datos**
+   - 216 planetas
+   - Tabla `personnel`
+   - Tabla `employee_tasks` ⭐ NUEVO
+   - Catálogo de 29 puestos ⭐ NUEVO
 
 ---
 
 ## 🗄️ Estructura de Base de Datos
 
-### Tabla `planets` (216 registros)
-- **Identificación**: code, name, is_custom
-- **Soporte Vital**: life_support, local_contagion_risk, days_to_hyperspace, legal_order_threshold
-- **Espaciopuerto**: spaceport_quality, fuel_density, docking_price
-- **Instalaciones Orbitales**: 4 campos booleanos (CC, PI, DS, AA)
-- **Productos**: 13 campos booleanos (INDU, BASI, ALIM, etc.)
-- **Comercial**: self_sufficiency_level, ucn_per_order, max_passengers, mission_threshold
-- **Validación**: tech_level, population_over_1000, convenio_spacegom
-- **Notas**: notes (editable por usuario)
+### Tabla `employee_tasks` (NUEVA)
+```python
+- id, game_id, employee_id
+- task_type ("hire_search")
+- status (pending/in_progress/completed/failed)
+- queue_position (1, 2, 3...)
+- task_data (JSON): position, experience, days, salary, threshold
+- result_data (JSON): dice, modifiers, success, new_employee_id
+- created_date, started_date, completion_date, finished_date
+```
 
-### Tabla `personnel` (NUEVA)
-- **Campos**: id, game_id, position, name, monthly_salary, experience, morale, hire_date, is_active, notes
-- **Personal inicial**: 11 empleados creados automáticamente (76 SC/mes total)
+### Catálogos Nuevos
+- **POSITIONS_CATALOG**: 29 puestos x nivel tecnológico
+- **TECH_LEVEL_REQUIREMENTS**: Compatibilidad planeta-puesto
 
-### Game State (JSON)
+### Game State (JSON) - ACTUALIZADO
 ```json
 {
-  "difficulty": "normal",  // easy/normal/hard
-  "treasury": 500,         // Saldo en SC
+  "year": 1,
+  "day": 1,
+  "event_queue": [...],  // NUEVO
+  "difficulty": "normal",
+  "treasury": 500,
   "reputation": 0,
   "transactions": [...],
   "fuel": 18,
-  "storage": 0,
-  "month": 1,
-  "current_planet_code": 123,
-  "discovered_planets": {...},
-  "quadrant_planets": {...}
+  "current_planet_code": 111,
+  "discovered_planets": {...}
 }
 ```
 
@@ -86,37 +107,21 @@ Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrol
 
 ## 🔌 API Endpoints
 
-### Gestión de Juegos
-- `POST /api/games/new` - Crear nueva partida
-- `GET /api/games` - Listar partidas
-- `GET /api/games/{id}` - Obtener estado de partida
-- `POST /api/games/{id}/company-setup` - Guardar identidad
-- `POST /api/games/{id}/area-density` - Guardar área y densidad
-- `POST /api/games/{id}/set-starting-planet` - Establecer planeta inicial
-- `POST /api/games/{id}/complete-setup` - **NUEVO** Completar setup con dificultad
+### Personal y Contratación (NUEVO)
+- `GET /api/games/{id}/hire/available-positions` - Puestos disponibles
+- `POST /api/games/{id}/hire/start` - Iniciar búsqueda
+- `GET /api/games/{id}/personnel/{emp_id}/tasks` - Cola de tareas
+- `PUT /api/games/{id}/tasks/{task_id}/reorder` - Reordenar cola
+- `DELETE /api/games/{id}/tasks/{task_id}` - Eliminar tarea
+- `POST /api/games/{id}/time/advance` ⭐ - Avanzar tiempo
 
-### Planetas
-- `GET /api/planets/{code}` - Información detallada
-- `POST /api/games/{id}/roll-planet-code` - Generar código aleatorio
-- `GET /api/planets/next/{code}` - Siguiente planeta en secuencia
-- `POST /api/planets/{code}/update-notes` - Actualizar notas
+### Misiones (NUEVO)
+- `GET /api/games/{id}/missions` - Listar misiones
+- `POST /api/games/{id}/missions` - Crear misión
+- `PUT /api/games/{id}/missions/{mission_id}` - Actualizar
+- `DELETE /api/games/{id}/missions/{mission_id}` - Eliminar
 
-### Personal (NUEVO)
-- `GET /api/games/{id}/personnel` - Listar empleados
-- `POST /api/games/{id}/personnel` - Contratar
-- `PUT /api/games/{id}/personnel/{emp_id}` - Editar
-- `DELETE /api/games/{id}/personnel/{emp_id}` - Despedir
-
-### Tesorería (NUEVO)
-- `GET /api/games/{id}/treasury` - Estado completo
-- `POST /api/games/{id}/treasury/transaction` - Registrar transacción
-
-### Sugerencias de Nombres
-- `GET /api/suggestions/company-name` - Nombre de megacorporación
-- `GET /api/suggestions/ship-name` - Nombre de nave
-
-### Exploración
-- `POST /api/games/{id}/explore` - Marcar cuadrante como explorado
+### (resto de endpoints anteriores...)
 
 ---
 
@@ -125,278 +130,167 @@ Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrol
 ```
 spacegom-web/
 ├── app/
-│   ├── main.py                  # FastAPI app + endpoints
-│   ├── database.py              # Modelos SQLAlchemy (Planet, Personnel)
-│   ├── game_state.py            # Gestión de estado JSON
-│   ├── dice.py                  # Sistema de dados
-│   ├── name_suggestions.py      # Carga de nombres desde CSV
-│   ├── import_planets.py        # Importación desde Excel
+│   ├── main.py
+│   ├── database.py
+│   ├── game_state.py
+│   ├── time_manager.py        # NUEVO - 323 líneas
+│   ├── dice.py
+│   ├── name_suggestions.py
 │   └── templates/
-│       ├── index.html           # Landing page
-│       ├── setup.html           # Flujo de configuración inicial
-│       ├── dashboard.html       # Panel principal
-│       ├── personnel.html       # NUEVO - Gestión de personal
-│       └── treasury.html        # NUEVO - Gestión de tesorería
+│       ├── base.html          # ACTUALIZADO - Sistema notificaciones
+│       ├── dashboard.html     # LIMPIADO - 273 líneas eliminadas
+│       ├── personnel.html     # REESCRITO - Sistema contratación
+│       ├── treasury.html
+│       └── missions.html      # NUEVO
 ├── data/
-│   ├── spacegom.db              # SQLite (planets + personnel)
-│   ├── Base_de_datos_de_planetas_simple.xlsx
+│   ├── spacegom.db
 │   └── games/{game_id}/state.json
-├── files/                       # Materiales de referencia + CSV
-│   ├── Calendario_de_Campana.pdf
-│   ├── Ficha_de_Compania.pdf
-│   ├── Hoja_de_Mundos.pdf
-│   ├── Tesoreria.pdf
-│   ├── nombres_megacorp.csv     # 470 nombres
-│   ├── nombres_naves.csv        # 500 nombres
-│   └── nombres_personal.csv     # 1000 nombres (futuro)
-├── DATABASE.md                  # Documentación de BD
-├── API.md                       # Documentación de API
-├── CONTEXT.md                   # Este archivo
-└── README.md
+└── files/
 ```
 
 ---
 
-## 🎮 Flujo de Usuario
+## 🎮 Flujo de Usuario - Sistema de Contratación
 
-### 1. Nueva Partida (/setup)
 ```
-Paso 1: Identidad
-  → Nombre compañía (autosugestión)
-  → Nombre nave (autosugestión)
-  → Modelo nave
+1. Usuario va a /personnel?game_id=X
 
-Paso 2: Área y Densidad
-  → Rodar 2d6 para área (2-12)
-  → Seleccionar densidad (Baja/Media/Alta)
+2. Click "+ INICIAR BÚSQUEDA"
+   → Modal se abre
+   → Selecciona puesto (filtrado por tech_level planeta)
+   → Elige experiencia (Novato/Estándar/Veterano)
+   → Ve resumen: días estimados, salario final
+   → Click "Iniciar Búsqueda"
 
-Paso 3: Planeta Inicial
-  → Generar código 3d6
-  → Validar requisitos
-  → Si válido: continuar. Si no: siguiente código
+3. Toast verde: "Búsqueda iniciada - Cola #1"
+   → Tarea aparece en cola como "EN PROCESO"
 
-Paso 4: Dificultad (NUEVO)
-  → Fácil: 600 SC
-  → Normal: 500 SC
-  → Difícil: 400 SC
-  → Crea 11 empleados automáticamente
-  → Redirige a dashboard
-```
+4. Click "⏩ AVANZAR TIEMPO"
+   → Confirm dialog
+   → Toast azul: "Tiempo avanzado: 1-01-01 → 1-01-02"
+   → Panel lateral desliza desde derecha:
+      • Dados visuales [5] + [6] = 11
+      • Modificadores +2
+      • Resultado: 13 vs Umbral: 8
+      • ✅ ÉXITO - Empleado contratado
+      • Siguiente tarea auto-iniciada
 
-### 2. Dashboard (/dashboard?game_id=X)
-```
-HUD (Columna izquierda):
-  - Combustible: 18/30
-  - Almacén: 0/40 UCN
-  - Daños: Leve/Moderado/Severo
-  - Mes: 1/12
-  - Reputación: 0 (-5 a +5)
-  - Tesorería: 500 SC
-  - Gastos/Mes: 76 SC
-
-Navegación Rápida:
-  - [👥 PERSONAL] → /personnel
-  - [💰 TESORERÍA] → /treasury
-
-Vista de Cuadrante:
-  - Grid 6x6 (A-F, 1-6)
-  - Explorar cuadrantes
-  - Ver planetas descubiertos
-
-Información de Planeta:
-  - Detalles completos
-  - Productos disponibles
-  - Instalaciones orbitales
-```
-
-### 3. Personal (/personnel?game_id=X)
-```
-Resumen:
-  - Total Personal: 11
-  - Salarios Mensuales: 76 SC
-  - Moral Promedio: Media
-
-Acciones:
-  - [+ CONTRATAR PERSONAL]
-  - Ver tabla de empleados
-  - Despedir empleados
-
-Formulario de Contratación:
-  - Nombre, Puesto, Salario
-  - Experiencia (N/E/V)
-  - Moral (B/M/A)
-  - Notas
-```
-
-### 4. Tesorería (/treasury?game_id=X)
-```
-Resumen:
-  - Saldo Actual: 500 SC
-  - Salarios/Mes: 76 SC
-  - Préstamos/Mes: 0 SC
-  - Dificultad: Normal
-
-Registrar Transacción:
-  - Monto (+/-)
-  - Categoría
-  - Descripción
-
-Historial:
-  - Últimas 10 transacciones
-  - Fecha, Descripción, Categoría, Monto
+5. Tabla actualizada con nuevo empleado
+   → Cola actualizada (siguiente tarea "EN PROCESO")
 ```
 
 ---
 
-## 🔧 Decisiones de Diseño Importantes
+## 🔧 Decisiones de Diseño Nuevas
 
-### 1. Personal Inicial (11 empleados)
-**Por qué**: El manual del juego establece que comienzas con el personal que trabajaba con tu madre.
-
-**Implementación**:
-- Definidos en `database.py` como `INITIAL_PERSONNEL`
-- Creados automáticamente al completar setup
-- Total: 76 SC/mes en salarios
-
-### 2. Dificultad Variable
-**Por qué**: Añade rejugabilidad y ajusta la dificultad inicial.
+### 1. Cola de Tareas del Director
+**Por qué**: El manual establece que el Director Gerente gestiona las contrataciones.
 
 **Implementación**:
-- Fácil: 600 SC (más margen de error)
-- Normal: 500 SC (equilibrado)
-- Difícil: 400 SC (desafío mayor)
+- Una tarea activa a la vez (`status: "in_progress"`)
+- Tareas pendientes en cola ordenada (`queue_position`)
+- Auto-inicio de siguiente tarea al completar actual
 
-### 3. Navegación Integrada
-**Por qué**: Mejor UX, evita escribir URLs manualmente.
+### 2. Sistema Temporal con Eventos
+**Por qué**: Necesario para gestionar múltiples tareas futuras.
 
 **Implementación**:
-- Botones grandes con emojis en dashboard
-- JavaScript configura `game_id` automáticamente
-- Botón "Volver al Dashboard" en todas las páginas
+- `event_queue` en game_state
+- Eventos con tipo, fecha y datos
+- Procesamiento ordenado por fecha
 
-### 4. Esquema de BD Refactorizado
-**Por qué**: El esquema original tenía campos ambiguos (`life_support_1/2`, `spaceport` como string).
+### 3. Sistema de Notificaciones Integrado
+**Por qué**: Los `alert()` del navegador son feos y bloquean la UI.
+
+**Implementación**:
+- Toast notifications no-bloqueantes
+- Panel lateral para resultados detallados
+- Funciones globales en `base.html`
+
+### 4. Dashboard Limpiado
+**Por qué**: Componentes "Tripulación" y "Terminal Comercial" eran prototipos obsoletos.
 
 **Cambios**:
-- `spaceport` → `spaceport_quality`, `fuel_density`, `docking_price`
-- `orbital_facilities` (CSV) → 4 campos booleanos
-- `life_support_1/2` → `life_support` (tipo único)
+- Eliminadas 273 líneas de código
+- Dashboard enfocado en Vista Cuadrante + HUD
+- Uso de /personnel y /treasury en su lugar
 
 ---
 
-## 🚀 Próximos Pasos Sugeridos
+## 🚀 Próximos Pasos
 
-### Corto Plazo
-1. **Sistema de Comercio**
-   - Compra/venta de productos
-   - Cálculo de precios según oferta/demanda
-   - Gestión de carga en el almacén
+### Alta Prioridad
+1. **Navegación Entre Áreas**
+   - Selector de área explorada
+   - Persistencia de datos por área
+   - Switch entre cuadrantes
 
-2. **Sistema de Misiones**
-   - Generar misiones aleatorias
-   - Tracking de progreso
-   - Recompensas
+2. **Pantalla de Selección de Partidas**
+   - Landing page con grid de partidas
+   - Botones: Continuar, Borrar, Nueva
+   - Metadata visible
 
-3. **Navegación Mejorada**
-   - Cálculo de rutas entre planetas
-   - Consumo de combustible
-   - Tiempo de viaje
+### Media Prioridad
+3. **Mejoras UX**
+   - Fix fondo estrellado (canvas estrellas)
+   - employee_number por compañía
+   - Reordenar cola con drag & drop
 
-### Medio Plazo
-4. **Sistema de Eventos**
-   - Eventos aleatorios durante viaje
-   - Eventos de puerto espacial
-   - Consecuencias de decisiones
-
-5. **Sistema de Mejoras**
-   - Upgrades de nave
-   - Equipamiento especial
-   - Instalaciones personalizadas
-
-6. **Gestión Avanzada de Personal**
-   - Sistema de habilidades
-   - Progresión de experiencia
-   - Eventos de moral
-
-### Largo Plazo
-7. **Multijugador (opcional)**
-   - Compartir partidas
-   - Competencia/Cooperación
-
-8. **Estadísticas y Reportes**
-   - Gráficos de progreso
-   - Historial de decisiones
-   - Achievements
-
----
-
-## 📚 Archivos de Documentación
-
-- **[DATABASE.md](DATABASE.md)**: Esquema completo de todas las tablas
-- **[API.md](API.md)**: Documentación de todos los endpoints (pendiente actualizar con nuevos endpoints)
-- **[README.md](README.md)**: Instalación, características, estructura
-- **[CONTEXT.md](CONTEXT.md)**: Este archivo
+### Implementaciones Futuras
+4. **Sistema de Comercio Completo**
+5. **Eventos Aleatorios**
+6. **Mejoras de Nave**
 
 ---
 
 ## ⚠️ Puntos de Atención
 
-### Para la Próxima Sesión
+### Bugs Conocidos
+- Ninguno crítico identificado
 
-1. **API.md desactualizado**
-   - Faltan endpoints de personnel y treasury
-   - Falta endpoint de complete-setup
+### Limitaciones Actuales
+- No se puede reordenar cola visualmente (endpoint existe, UI pendiente)
+- Fondo estrellado no visible
+- Sin pantalla de selección de partidas (dificulta gestión multi-juego)
+- Sin navegación entre áreas (bloqueante para exploración avanzada)
 
-2. **Sistema de Préstamos**
-   - Mencionado en tesorería pero no implementado
-   - Considerar si implementar o remover referencias
-
-3. **CSV nombres_personal.csv**
-   - Existe (1000 nombres) pero no se usa aún
-   - Podría usarse para generar nombres aleatorios al contratar
-
-4. **Validación de Formularios**
-   - Actualmente básica (required HTML)
-   - Considerar validaciones más robustas
-
-5. **Testing**
-   - No hay tests automatizados
-   - Toda la validación es manual
+### Deuda Técnica
+- API.md desactualizado (faltan 10 endpoints nuevos)
+- Sin tests automatizados
+- employee_number debería ser por juego, no global
 
 ---
 
-## 🎨 Stack Tecnológico
+## 📈 Métricas
 
-- **Backend**: FastAPI (Python 3.12+)
-- **Base de Datos**: SQLite + SQLAlchemy
-- **Persistencia**: JSON para game_state
-- **Frontend**: HTML + Vanilla JavaScript + CSS (Tailwind-like classes)
-- **Fuentes**: Google Fonts (Orbitron, Rajdhani)
+**Líneas de Código Nuevas**: ~1400  
+**Archivos Nuevos**: 1 (time_manager.py)  
+**Archivos Significativamente Modificados**: 5  
+**Endpoints Nuevos**: 10  
+**Tablas Nuevas**: 1 (employee_tasks)  
+**Funcionalidades Completas Nuevas**: 3 (Contratación, Temporal, Notificaciones)
 
 ---
 
 ## 💡 Comandos Útiles
 
 ```bash
-# Activar entorno virtual
-source .venv/bin/activate
-
 # Iniciar servidor
 uvicorn app.main:app --reload
 
-# Reimportar planetas
-rm data/spacegom.db && python -m app.import_planets
+# Ver cola de tareas
+sqlite3 data/spacegom.db "SELECT * FROM employee_tasks WHERE game_id='test' ORDER BY queue_position;"
 
-# Ver esquema de BD
-sqlite3 data/spacegom.db ".schema"
+# Ver eventos pendientes
+sqlite3 data/spacegom.db "SELECT state FROM games WHERE id='test';" | jq '.event_queue'
 
-# Listar personal de un juego
-sqlite3 data/spacegom.db "SELECT * FROM personnel WHERE game_id='test';"
+# Limpiar partida de prueba
+rm -rf data/games/test
 ```
 
 ---
 
-**Última actualización**: 2026-01-08 16:10  
-**Versión**: 2.0  
+**Última actualización**: 2026-01-09 13:54  
+**Versión**: 3.0  
 **Estado**: Funcional y probado ✅  
-**Autor**: Desarrollo colaborativo con Gemini
+**Próximo objetivo**: Navegación entre Áreas + Pantalla de Selección

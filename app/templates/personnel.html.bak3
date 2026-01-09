@@ -436,12 +436,23 @@
 
             if (response.ok && data.event_result) {
                 const result = data.event_result;
-                
+                let message = `📅 Tiempo avanzado: ${data.old_date} → ${data.new_date}\n\n`;
+
                 if (result.type === 'hire_resolution') {
-                    showToast(`Tiempo avanzado: ${data.old_date} → ${data.new_date}`, 'info');
-                    showHireResult(result);
+                    message += `🎲 Búsqueda de ${result.position} (${result.experience_level})\n`;
+                    message += `Dados: [${result.dice.join(', ')}] = ${result.dice.reduce((a, b) => a + b, 0)}\n`;
+                    message += `Total (con mods): ${result.total} vs Umbral: ${result.threshold}\n\n`;
+                    message += result.success
+                        ? `✅ ¡ÉXITO! Empleado contratado (ID: ${result.new_employee_id})`
+                        : `❌ FRACASO - No se encontró candidato adecuado`;
+
+                    if (result.next_task_started) {
+                        message += `\n\n⏭️  Auto-iniciada siguiente búsqueda: ${result.next_task_started.position}`;
+                        message += `\nFinaliza: ${result.next_task_started.completion_date}`;
+                    }
                 }
 
+                alert(message);
                 await loadPersonnel();
                 await loadDirectorTasks();
                 await loadGameDate();

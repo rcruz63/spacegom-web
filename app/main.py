@@ -4,10 +4,13 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional, List
 import random
+import json
+import math
 
-from app.database import get_db, Planet, Personnel, INITIAL_PERSONNEL, init_db
+from app.database import get_db, Planet, Personnel, INITIAL_PERSONNEL, Mission, EmployeeTask, POSITIONS_CATALOG, TECH_LEVEL_REQUIREMENTS, init_db
 from app.game_state import GameState
 from app.dice import DiceRoller
+from app.time_manager import GameCalendar, EventQueue, calculate_hire_time, calculate_hire_salary
 from app.name_suggestions import get_random_company_name, get_random_ship_name
 
 app = FastAPI()
@@ -42,6 +45,10 @@ async def personnel_page(request: Request):
 @app.get("/treasury", response_class=HTMLResponse)
 async def treasury_page(request: Request):
     return templates.TemplateResponse("treasury.html", {"request": request})
+
+@app.get("/missions", response_class=HTMLResponse)
+async def missions_page(request: Request):
+    return templates.TemplateResponse("missions.html", {"request": request})
 
 
 # ===== GAME MANAGEMENT API =====
@@ -896,6 +903,633 @@ async def add_transaction(
         "status": "success",
         "new_balance": game.state["treasury"],
         "transaction": transaction
+    }
+
+
+# ===== MISSIONS MANAGEMENT API =====
+
+@app.get("/api/games/{game_id}/missions")
+async def get_missions(game_id: str, db: Session = Depends(get_db)):
+    """Get all missions for a game, separated by status"""
+    missions = db.query(Mission).filter(Mission.game_id == game_id).all()
+    
+    active = []
+    completed = []
+    failed = []
+    
+    for mission in missions:
+        mission_data = {
+            "id": mission.id,
+            "mission_type": mission.mission_type,
+            "origin_world": mission.origin_world,
+            "execution_place": mission.execution_place,
+            "max_date": mission.max_date,
+            "result": mission.result,
+            "created_date": mission.created_date,
+            "completed_date": mission.completed_date,
+            "notes": mission.notes
+        }
+        
+        # Add type-specific fields
+        if mission.mission_type == "campaign":
+            mission_data["objective_number"] = mission.objective_number
+        else:
+            mission_data["mission_code"] = mission.mission_code
+            mission_data["book_page"] = mission.book_page
+        
+        # Categorize by result
+        if mission.result == "exito":
+            completed.append(mission_data)
+        elif mission.result == "fracaso":
+            failed.append(mission_data)
+        else:
+            active.append(mission_data)
+    
+    return {
+        "active": active,
+        "completed": completed,
+        "failed": failed,
+        "total": len(missions)
+    }
+
+
+@app.post("/api/games/{game_id}/missions")
+async def create_mission(
+    game_id: str,
+    mission_type: str = Form(...),
+    origin_world: str = Form(""),
+    execution_place: str = Form(...),
+    max_date: str = Form(""),
+    notes: str = Form(""),
+    # Campaign-specific
+    objective_number: Optional[int] = Form(None),
+    # Special mission-specific
+    mission_code: Optional[str] = Form(None),
+    book_page: Optional[int] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Create a new mission (campaign objective or special mission)"""
+    from datetime import date
+    
+    # Validate mission type
+    if mission_type not in ["campaign", "special"]:
+        raise HTTPException(status_code=400, detail="Mission type must be 'campaign' or 'special'")
+    
+    # Validate required fields for each type
+    if mission_type == "campaign" and objective_number is None:
+        raise HTTPException(status_code=400, detail="objective_number required for campaign missions")
+    
+    if mission_type == "special" and (not mission_code or book_page is None):
+        raise HTTPException(status_code=400, detail="mission_code and book_page required for special missions")
+    
+    # Create mission
+    mission = Mission(
+        game_id=game_id,
+        mission_type=mission_type,
+        origin_world=origin_world,
+        execution_place=execution_place,
+        max_date=max_date,
+        created_date=date.today().isoformat(),
+        notes=notes,
+        objective_number=objective_number,
+        mission_code=mission_code,
+        book_page=book_page
+    )
+    
+    db.add(mission)
+    db.commit()
+    db.refresh(mission)
+    
+    return {
+        "status": "success",
+        "mission_id": mission.id,
+        "mission_type": mission_type
+    }
+
+
+@app.put("/api/games/{game_id}/missions/{mission_id}")
+async def update_mission_result(
+    game_id: str,
+    mission_id: int,
+    result: str = Form(...),
+    completed_date: str = Form(""),
+    notes: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Update mission result (mark as success or failure)"""
+    mission = db.query(Mission).filter(
+        Mission.id == mission_id,
+        Mission.game_id == game_id
+    ).first()
+    
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    
+    if result not in ["exito", "fracaso", ""]:
+        raise HTTPException(status_code=400, detail="Result must be 'exito', 'fracaso', or empty")
+    
+    mission.result = result
+    if completed_date:
+        mission.completed_date = completed_date
+    if notes is not None:
+        mission.notes = notes
+    
+    db.commit()
+    
+    return {
+        "status": "success",
+        "mission_id": mission.id,
+        "result": result
+    }
+
+
+@app.delete("/api/games/{game_id}/missions/{mission_id}")
+async def delete_mission(
+    game_id: str,
+    mission_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a mission"""
+    mission = db.query(Mission).filter(
+        Mission.id == mission_id,
+        Mission.game_id == game_id
+    ).first()
+    
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    
+    db.delete(mission)
+    db.commit()
+    
+    return {"status": "success", "deleted_id": mission_id}
+
+
+# ===== HIRING SYSTEM API =====
+
+@app.get("/api/games/{game_id}/hire/available-positions")
+async def get_available_positions(game_id: str, db: Session = Depends(get_db)):
+    """Get positions available for hiring based on current planet's tech level"""
+    game = GameState(game_id)
+    current_planet_code = game.state.get("current_planet_code")
+    
+    if not current_planet_code:
+        return {"positions": [], "error": "No current planet"}
+    
+    # Get planet tech level
+    planet = db.query(Planet).filter(Planet.code == current_planet_code).first()
+    if not planet or not planet.tech_level:
+        return {"positions": [], "error": "Planet tech level not defined"}
+    
+    # Filter positions by tech level
+    available = []
+    for position_name, position_data in POSITIONS_CATALOG.items():
+        required_level = position_data["tech_level"]
+        if planet.tech_level in TECH_LEVEL_REQUIREMENTS.get(required_level, []):
+            available.append({
+                "name": position_name,
+                "search_time_dice": position_data["search_time_dice"],
+                "base_salary": position_data["base_salary"],
+                "hire_threshold": position_data["hire_threshold"],
+                "tech_level": required_level
+            })
+    
+    return {
+        "planet_code": current_planet_code,
+        "planet_tech_level": planet.tech_level,
+        "positions": available
+    }
+
+
+@app.post("/api/games/{game_id}/hire/start")
+async def start_hire_search(
+    game_id: str,
+    position: str = Form(...),
+    experience_level: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Start a new hire search task for the Director Gerente"""
+    
+    # Validate position exists
+    if position not in POSITIONS_CATALOG:
+        raise HTTPException(status_code=400, detail="Invalid position")
+    
+    # Validate experience level
+    if experience_level not in ["Novato", "Estándar", "Veterano"]:
+        raise HTTPException(status_code=400, detail="Invalid experience level")
+    
+    # Get Director Gerente
+    director = db.query(Personnel).filter(
+        Personnel.game_id == game_id,
+        Personnel.position == "Director gerente",
+        Personnel.is_active == True
+    ).first()
+    
+    if not director:
+        raise HTTPException(status_code=404, detail="Director Gerente not found")
+    
+    # Calculate search days
+    position_data = POSITIONS_CATALOG[position]
+    dice_roller = DiceRoller()
+    search_days = calculate_hire_time(
+        position_data["search_time_dice"],
+        experience_level,
+        dice_roller
+    )
+    
+    # Calculate salary
+    final_salary = calculate_hire_salary(position_data["base_salary"], experience_level)
+    
+    # Determine queue position
+    existing_tasks = db.query(EmployeeTask).filter(
+        EmployeeTask.game_id == game_id,
+        EmployeeTask.employee_id == director.id,
+        EmployeeTask.status.in_(["pending", "in_progress"])
+    ).count()
+    
+    queue_position = existing_tasks + 1
+    
+    # Get current date
+    game = GameState(game_id)
+    current_date = f"{game.state.get('year', 1)}-{game.state.get('month', 1):02d}-{game.state.get('day', 1):02d}"
+    
+    # Create task
+    task = EmployeeTask(
+        game_id=game_id,
+        employee_id=director.id,
+        task_type="hire_search",
+        status="pending",
+        queue_position=queue_position,
+        task_data=json.dumps({
+            "position": position,
+            "experience_level": experience_level,
+            "search_days": search_days,
+            "base_salary": position_data["base_salary"],
+            "final_salary": final_salary,
+            "hire_threshold": position_data["hire_threshold"]
+        }),
+        created_date=current_date
+    )
+    
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    
+    # If it's the first task, start it immediately
+    if queue_position == 1:
+        task.status = "in_progress"
+        task.started_date = current_date
+        task.completion_date = GameCalendar.add_days(current_date, search_days)
+        
+        # Add event to queue
+        game.state["event_queue"] = EventQueue.add_event(
+            game.state.get("event_queue", []),
+            "task_completion",
+            task.completion_date,
+            {"task_id": task.id, "employee_id": director.id}
+        )
+        game.save()
+        db.commit()
+    
+    return {
+        "status": "success",
+        "task_id": task.id,
+        "queue_position": queue_position,
+        "search_days": search_days,
+        "final_salary": final_salary,
+        "task_status": task.status
+    }
+
+
+@app.get("/api/games/{game_id}/personnel/{employee_id}/tasks")
+async def get_employee_tasks(
+    game_id: str,
+    employee_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all tasks for an employee (mainly Director Gerente)"""
+    
+    employee = db.query(Personnel).filter(
+        Personnel.id == employee_id,
+        Personnel.game_id == game_id
+    ).first()
+    
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    
+    tasks = db.query(EmployeeTask).filter(
+        EmployeeTask.game_id == game_id,
+        EmployeeTask.employee_id == employee_id
+    ).order_by(EmployeeTask.queue_position).all()
+    
+    current_task = None
+    pending_tasks = []
+    completed_tasks = []
+    
+    for task in tasks:
+        task_data = json.loads(task.task_data) if task.task_data else {}
+        
+        task_info = {
+            "id": task.id,
+            "task_type": task.task_type,
+            "status": task.status,
+            "queue_position": task.queue_position,
+            "task_data": task_data,
+            "created_date": task.created_date,
+            "started_date": task.started_date,
+            "completion_date": task.completion_date,
+            "finished_date": task.finished_date
+        }
+        
+        if task.status == "in_progress":
+            current_task = task_info
+        elif task.status == "pending":
+            pending_tasks.append(task_info)
+        elif task.status in ["completed", "failed"]:
+            result_data = json.loads(task.result_data) if task.result_data else {}
+            task_info["result"] = result_data
+            completed_tasks.append(task_info)
+    
+    return {
+        "employee": {
+            "id": employee.id,
+            "name": employee.name,
+            "position": employee.position
+        },
+        "current_task": current_task,
+        "pending_tasks": pending_tasks,
+        "completed_tasks": completed_tasks,
+        "total_tasks": len(tasks)
+    }
+
+
+@app.put("/api/games/{game_id}/tasks/{task_id}/reorder")
+async def reorder_task(
+    game_id: str,
+    task_id: int,
+    new_position: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Reorder a pending task in the queue"""
+    
+    task = db.query(EmployeeTask).filter(
+        EmployeeTask.id == task_id,
+        EmployeeTask.game_id == game_id
+    ).first()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if task.status != "pending":
+        raise HTTPException(status_code=400, detail="Can only reorder pending tasks")
+    
+    # Get all pending tasks for this employee
+    pending_tasks = db.query(EmployeeTask).filter(
+        EmployeeTask.game_id == game_id,
+        EmployeeTask.employee_id == task.employee_id,
+        EmployeeTask.status == "pending"
+    ).order_by(EmployeeTask.queue_position).all()
+    
+    # Validate new position
+    if new_position < 2 or new_position > len(pending_tasks) + 1:
+        raise HTTPException(status_code=400, detail="Invalid new position")
+    
+    old_position = task.queue_position
+    
+    # Reorder tasks
+    if old_position < new_position:
+        # Moving down
+        for t in pending_tasks:
+            if old_position < t.queue_position <= new_position:
+                t.queue_position -= 1
+    else:
+        # Moving up
+        for t in pending_tasks:
+            if new_position <= t.queue_position < old_position:
+                t.queue_position += 1
+    
+    task.queue_position = new_position
+    db.commit()
+    
+    return {"status": "success", "new_position": new_position}
+
+
+@app.delete("/api/games/{game_id}/tasks/{task_id}")
+async def delete_task(
+    game_id: str,
+    task_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a pending task"""
+    
+    task = db.query(EmployeeTask).filter(
+        EmployeeTask.id == task_id,
+        EmployeeTask.game_id == game_id
+    ).first()
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if task.status != "pending":
+        raise HTTPException(status_code=400, detail="Can only delete pending tasks")
+    
+    employee_id = task.employee_id
+    deleted_position = task.queue_position
+    
+    db.delete(task)
+    
+    # Adjust queue positions of remaining tasks
+    remaining_tasks = db.query(EmployeeTask).filter(
+        EmployeeTask.game_id == game_id,
+        EmployeeTask.employee_id == employee_id,
+        EmployeeTask.status == "pending",
+        EmployeeTask.queue_position > deleted_position
+    ).all()
+    
+    for t in remaining_tasks:
+        t.queue_position -= 1
+    
+    db.commit()
+    
+    return {"status": "success", "deleted_id": task_id}
+
+
+@app.post("/api/games/{game_id}/time/advance")
+async def advance_time(game_id: str, db: Session = Depends(get_db)):
+    """Advance time to the next event and process it"""
+    
+    game = GameState(game_id)
+    event_queue = game.state.get("event_queue", [])
+    
+    if not event_queue:
+        return {"status": "no_events", "message": "No hay eventos pendientes"}
+    
+    # Get next event
+    next_event = EventQueue.get_next_event(event_queue)
+    if not next_event:
+        return {"status": "no_events"}
+    
+    # Advance to event date
+    old_date = f"{game.state.get('year', 1)}-{game.state.get('month', 1):02d}-{game.state.get('day', 1):02d}"
+    new_year, new_month, new_day = GameCalendar.parse_date(next_event["date"])
+    
+    game.state["year"] = new_year
+    game.state["month"] = new_month
+    game.state["day"] = new_day
+    
+    # Process event based on type
+    event_result = {}
+    
+    if next_event["type"] == "task_completion":
+        # Resolve hire task
+        task_id = next_event["data"]["task_id"]
+        task = db.query(EmployeeTask).get(task_id)
+        
+        if task and task.status == "in_progress":
+            task_data = json.loads(task.task_data)
+            
+            # Get Director Gerente
+            director = db.query(Personnel).get(task.employee_id)
+            
+            # Calculate modifiers
+            exp_mod = {"N": -1, "E": 0, "V": 1}.get(director.experience, 0)
+            morale_mod = {"B": -1, "M": 0, "A": 1}.get(director.morale, 0)
+            rep_mod = game.state.get("reputation", 0)
+            total_mod = exp_mod + morale_mod + rep_mod
+            
+            
+            # Roll 2d6
+            dice_roller = DiceRoller()
+            dice_values = dice_roller.roll_dice(2, 6)
+            dice_sum = sum(dice_values)
+            final_result = dice_sum + total_mod
+            
+            # Check success
+            threshold = task_data["hire_threshold"]
+            success = final_result >= threshold
+            
+            # Update employee evolution
+            if final_result >= 10:
+                # Increase morale
+                if director.morale == "B":
+                    director.morale = "M"
+                elif director.morale == "M":
+                    director.morale = "A"
+            elif final_result <= 4:
+                # Decrease morale
+                if director.morale == "A":
+                    director.morale = "M"
+                elif director.morale == "M":
+                    director.morale = "B"
+            
+            # Check for double 6 (experience increase)
+            if dice_values[0] == 6 and dice_values[1] == 6:
+                if director.experience == "N":
+                    director.experience = "E"
+                elif director.experience == "E":
+                    director.experience = "V"
+            
+            new_employee_id = None
+            if success:
+                # Create new employee
+                from app.name_suggestions import get_random_personal_name
+                
+                new_employee = Personnel(
+                    game_id=game_id,
+                    position=task_data["position"],
+                    name=get_random_personal_name(),
+                    monthly_salary=task_data["final_salary"],
+                    experience=task_data["experience_level"][0],  # N, E, V
+                    morale="M",  # Always start with Medium morale
+                    hire_date=next_event["date"],
+                    is_active=True,
+                    notes="Contratado automáticamente"
+                )
+                db.add(new_employee)
+                db.flush()  # Get ID
+                new_employee_id = new_employee.id
+            
+            # Update task
+            task.status = "completed" if success else "failed"
+            task.finished_date = next_event["date"]
+            task.result_data = json.dumps({
+                "dice_values": dice_values,
+                "dice_sum": dice_sum,
+                "modifiers": {
+                    "experience": exp_mod,
+                    "morale": morale_mod,
+                    "reputation": rep_mod,
+                    "total": total_mod
+                },
+                "final_result": final_result,
+                "threshold": threshold,
+                "success": success,
+                "employee_id": new_employee_id
+            })
+            
+            event_result = {
+                "type": "hire_resolution",
+                "position": task_data["position"],
+                "experience_level": task_data["experience_level"],
+                "dice": dice_values,
+                "total": final_result,
+                "threshold": threshold,
+                "success": success,
+                "new_employee_id": new_employee_id,
+                "director_evolution": {
+                    "old_morale": director.morale,
+                    "old_experience": director.experience
+                }
+            }
+            
+            # Reorganize queue and start next task
+            remaining_tasks = db.query(EmployeeTask).filter(
+                EmployeeTask.game_id == game_id,
+                EmployeeTask.employee_id == task.employee_id,
+                EmployeeTask.status == "pending"
+            ).order_by(EmployeeTask.queue_position).all()
+            
+            for t in remaining_tasks:
+                t.queue_position -= 1
+            
+            # Start next task if exists
+            if remaining_tasks:
+                next_task = remaining_tasks[0]  # Now position 1
+                next_task.status = "in_progress"
+                next_task.started_date = next_event["date"]
+                
+                task_data_next = json.loads(next_task.task_data)
+                next_task.completion_date = GameCalendar.add_days(
+                    next_event["date"],
+                    task_data_next["search_days"]
+                )
+                
+                # Add new event
+                game.state["event_queue"] = EventQueue.add_event(
+                    game.state.get("event_queue", []),
+                    "task_completion",
+                    next_task.completion_date,
+                    {"task_id": next_task.id, "employee_id": task.employee_id}
+                )
+                
+                event_result["next_task_started"] = {
+                    "task_id": next_task.id,
+                    "position": task_data_next["position"],
+                    "completion_date": next_task.completion_date
+                }
+    
+    # Remove processed event
+    game.state["event_queue"] = EventQueue.remove_event(event_queue, next_event)
+    
+    db.commit()
+    game.save()
+    
+    return {
+        "status": "success",
+        "old_date": old_date,
+        "new_date": next_event["date"],
+        "event_type": next_event["type"],
+        "event_result": event_result,
+        "next_event": EventQueue.get_next_event(game.state.get("event_queue", []))
     }
 
 
