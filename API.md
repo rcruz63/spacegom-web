@@ -144,6 +144,33 @@ Establece el planeta de origen para el juego.
 
 ---
 
+### Complete Setup with Difficulty
+```http
+POST /api/games/{game_id}/complete-setup
+Content-Type: application/x-www-form-urlencoded
+
+difficulty=normal
+```
+Completa la configuración inicial del juego seleccionando dificultad, creando 11 empleados iniciales y asignando fondos.
+
+**Difficulty Levels:**
+- `easy`: 600 SC iniciales
+- `normal`: 500 SC iniciales  
+- `hard`: 400 SC iniciales
+
+**Response:**
+```json
+{
+  "status": "success",
+  "difficulty": "normal",
+  "starting_funds": 500,
+  "personnel_count": 11,
+  "monthly_salaries": 76
+}
+```
+
+---
+
 ### Update Ship Location on Planet
 ```http
 POST /api/games/{game_id}/update-location
@@ -348,6 +375,206 @@ Marca un cuadrante como explorado.
 
 ---
 
+### Update Planet Notes
+```http
+POST /api/planets/{code}/update-notes
+Content-Type: application/x-www-form-urlencoded
+
+notes=Este planeta tiene excelentes recursos mineros
+```
+Actualiza las notas personalizadas de un planeta.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "planet": {
+    "code": 466,
+    "name": "Bretobos",
+    "notes": "Este planeta tiene excelentes recursos mineros",
+    ...
+  }
+}
+```
+
+---
+
+## 👥 Personnel Management
+
+### Get Personnel List
+```http
+GET /api/games/{game_id}/personnel
+```
+Retorna la lista de empleados activos del juego.
+
+**Response:**
+```json
+{
+  "personnel": [
+    {
+      "id": 1,
+      "position": "Director gerente",
+      "name": "Widaker Farq",
+      "monthly_salary": 20,
+      "experience": "V",
+      "morale": "A",
+      "hire_date": "2026-01-08",
+      "notes": ""
+    }
+  ],
+  "total_monthly_salaries": 76,
+  "count": 11
+}
+```
+
+---
+
+### Hire Personnel
+```http
+POST /api/games/{game_id}/personnel
+Content-Type: application/x-www-form-urlencoded
+
+position=Piloto
+name=Juan García
+monthly_salary=10
+experience=E
+morale=M
+notes=Piloto experimental
+```
+Contrata un nuevo empleado.
+
+**Experience Levels:**
+- `N`: Novato
+- `E`: Experto
+- `V`: Veterano
+
+**Morale Levels:**
+- `B`: Baja
+- `M`: Media
+- `A`: Alta
+
+**Response:**
+```json
+{
+  "status": "success",
+  "employee": {
+    "id": 12,
+    "name": "Juan García",
+    "position": "Piloto"
+  }
+}
+```
+
+---
+
+### Update Personnel
+```http
+PUT /api/games/{game_id}/personnel/{employee_id}
+Content-Type: application/x-www-form-urlencoded
+
+monthly_salary=12
+morale=A
+```
+Actualiza la información de un empleado (campos opcionales).
+
+**Response:**
+```json
+{
+  "status": "success",
+  "employee": {
+    "id": 12,
+    "name": "Juan García"
+  }
+}
+```
+
+---
+
+### Fire Personnel
+```http
+DELETE /api/games/{game_id}/personnel/{employee_id}
+```
+Despide un empleado (marca como inactivo).
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Juan García has been dismissed"
+}
+```
+
+---
+
+## 💰 Treasury Management
+
+### Get Treasury Status
+```http
+GET /api/games/{game_id}/treasury
+```
+Obtiene el estado financiero completo del juego.
+
+**Response:**
+```json
+{
+  "current_balance": 500,
+  "difficulty": "normal",
+  "reputation": 0,
+  "monthly_expenses": {
+    "salaries": 76,
+    "loans": 0,
+    "total": 76
+  },
+  "recent_transactions": [
+    {
+      "date": "2026-01-08T20:30:00",
+      "amount": -50,
+      "description": "Compra de combustible",
+      "category": "combustible"
+    }
+  ]
+}
+```
+
+---
+
+### Add Transaction
+```http
+POST /api/games/{game_id}/treasury/transaction
+Content-Type: application/x-www-form-urlencoded
+
+amount=-50
+description=Compra de combustible
+category=combustible
+```
+Registra una transacción financiera (ingreso o gasto).
+
+**Categories:**
+- `comercio`: Comercio de productos
+- `mision`: Recompensas de misiones
+- `suministros`: Compra de suministros
+- `reparaciones`: Reparaciones de nave
+- `combustible`: Compra de combustible
+- `salarios`: Pago de salarios (automático)
+- `prestamos`: Préstamos
+- `other`: Otros
+
+**Response:**
+```json
+{
+  "status": "success",
+  "new_balance": 450,
+  "transaction": {
+    "date": "2026-01-08T20:30:00",
+    "amount": -50,
+    "description": "Compra de combustible",
+    "category": "combustible"
+  }
+}
+```
+
+---
+
 ## 📝 Example cURL Commands
 
 ```bash
@@ -374,6 +601,31 @@ curl http://localhost:8000/api/planets/next/115
 curl -X POST http://localhost:8000/api/games/test_campaign/update \
   -F "fuel=25" \
   -F "reputation=3"
+
+# Completar setup con dificultad
+curl -X POST http://localhost:8000/api/games/test_campaign/complete-setup \
+  -F "difficulty=normal"
+
+# Contratar personal
+curl -X POST http://localhost:8000/api/games/test_campaign/personnel \
+  -F "position=Piloto" \
+  -F "name=Juan García" \
+  -F "monthly_salary=10" \
+  -F "experience=E" \
+  -F "morale=M"
+
+# Ver estado de tesorería
+curl http://localhost:8000/api/games/test_campaign/treasury
+
+# Registrar transacción
+curl -X POST http://localhost:8000/api/games/test_campaign/treasury/transaction \
+  -F "amount=-50" \
+  -F "description=Compra de combustible" \
+  -F "category=combustible"
+
+# Actualizar notas de planeta
+curl -X POST http://localhost:8000/api/planets/466/update-notes \
+  -F "notes=Excelente para comercio"
 ```
 
 ---
