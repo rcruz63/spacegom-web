@@ -21,3 +21,8 @@
 - NECESARIO: Se necesita proporcionar un mecanismo para ver la informacion de otras areas que ya se conozcan.
 - Deseable: Necesitamos una pantalla de entrada que permita seleccionar la partida a la que se desea acceder y borrar partidas si se desea.
 - DESEABLE: No se ve el fondo estrellado en la visualizacion del area.
+
+## Review 2
+
+- GRAVE: La fecha que aparece en todas las pantallas en la esquina superior derecha no corresponde con la fecha del juego, ni se actualiza con el transcurso del juego.
+- NECESARIO: ficheros de codigo demasiado grandes, dificiles de mantener, se recomienda refactorizar el codigo.

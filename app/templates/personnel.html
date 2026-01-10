@@ -420,28 +420,105 @@
     }
 
     async function advanceTime() {
-        if (!confirm('¿Avanzar tiempo hasta el próximo evento?')) return;
+        showDiceModeModal();
+    }
 
+    function showDiceModeModal() {
+        const modal = document.createElement('div');
+        modal.id = 'dice-mode-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+        modal.innerHTML = `
+        <div class="glass-panel tech-border p-8 rounded-lg max-w-md w-full">
+            <h3 class="text-2xl font-orbitron text-neon-blue mb-6">🎲 Modo de Dados</h3>
+            <p class="text-gray-400 mb-6">¿Cómo deseas resolver la tirada?</p>
+            <div class="space-y-3">
+                <button onclick="proceedWithDice('auto')" 
+                    class="w-full py-4 bg-neon-blue bg-opacity-20 border-2 border-neon-blue text-neon-blue rounded hover:bg-opacity-30 font-orbitron">
+                    🤖 AUTOMÁTICA<div class="text-xs text-gray-400 mt-1">El sistema tira los dados</div>
+                </button>
+                <button onclick="proceedWithDice('manual')" 
+                    class="w-full py-4 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
+                    🎯 MANUAL<div class="text-xs text-gray-400 mt-1">Introduce tus dados físicos</div>
+                </button>
+            </div>
+            <button onclick="document.getElementById('dice-mode-modal').remove()" 
+                class="w-full mt-4 py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                Cancelar
+            </button>
+        </div>
+    `;
+        document.body.appendChild(modal);
+    }
+    async function proceedWithDice(mode) {
+        document.getElementById('dice-mode-modal')?.remove();
+        if (mode === 'manual') {
+            showManualDice();
+        } else {
+            executeTimeAdvance();
+        }
+    }
+    function showManualDice() {
+        const modal = document.createElement('div');
+        modal.id = 'manual-dice-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+        modal.innerHTML = `
+        <div class="glass-panel tech-border p-8 rounded-lg max-w-md w-full">
+            <h3 class="text-2xl font-orbitron text-neon-blue mb-6">🎲 Tira 2d6</h3>
+            <p class="text-gray-400 mb-4">Introduce los resultados:</p>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm text-gray-500 mb-2">Dado 1</label>
+                    <input type="number" id="dice1" min="1" max="6" 
+                        class="w-full bg-space-800 border border-gray-700 rounded px-4 py-3 text-white text-center text-2xl font-orbitron">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-500 mb-2">Dado 2</label>
+                    <input type="number" id="dice2" min="1" max="6" 
+                        class="w-full bg-space-800 border border-gray-700 rounded px-4 py-3 text-white text-center text-2xl font-orbitron">
+                </div>
+            </div>
+            <button onclick="submitManualDice()" 
+                class="w-full py-3 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron mb-2">
+                Confirmar
+            </button>
+            <button onclick="document.getElementById('manual-dice-modal').remove()" 
+                class="w-full py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                Cancelar
+            </button>
+        </div>
+    `;
+        document.body.appendChild(modal);
+        document.getElementById('dice1').focus();
+    }
+    async function submitManualDice() {
+        const d1 = parseInt(document.getElementById('dice1').value);
+        const d2 = parseInt(document.getElementById('dice2').value);
+        if (!d1 || !d2 || d1 < 1 || d1 > 6 || d2 < 1 || d2 > 6) {
+            showToast('Valores inválidos (1-6)', 'warning');
+            return;
+        }
+        document.getElementById('manual-dice-modal')?.remove();
+        executeTimeAdvance([d1, d2]);
+    }
+    async function executeTimeAdvance(manualDice = null) {
         try {
+            const formData = new FormData();
+            if (manualDice) formData.append('manual_dice', manualDice.join(','));
             const response = await fetch(`/api/games/${gameId}/time/advance`, {
-                method: 'POST'
+                method: 'POST',
+                body: formData
             });
-
             const data = await response.json();
-
             if (data.status === 'no_events') {
                 showToast('No hay eventos pendientes', 'info');
                 return;
             }
-
             if (response.ok && data.event_result) {
                 const result = data.event_result;
-
                 if (result.type === 'hire_resolution') {
                     showToast(`Tiempo avanzado: ${data.old_date} → ${data.new_date}`, 'info');
                     showHireResult(result);
                 }
-
                 await loadPersonnel();
                 await loadDirectorTasks();
                 await loadGameDate();

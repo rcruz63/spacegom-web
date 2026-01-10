@@ -1354,7 +1354,11 @@ async def delete_task(
 
 
 @app.post("/api/games/{game_id}/time/advance")
-async def advance_time(game_id: str, db: Session = Depends(get_db)):
+async def advance_time(
+    game_id: str, 
+    manual_dice: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
     """Advance time to the next event and process it"""
     
     game = GameState(game_id)
@@ -1397,9 +1401,12 @@ async def advance_time(game_id: str, db: Session = Depends(get_db)):
             total_mod = exp_mod + morale_mod + rep_mod
             
             
-            # Roll 2d6
-            dice_roller = DiceRoller()
-            dice_values = dice_roller.roll_dice(2, 6)
+            # Roll 2d6 (or use manual values)
+            if manual_dice:
+                dice_values = [int(x) for x in manual_dice.split(',')]
+            else:
+                dice_roller = DiceRoller()
+                dice_values = dice_roller.roll_dice(2, 6)
             dice_sum = sum(dice_values)
             final_result = dice_sum + total_mod
             
