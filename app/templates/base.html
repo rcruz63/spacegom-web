@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,8 +10,10 @@
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -39,43 +42,137 @@
     <style>
         body {
             background-color: #050505;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
             background-size: 30px 30px;
         }
+
         .glass-panel {
             background: rgba(11, 13, 23, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(0, 243, 255, 0.2);
             box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
         }
+
         .tech-border {
             position: relative;
         }
+
         .tech-border::before {
             content: '';
             position: absolute;
-            top: -1px; left: -1px;
-            width: 10px; height: 10px;
+            top: -1px;
+            left: -1px;
+            width: 10px;
+            height: 10px;
             border-top: 2px solid #00f3ff;
             border-left: 2px solid #00f3ff;
         }
+
         .tech-border::after {
             content: '';
             position: absolute;
-            bottom: -1px; right: -1px;
-            width: 10px; height: 10px;
+            bottom: -1px;
+            right: -1px;
+            width: 10px;
+            height: 10px;
             border-bottom: 2px solid #00f3ff;
             border-right: 2px solid #00f3ff;
         }
+
+        /* Notification System */
+        #toast-container {
+            position: fixed;
+            top: 100px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .toast {
+            min-width: 300px;
+            padding: 16px 20px;
+            background: rgba(21, 25, 43, 0.95);
+            border-left: 4px solid;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .toast.success {
+            border-color: #00ff9d;
+        }
+
+        .toast.error {
+            border-color: #ff2a6d;
+        }
+
+        .toast.info {
+            border-color: #00f3ff;
+        }
+
+        .toast.warning {
+            border-color: #ffa500;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        #results-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            width: 450px;
+            background: rgba(11, 13, 23, 0.98);
+            border-left: 2px solid #00f3ff;
+            box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 999;
+            overflow-y: auto;
+        }
+
+        #results-panel.open {
+            transform: translateX(0);
+        }
     </style>
 </head>
+
 <body class="text-gray-300 font-tech min-h-screen p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
         <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-end">
             <div>
-                <h1 class="text-4xl font-orbitron font-bold text-neon-blue tracking-wider uppercase drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]">
+                <h1
+                    class="text-4xl font-orbitron font-bold text-neon-blue tracking-wider uppercase drop-shadow-[0_0_10px_rgba(0,243,255,0.5)]">
                     Spacegom <span class="text-white text-xl align-top opacity-80">Companion</span>
                 </h1>
                 <p class="text-neon-green text-sm tracking-widest mt-1">SYSTEM ONLINE // CAPTAIN ACCESS GRANTED</p>
@@ -94,5 +191,123 @@
             SPACEGOM COMPANION SYSTEM v0.1 // CONNECTION SECURE
         </footer>
     </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
+    <!-- Results Panel -->
+    <div id="results-panel">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-orbitron text-neon-blue">Resultados</h2>
+                <button onclick="closeResultsPanel()" class="text-gray-400 hover:text-white text-2xl">×</button>
+            </div>
+            <div id="results-content"></div>
+        </div>
+    </div>
+
+    <!-- Global Notification System JS -->
+    <script>
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️',
+                warning: '⚠️'
+            };
+
+            toast.innerHTML = `
+                <span class="text-2xl">${icons[type]}</span>
+                <span class="text-sm text-white flex-1">${message}</span>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        function showResultsPanel(content) {
+            document.getElementById('results-content').innerHTML = content;
+            document.getElementById('results-panel').classList.add('open');
+        }
+
+        function closeResultsPanel() {
+            document.getElementById('results-panel').classList.remove('open');
+        }
+
+        function showHireResult(data) {
+            const diceHtml = data.dice.map(d =>
+                `<span class="inline-block w-12 h-12 leading-12 text-center bg-white text-space-900 font-bold rounded text-xl">${d}</span>`
+            ).join(' + ');
+
+            const successClass = data.success ? 'text-neon-green' : 'text-neon-red';
+            const successIcon = data.success ? '✅' : '❌';
+            const successText = data.success ? 'ÉXITO' : 'FRACASO';
+
+            const content = `
+                <div class="space-y-6">
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">${successIcon}</div>
+                        <div class="text-3xl font-orbitron ${successClass} mb-2">${successText}</div>
+                        <div class="text-gray-400">${data.position}</div>
+                        <div class="text-sm text-gray-500">${data.experience_level}</div>
+                    </div>
+
+                    <div class="glass-panel tech-border p-4 rounded">
+                        <div class="text-xs text-gray-500 uppercase mb-3 tracking-wider">Tirada de Dados</div>
+                        <div class="flex items-center justify-center gap-2 mb-4">
+                            ${diceHtml}
+                        </div>
+                        <div class="text-center text-sm text-gray-400">
+                            Suma: ${data.dice.reduce((a, b) => a + b, 0)}
+                        </div>
+                       <div class="text-xs text-gray-500 mt-2">
+                            Modificadores: ${data.modifiers ? `Exp(${data.modifiers.experience >= 0 ? '+' : ''}${data.modifiers.experience}) + Moral(${data.modifiers.morale >= 0 ? '+' : ''}${data.modifiers.morale}) + Rep(${data.modifiers.reputation >= 0 ? '+' : ''}${data.modifiers.reputation}) = ${data.modifiers.total >= 0 ? '+' : ''}${data.modifiers.total}` : '0'}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="glass-panel p-4 rounded text-center">
+                            <div class="text-xs text-gray-500 uppercase mb-1">Resultado Final</div>
+                            <div class="text-2xl font-orbitron text-neon-blue">${data.total}</div>
+                        </div>
+                        <div class="glass-panel p-4 rounded text-center">
+                            <div class="text-xs text-gray-500 uppercase mb-1">Umbral</div>
+                            <div class="text-2xl font-orbitron text-gray-300">${data.threshold}</div>
+                        </div>
+                    </div>
+
+                    ${data.success ? `
+                        <div class="bg-neon-green bg-opacity-10 border border-neon-green rounded p-4">
+                            <div class="text-neon-green font-orbitron mb-2">Empleado Contratado</div>
+                            <div class="text-sm text-gray-300">ID: ${data.new_employee_id}</div>
+                        </div>
+                    ` : `
+                        <div class="bg-neon-red bg-opacity-10 border border-neon-red rounded p-4">
+                            <div class="text-neon-red font-orbitron">No se encontró candidato adecuado</div>
+                        </div>
+                    `}
+
+                    ${data.next_task_started ? `
+                        <div class="bg-purple-500 bg-opacity-10 border border-purple-500 rounded p-4">
+                            <div class="text-purple-400 font-orbitron mb-2">⏭️ Siguiente Búsqueda Iniciada</div>
+                            <div class="text-sm text-gray-300">${data.next_task_started.position}</div>
+                            <div class="text-xs text-gray-500">Finaliza: ${data.next_task_started.completion_date}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            showResultsPanel(content);
+        }
+    </script>
 </body>
+
 </html>

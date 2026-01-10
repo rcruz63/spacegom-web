@@ -1,6 +1,6 @@
 # Primer objetivo
 
-Ahora en el juego aparece el primer objetivo de la campaña (1), contratara 1 responsable de soporte a pasajeros, 1 auxiliar de vuelo, 1 negociador de compraventa de mercadería, 1 técnico de mantenimiento de astronaves, 1 tecnico de soportes vitales y 1 un abogado.
+Ahora en el juego aparece el primer objetivo de la campaña (1), contratar a 1 responsable de soporte a pasajeros, 1 auxiliar de vuelo, 1 negociador de compraventa de mercadería, 1 técnico de mantenimiento de astronaves, 1 tecnico de soportes vitales y 1 abogado.
 
 Tendremos que tener un registro de misiones, hay dos tipos de misiones, Objetivos de Campaña y Misiones Especiales.
 
@@ -90,6 +90,7 @@ Se utilizará un nombre aleatorio de la lista de nombres de la tabla de nombres.
 ### Cambios en la Moral y la Experiencia de los trabajadores.
 
 Siempre que un trabajador efectue una tirada de dados 2d6 está sujeto a lo siguiente:
+
 - ganará 1 nivel de moral si el resultado total, sumado todos los modificadores iguala o supera el valor de 10. Tambien se incrementa la experiencia si obtiene 2 seises en los dados independientemente de los modificadores.
 - perderá 1 nivel de moral si el resultado total, sumado todos los modificadores es igual o inferior a 4. 
 - No se puede superar el nivel maximo de moral ni el nivel minimo de moral.
@@ -108,6 +109,7 @@ Otra forma es abonar la mensualidad y otras 4 mensualidades, en este caso no se 
 ### Sistema de Eventos y Avance del Tiempo
 
 El juego debe implementar un **sistema de cola de eventos ordenados por tiempo**. Los días se saltan automáticamente hasta el siguiente evento:
+
 - Finalización de búsqueda de personal
 - Día 35 del mes (pago de salarios)
 - Futuros eventos que se añadan

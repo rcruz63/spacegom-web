@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Misiones - Spacegom{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-space-900 p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-orbitron text-neon-blue">📋 MISIONES</h1>
+            <p class="text-gray-400 text-sm mt-1" id="game-id-display">Game ID: <span id="current-game-id"></span></p>
+        </div>
+        <a href="/dashboard" id="back-dashboard"
+            class="px-4 py-2 bg-space-800 border border-gray-700 rounded text-gray-300 hover:border-neon-blue">
+            ← Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Activas</div>
+            <div class="text-3xl font-orbitron text-neon-blue" id="active-count">0</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Completadas</div>
+            <div class="text-3xl font-orbitron text-neon-green" id="completed-count">0</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Fallidas</div>
+            <div class="text-3xl font-orbitron text-neon-red" id="failed-count">0</div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="mb-6 flex gap-3">
+        <button onclick="showCampaignForm()"
+            class="px-6 py-3 bg-neon-blue bg-opacity-20 border-2 border-neon-blue text-neon-blue rounded hover:bg-opacity-30 font-orbitron transition-all">
+            + OBJETIVO DE CAMPAÑA
+        </button>
+        <button onclick="showSpecialForm()"
+            class="px-6 py-3 bg-purple-500 bg-opacity-20 border-2 border-purple-500 text-purple-400 rounded hover:bg-opacity-30 font-orbitron transition-all">
+            + MISIÓN ESPECIAL
+        </button>
+    </div>
+
+    <!-- Campaign Objective Form (hidden by default) -->
+    <div id="campaign-form" class="hidden glass-panel tech-border p-6 rounded mb-6">
+        <h3 class="text-xl font-orbitron text-neon-blue mb-4">Nuevo Objetivo de Campaña</h3>
+        <form id="create-campaign-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Número de Objetivo</label>
+                <input type="number" name="objective_number" required min="1"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Mundo de Origen</label>
+                <input type="text" name="origin_world" placeholder="Chipethea (111)"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Lugar de Ejecución</label>
+                <input type="text" name="execution_place" required placeholder="Cualquier mundo"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Fecha Máxima</label>
+                <input type="text" name="max_date" placeholder="1-03-35 (opcional)"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm text-gray-400 mb-2">Notas</label>
+                <textarea name="notes" rows="2"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white"></textarea>
+            </div>
+            <div class="md:col-span-2 flex gap-3">
+                <button type="submit"
+                    class="px-6 py-2 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded hover:bg-opacity-30">
+                    Crear Objetivo
+                </button>
+                <button type="button" onclick="hideCampaignForm()"
+                    class="px-6 py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Special Mission Form (hidden by default) -->
+    <div id="special-form" class="hidden glass-panel tech-border p-6 rounded mb-6">
+        <h3 class="text-xl font-orbitron text-purple-400 mb-4">Nueva Misión Especial</h3>
+        <form id="create-special-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Código de Misión</label>
+                <input type="text" name="mission_code" required placeholder="M-47"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Página del Libro</label>
+                <input type="number" name="book_page" required min="1"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Mundo de Origen</label>
+                <input type="text" name="origin_world" placeholder="Chipethea (111)"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Lugar de Ejecución</label>
+                <input type="text" name="execution_place" required
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Fecha Máxima</label>
+                <input type="text" name="max_date" placeholder="1-03-35 (opcional)"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm text-gray-400 mb-2">Notas</label>
+                <textarea name="notes" rows="2"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white"></textarea>
+            </div>
+            <div class="md:col-span-2 flex gap-3">
+                <button type="submit"
+                    class="px-6 py-2 bg-purple-500 bg-opacity-20 border border-purple-500 text-purple-400 rounded hover:bg-opacity-30">
+                    Crear Misión
+                </button>
+                <button type="button" onclick="hideSpecialForm()"
+                    class="px-6 py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Active Missions -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-orbitron text-neon-blue mb-4">🎯 MISIONES ACTIVAS</h2>
+        <div id="active-missions-list" class="space-y-4">
+            <!-- Dynamically loaded -->
+        </div>
+    </div>
+
+    <!-- Completed/Failed History -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-orbitron text-gray-400 mb-4">📜 HISTORIAL</h2>
+        <div id="history-missions-list" class="space-y-4">
+            <!-- Dynamically loaded -->
+        </div>
+    </div>
+</div>
+
+<script>
+    let gameId = null;
+
+    window.onload = async function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        gameId = urlParams.get('game_id');
+
+        if (!gameId) {
+            alert('No game ID provided');
+            window.location.href = '/';
+            return;
+        }
+
+        document.getElementById('current-game-id').textContent = gameId;
+        document.getElementById('back-dashboard').href = `/dashboard?game_id=${gameId}`;
+
+        await loadMissions();
+    };
+
+    async function loadMissions() {
+        try {
+            const response = await fetch(`/api/games/${gameId}/missions`);
+            const data = await response.json();
+
+            // Update counts
+            document.getElementById('active-count').textContent = data.active.length;
+            document.getElementById('completed-count').textContent = data.completed.length;
+            document.getElementById('failed-count').textContent = data.failed.length;
+
+            // Render active missions
+            const activeList = document.getElementById('active-missions-list');
+            activeList.innerHTML = '';
+
+            if (data.active.length === 0) {
+                activeList.innerHTML = '<div class="text-center py-8 text-gray-500">No hay misiones activas</div>';
+            } else {
+                data.active.forEach(mission => {
+                    activeList.appendChild(createMissionCard(mission, true));
+                });
+            }
+
+            // Render history (completed + failed)
+            const historyList = document.getElementById('history-missions-list');
+            historyList.innerHTML = '';
+
+            const history = [...data.completed, ...data.failed];
+            if (history.length === 0) {
+                historyList.innerHTML = '<div class="text-center py-8 text-gray-500">No hay misiones completadas</div>';
+            } else {
+                history.forEach(mission => {
+                    historyList.appendChild(createMissionCard(mission, false));
+                });
+            }
+
+        } catch (error) {
+            console.error('Error loading missions:', error);
+        }
+    }
+
+    function createMissionCard(mission, isActive) {
+        const card = document.createElement('div');
+        card.className = 'glass-panel tech-border p-6 rounded-lg';
+
+        const typeClass = mission.mission_type === 'campaign' ? 'text-neon-blue' : 'text-purple-400';
+        const typeIcon = mission.mission_type === 'campaign' ? '🎯' : '⭐';
+
+        let title = '';
+        if (mission.mission_type === 'campaign') {
+            title = `${typeIcon} Objetivo #${mission.objective_number}`;
+        } else {
+            title = `${typeIcon} Misión ${mission.mission_code} (Pág. ${mission.book_page})`;
+        }
+
+        let statusBadge = '';
+        if (!isActive) {
+            if (mission.result === 'exito') {
+                statusBadge = '<span class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-sm">✅ Completada</span>';
+            } else {
+                statusBadge = '<span class="px-3 py-1 bg-neon-red bg-opacity-20 border border-neon-red text-neon-red rounded text-sm">❌ Fallida</span>';
+            }
+        }
+
+        let actions = '';
+        if (isActive) {
+            actions = `
+                <div class="flex gap-2 mt-4">
+                    <button onclick="completeMission(${mission.id}, 'exito')" 
+                        class="px-4 py-2 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-sm hover:bg-opacity-30">
+                        ✅ Completar
+                    </button>
+                    <button onclick="completeMission(${mission.id}, 'fracaso')" 
+                        class="px-4 py-2 bg-neon-red bg-opacity-20 border border-neon-red text-neon-red rounded text-sm hover:bg-opacity-30">
+                        ❌ Marcar Fallo
+                    </button>
+                    <button onclick="deleteMission(${mission.id})" 
+                        class="px-4 py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded text-sm hover:bg-gray-600">
+                        🗑️ Eliminar
+                    </button>
+                </div>
+            `;
+        }
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xl font-orbitron ${typeClass}">${title}</h3>
+                ${statusBadge}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                ${mission.origin_world ? `<div><span class="text-gray-500">Origen:</span> <span class="text-gray-300">${mission.origin_world}</span></div>` : ''}
+                <div><span class="text-gray-500">Lugar:</span> <span class="text-gray-300">${mission.execution_place}</span></div>
+                ${mission.max_date ? `<div><span class="text-gray-500">Fecha límite:</span> <span class="text-gray-300">${mission.max_date}</span></div>` : ''}
+                ${mission.created_date ? `<div><span class="text-gray-500">Aceptada:</span> <span class="text-gray-300">${mission.created_date}</span></div>` : ''}
+                ${mission.completed_date ? `<div><span class="text-gray-500">Completada:</span> <span class="text-gray-300">${mission.completed_date}</span></div>` : ''}
+            </div>
+            ${mission.notes ? `<div class="mt-3 text-sm text-gray-400 border-l-2 border-gray-700 pl-3">${mission.notes}</div>` : ''}
+            ${actions}
+        `;
+
+        return card;
+    }
+
+    function showCampaignForm() {
+        document.getElementById('campaign-form').classList.remove('hidden');
+        document.getElementById('special-form').classList.add('hidden');
+    }
+
+    function hideCampaignForm() {
+        document.getElementById('campaign-form').classList.add('hidden');
+        document.getElementById('create-campaign-form').reset();
+    }
+
+    function showSpecialForm() {
+        document.getElementById('special-form').classList.remove('hidden');
+        document.getElementById('campaign-form').classList.add('hidden');
+    }
+
+    function hideSpecialForm() {
+        document.getElementById('special-form').classList.add('hidden');
+        document.getElementById('create-special-form').reset();
+    }
+
+    // Create Campaign Objective
+    document.getElementById('create-campaign-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        formData.append('mission_type', 'campaign');
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/missions`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                hideCampaignForm();
+                await loadMissions();
+            } else {
+                alert('Error creando objetivo');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error creando objetivo');
+        }
+    });
+
+    // Create Special Mission
+    document.getElementById('create-special-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+        formData.append('mission_type', 'special');
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/missions`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                hideSpecialForm();
+                await loadMissions();
+            } else {
+                alert('Error creando misión');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error creando misión');
+        }
+    });
+
+    async function completeMission(missionId, result) {
+        const action = result === 'exito' ? 'completar' : 'marcar como fallida';
+        if (!confirm(`¿Seguro que quieres ${action} esta misión?`)) return;
+
+        const formData = new FormData();
+        formData.append('result', result);
+        formData.append('completed_date', new Date().toISOString().split('T')[0]);
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/missions/${missionId}`, {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (response.ok) {
+                await loadMissions();
+            } else {
+                alert('Error actualizando misión');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error actualizando misión');
+        }
+    }
+
+    async function deleteMission(missionId) {
+        if (!confirm('¿Eliminar esta misión?')) return;
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/missions/${missionId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                await loadMissions();
+            } else {
+                alert('Error eliminando misión');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error eliminando misión');
+        }
+    }
+</script>
+{% endblock %}
