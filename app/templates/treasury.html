@@ -116,6 +116,8 @@
         document.getElementById('back-dashboard').href = `/dashboard?game_id=${gameId}`;
 
         await loadTreasury();
+        // Actualizar fecha del header
+        await updateHeaderGameDate(gameId);
     };
 
     async function loadTreasury() {

@@ -50,22 +50,22 @@
         <form id="create-campaign-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm text-gray-400 mb-2">Número de Objetivo</label>
-                <input type="number" name="objective_number" required min="1"
+                <input type="number" name="objective_number" required min="1" id="objective-number-input"
                     class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-2">Mundo de Origen</label>
-                <input type="text" name="origin_world" placeholder="Chipethea (111)"
+                <input type="text" name="origin_world" id="origin-world-input" placeholder="Ej: 111 - Chipethea"
                     class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-2">Lugar de Ejecución</label>
-                <input type="text" name="execution_place" required placeholder="Cualquier mundo"
+                <input type="text" name="execution_place" required placeholder="Ej: Sistema Alfa, Planeta 222, etc."
                     class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
             </div>
             <div>
                 <label class="block text-sm text-gray-400 mb-2">Fecha Máxima</label>
-                <input type="text" name="max_date" placeholder="1-03-35 (opcional)"
+                <input type="text" name="max_date" placeholder="dd-mm-yyyy (opcional)"
                     class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
             </div>
             <div class="md:col-span-2">
@@ -167,6 +167,8 @@
         document.getElementById('back-dashboard').href = `/dashboard?game_id=${gameId}`;
 
         await loadMissions();
+        // Actualizar fecha del header
+        await updateHeaderGameDate(gameId);
     };
 
     async function loadMissions() {
@@ -274,6 +276,59 @@
     function showCampaignForm() {
         document.getElementById('campaign-form').classList.remove('hidden');
         document.getElementById('special-form').classList.add('hidden');
+
+        // Auto-rellenar cuando se abre el formulario
+        autoFillCampaignForm();
+    }
+
+    async function autoFillCampaignForm() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+
+        if (!gameId) return;
+
+        try {
+            // Cargar datos del juego
+            const gameResponse = await fetch(`/api/games/${gameId}`);
+            const gameData = await gameResponse.json();
+
+            // Auto-rellenar mundo de origen con código + nombre
+            if (gameData.state.current_planet_code) {
+                const planetCode = gameData.state.current_planet_code;
+
+                try {
+                    const planetResponse = await fetch(`/api/planets/${planetCode}`);
+                    const planetData = await planetResponse.json();
+                    const originInput = document.getElementById('origin-world-input');
+                    if (originInput) {
+                        originInput.value = `${planetCode} - ${planetData.planet.name}`;
+                    }
+                } catch (error) {
+                    // Si falla, solo mostrar el código
+                    document.getElementById('origin-world-input').value = planetCode;
+                }
+            }
+
+            // Auto-incrementar número de objetivo
+            const missionsResponse = await fetch(`/api/games/${gameId}/missions`);
+            const missionsData = await missionsResponse.json();
+
+            let maxObjective = 0;
+            const allMissions = [...missionsData.active, ...missionsData.completed, ...missionsData.failed];
+            allMissions.forEach(mission => {
+                if (mission.objective_number && mission.objective_number > maxObjective) {
+                    maxObjective = mission.objective_number;
+                }
+            });
+
+            const objectiveInput = document.getElementById('objective-number-input');
+            if (objectiveInput) {
+                objectiveInput.value = maxObjective + 1;
+            }
+
+        } catch (error) {
+            console.error('Error auto-filling campaign form:', error);
+        }
     }
 
     function hideCampaignForm() {

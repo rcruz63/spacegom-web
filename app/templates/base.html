@@ -178,8 +178,8 @@
                 <p class="text-neon-green text-sm tracking-widest mt-1">SYSTEM ONLINE // CAPTAIN ACCESS GRANTED</p>
             </div>
             <div class="text-right hidden md:block">
-                <div class="text-xs text-gray-500 uppercase tracking-widest">Stardate</div>
-                <div class="text-neon-blue font-orbitron">2026.01.07</div>
+                <div class="text-xs text-gray-500 uppercase tracking-widest">Fecha del Juego</div>
+                <div id="header-game-date" class="text-neon-blue font-orbitron">--</div>
             </div>
         </header>
 
@@ -306,6 +306,31 @@
             `;
 
             showResultsPanel(content);
+        }
+
+        // Global function to update header game date
+        async function updateHeaderGameDate(gameId) {
+            if (!gameId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                gameId = urlParams.get('game_id');
+            }
+
+            if (!gameId) return;
+
+            try {
+                const response = await fetch(`/api/games/${gameId}`);
+                const data = await response.json();
+                const day = String(data.state.day || 1).padStart(2, '0');
+                const month = String(data.state.month || 1).padStart(2, '0');
+                const year = data.state.year || 1;
+
+                const dateEl = document.getElementById('header-game-date');
+                if (dateEl) {
+                    dateEl.textContent = `${day}-${month}-${year}`;
+                }
+            } catch (error) {
+                console.error('Error updating header date:', error);
+            }
         }
     </script>
 </body>

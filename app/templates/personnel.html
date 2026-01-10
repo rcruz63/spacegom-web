@@ -186,6 +186,9 @@
             if (nextEvent) {
                 document.getElementById('next-event').textContent = nextEvent.date;
             }
+            // Actualizar header también
+            await updateHeaderGameDate(gameId);
+
         } catch (error) {
             console.error('Error loading game date:', error);
         }
@@ -522,6 +525,7 @@
                 await loadPersonnel();
                 await loadDirectorTasks();
                 await loadGameDate();
+                await updateHeaderGameDate(gameId);
             }
         } catch (error) {
             console.error('Error:', error);

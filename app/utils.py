@@ -17,10 +17,10 @@ LIFE_SUPPORT_DESCRIPTIONS = {
 TECH_LEVEL_DESCRIPTIONS = {
     "PR": "Primitivo",
     "RUD": "Rudimentario",
-    "ES": "Estándar",
-    "INT": "Intermedio",
-    "POL": "Pólvora",
-    "N.S": "No Significativo"
+    "ES": "Espacial",
+    "INT": "Interestelar",
+    "POL": "Posinterestelar",
+    "N.S": "Nivel superior"
 }
 
 SPACEPORT_QUALITY = {

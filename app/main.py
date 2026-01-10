@@ -462,26 +462,36 @@ async def roll_planet_code(
 
 def format_planet_data(planet: Planet) -> dict:
     """
-    Format planet data for API responses using new schema
+    Format planet data for API responses using decoded human-readable values
     
     Args:
         planet: Planet object from database
         
     Returns:
-        Formatted dictionary with all planet information
+        Formatted dictionary with all planet information (codes + descriptions)
     """
+    from app.utils import decode_life_support, decode_tech_level, parse_spaceport
+    
+    # Parse spaceport into components
+    spaceport_str = f"{planet.spaceport_quality}-{planet.fuel_density}-{planet.docking_price}"
+    spaceport_decoded = parse_spaceport(spaceport_str)
+    
     return {
         "code": planet.code,
         "name": planet.name,
         "life_support": {
             "type": planet.life_support,
+            "description": decode_life_support(planet.life_support),
             "local_contagion_risk": planet.local_contagion_risk,
             "days_to_hyperspace": planet.days_to_hyperspace,
             "legal_order_threshold": planet.legal_order_threshold
         },
         "spaceport": {
-            "quality": planet.spaceport_quality,
-            "fuel_density": planet.fuel_density,
+            "raw": spaceport_str,
+            "quality_code": planet.spaceport_quality,
+            "quality": spaceport_decoded["quality"],
+            "fuel_code": planet.fuel_density,
+            "fuel": spaceport_decoded["fuel"],
             "docking_price": planet.docking_price
         },
         "orbital_facilities": {
@@ -513,6 +523,7 @@ def format_planet_data(planet: Planet) -> dict:
         },
         "bootstrap_data": {
             "tech_level": planet.tech_level,
+            "tech_level_description": decode_tech_level(planet.tech_level) if planet.tech_level else "Desconocido",
             "population_over_1000": planet.population_over_1000,
             "convenio_spacegom": planet.convenio_spacegom
         },

@@ -123,13 +123,15 @@
             <div>
                 <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider">CALENDARIO</div>
                 <div class="bg-space-800 border border-gray-700 rounded p-3 mb-3">
-                    <div class="text-xs text-gray-400 mb-1">Mes de Campaña</div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="adjustMonth(-1)" class="text-neon-blue hover:text-neon-green">◄</button>
-                        <span class="text-2xl font-orbitron text-neon-blue flex-1 text-center" id="month-value">3</span>
-                        <button onclick="adjustMonth(1)" class="text-neon-blue hover:text-neon-green">►</button>
+                    <div class="text-xs text-gray-400 mb-1">Fecha del Juego</div>
+                    <div class="flex items-center justify-center gap-1">
+                        <span class="text-xl font-orbitron text-neon-green" id="day-value">1</span>
+                        <span class="text-gray-500">-</span>
+                        <span class="text-xl font-orbitron text-neon-blue" id="month-value">1</span>
+                        <span class="text-gray-500">-</span>
+                        <span class="text-xl font-orbitron text-white" id="year-value">1</span>
                     </div>
-                    <div class="text-xs text-gray-500 text-center mt-1">de 12</div>
+                    <div class="text-xs text-gray-500 text-center mt-1">dd-mm-yyyy</div>
                 </div>
 
                 <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider">REPUTACIÓN</div>
@@ -351,7 +353,7 @@
             </div>
         </div>
 
-</div>
+    </div>
 
 </div>
 
@@ -392,11 +394,6 @@
     function adjustStorage(delta) {
         gameState.storage = Math.max(0, Math.min(gameState.storage_max || 40, gameState.storage + delta));
         updateStorageDisplay();
-    }
-
-    function adjustMonth(delta) {
-        gameState.month = Math.max(1, Math.min(12, gameState.month + delta));
-        document.getElementById('month-value').textContent = gameState.month;
     }
 
     function adjustReputation(delta) {
@@ -492,7 +489,9 @@
             updateFuelDisplay();
             updateStorageDisplay();
             updateReputationDisplay();
-            document.getElementById('month-value').textContent = gameState.month;
+            document.getElementById('day-value').textContent = gameState.day || 1;
+            document.getElementById('month-value').textContent = gameState.month || 1;
+            document.getElementById('year-value').textContent = gameState.year || 1;
 
             // Update Area/Density badges
             if (gameState.area) {
@@ -564,6 +563,9 @@
 
             // Load Treasury Data
             await loadTreasuryData(gameId);
+
+            // Actualizar fecha del header
+            await updateHeaderGameDate(gameId);
 
         } catch (error) {
             console.error("Error loading game state:", error);
@@ -676,13 +678,22 @@
             document.getElementById('planet-name').textContent = planet.name.toUpperCase();
             document.getElementById('planet-code').textContent = 'Código: ' + planet.code;
 
-            // Use new schema fields
-            document.getElementById('planet-life-support').textContent = planet.life_support.type || 'Ninguno';
-            document.getElementById('planet-spaceport').textContent =
-                `${planet.spaceport.quality}-${planet.spaceport.fuel_density}-${planet.spaceport.docking_price}`;
-            document.getElementById('planet-tech').textContent = planet.bootstrap_data.tech_level || 'Desconocido';
-            document.getElementById('planet-population').textContent =
-                planet.bootstrap_data.population_over_1000 ? '> 1000 hab.' : '< 1000 hab.';
+            // Usar datos decodificados del nuevo formato
+            document.getElementById('planet-life-support').textContent =
+                planet.life_support.description || planet.life_support.type || 'Desconocido';
+            document.getElementById('planet-spaceport').innerHTML = `
+                <div class="text-xs space-y-1">
+                    <div>Calidad: <span class="text-neon-blue">${planet.spaceport.quality || 'Medio'}</span></div>
+                    <div>Combustible: <span class="text-neon-green">${planet.spaceport.fuel || 'Densidad Media'}</span></div>
+                    <div>Amarre: <span class="text-white">${planet.spaceport.docking_price || 0} SC</span></div>
+                </div>
+            `;
+            document.getElementById('planet-tech').textContent =
+                planet.bootstrap_data.tech_level_description || planet.bootstrap_data.tech_level || 'Desconocido';
+
+            // Población
+            const population = planet.bootstrap_data.population_over_1000 ? '>1.000 hab.' : '<1.000 hab.';
+            document.getElementById('planet-population').textContent = population;
 
             // Handle orbital facilities as booleans
             const facilitiesEl = document.getElementById('planet-facilities');
