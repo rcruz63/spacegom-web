@@ -143,6 +143,36 @@ Contratar 6 tipos de personal:
 **Implementación:**
 - Nueva tabla en `database.py` o almacenamiento en `game_state`
 - UI para visualizar misiones activas
+- **CRÍTICO**: Registro automático del Objetivo 1 al completar el setup inicial
+
+**Registro del Primer Objetivo:**
+Al completar el setup del juego (cuando `setup_complete = True`), se debe crear automáticamente el primer objetivo:
+
+```python
+# Objetivo de Campaña #1
+{
+    "numero_objetivo": 1,
+    "descripcion": "Contratar: 1 responsable de soporte a pasajeros, 1 auxiliar de vuelo, 1 negociador de compraventa de mercadería, 1 técnico de mantenimiento de astronaves, 1 técnico de soportes vitales, 1 abogado",
+    "mundo_origen": current_planet_code,  # Planeta donde se acepta
+    "lugar_ejecucion": "Cualquiera",
+    "fecha_maxima": "",  # Sin fecha límite
+    "resultado": "",  # Vacío hasta completar
+    "progreso": {
+        "responsable_soporte_pasajeros": False,
+        "auxiliar_vuelo": False,
+        "negociador_compraventa": False,
+        "tecnico_mantenimiento_astronaves": False,
+        "tecnico_soportes_vitales": False,
+        "abogado": False
+    }
+}
+```
+
+**UI necesaria:**
+- Visualización de objetivos activos en el dashboard
+- Indicador de progreso (X/6 contratados)
+- Al contratar cada puesto, actualizar el campo `progreso` correspondiente
+- Cuando todos sean `True`, marcar `resultado = "exito"` y desbloquear siguiente objetivo
 
 ### 3. Catálogo de Puestos de Trabajo
 
