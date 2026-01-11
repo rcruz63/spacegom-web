@@ -45,10 +45,6 @@
             class="px-6 py-3 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
             + INICIAR BÚSQUEDA
         </button>
-        <button onclick="advanceTime()"
-            class="px-6 py-3 bg-purple-500 bg-opacity-20 border-2 border-purple-500 text-purple-400 rounded hover:bg-opacity-30 font-orbitron">
-            ⏩ AVANZAR TIEMPO
-        </button>
     </div>
 
     <!-- Director's Task Queue -->
@@ -112,7 +108,7 @@
                 <button type="button" onclick="selectLevel('Novato')" data-level="Novato"
                     class="level-btn px-4 py-4 border-2 border-green-500 bg-green-500 bg-opacity-20 text-green-400 rounded hover:bg-opacity-30">
                     <div class="font-orbitron font-bold">Novato</div>
-                    <div class="text-xs mt-1">50 tiempo / 50% salario</div>
+                    <div class="text-xs mt-1">50% tiempo / 50% salario</div>
                 </button>
                 <button type="button" onclick="selectLevel('Estándar')" data-level="Estándar"
                     class="level-btn active px-4 py-4 border-2 border-neon-blue bg-neon-blue bg-opacity-30 text-neon-blue rounded hover:bg-opacity-40">
@@ -122,7 +118,7 @@
                 <button type="button" onclick="selectLevel('Veterano')" data-level="Veterano"
                     class="level-btn px-4 py-4 border-2 border-purple-500 bg-purple-500 bg-opacity-20 text-purple-400 rounded hover:bg-opacity-30">
                     <div class="font-orbitron font-bold">Veterano</div>
-                    <div class="text-xs mt-1">200% tiempo / mismo salario</div>
+                    <div class="text-xs mt-1">200% tiempo / 200% salario</div>
                 </button>
             </div>
         </div>
@@ -396,29 +392,55 @@
             return;
         }
 
-        const formData = new FormData();
-        formData.append('position', selectedPosition.name);
-        formData.append('experience_level', selectedLevel);
+        // Modificadores de experiencia para los dados
+        const experienceModifiers = {
+            'Novato': -1,
+            'Estándar': 0,
+            'Veterano': 1
+        };
 
+        // Solicitar dados con DiceRollerUI
         try {
-            const response = await fetch(`/api/games/${gameId}/hire/start`, {
-                method: 'POST',
-                body: formData
+            await DiceRollerUI.requestRoll({
+                numDice: 2,
+                diceSides: 6,
+                title: "Búsqueda de Personal",
+                description: `Calculando días para encontrar ${selectedPosition.name}`,
+                modifiers: {
+                    [selectedLevel]: experienceModifiers[selectedLevel]
+                },
+                onResult: async (diceResult) => {
+                    // Llamar al backend CON los dados ya tirados
+                    const formData = new FormData();
+                    formData.append('position', selectedPosition.name);
+                    formData.append('experience_level', selectedLevel);
+                    formData.append('manual_dice_days', diceResult.dice.join(','));
+
+                    try {
+                        const response = await fetch(`/api/games/${gameId}/hire/start`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                            showToast(`✅ Búsqueda iniciada\n${selectedPosition.name} - ${diceResult.total} días`, 'success');
+                            hideHireModal();
+                            await loadDirectorTasks();
+                            await loadGameDate();
+                        } else {
+                            showToast('Error: ' + (data.detail || 'Error desconocido'), 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showToast('Error iniciando búsqueda', 'error');
+                    }
+                }
             });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                showToast(`Búsqueda de ${selectedPosition.name} (${selectedLevel}) iniciada - Cola #${data.queue_position}`, 'success');
-                hideHireModal();
-                await loadDirectorTasks();
-                await loadGameDate();
-            } else {
-                showToast('Error iniciando búsqueda: ' + (data.detail || 'Error desconocido'), 'error');
-            }
         } catch (error) {
-            console.error('Error:', error);
-            showToast('Error iniciando búsqueda', 'error');
+            console.error('Error en dados:', error);
+            showToast('Error en el sistema de dados: ' + error.message, 'error');
         }
     }
 

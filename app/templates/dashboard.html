@@ -168,42 +168,6 @@
         </div>
     </div>
 
-    <!-- QUICK NAVIGATION -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <a href="#" id="nav-personnel"
-            class="glass-panel tech-border p-6 rounded-lg hover:border-neon-green transition-all cursor-pointer group">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-xl font-orbitron text-neon-green mb-1">PERSONAL</h3>
-                    <p class="text-sm text-gray-400">Gestionar empleados y salarios</p>
-                </div>
-                <div class="text-3xl group-hover:translate-x-1 transition-transform">👥</div>
-            </div>
-        </a>
-
-        <a href="#" id="nav-treasury"
-            class="glass-panel tech-border p-6 rounded-lg hover:border-neon-blue transition-all cursor-pointer group">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-xl font-orbitron text-neon-blue mb-1">TESORERÍA</h3>
-                    <p class="text-sm text-gray-400">Ver saldo y transacciones</p>
-                </div>
-                <div class="text-3xl group-hover:translate-x-1 transition-transform">💰</div>
-            </div>
-        </a>
-
-        <a href="#" id="nav-missions"
-            class="glass-panel tech-border p-6 rounded-lg hover:border-purple-500 transition-all cursor-pointer group">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h3 class="text-xl font-orbitron text-purple-400 mb-1">MISIONES</h3>
-                    <p class="text-sm text-gray-400">Objetivos y misiones especiales</p>
-                </div>
-                <div class="text-3xl group-hover:translate-x-1 transition-transform">📋</div>
-            </div>
-        </a>
-    </div>
-
     <!-- GRID: Navegación y Plantilla -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- MÓDULO DE NAVEGACIÓN - VISTA DE CUADRANTE -->
@@ -469,7 +433,7 @@
         }
 
         // Setup navigation links
-        setupNavigation(gameId);
+        // No longer needed - global nav handles this
 
         try {
             const response = await fetch(`/api/games/${gameId}`);
@@ -792,11 +756,6 @@
         }
     }
 
-    // Setup navigation links with game_id
-    function setupNavigation(gameId) {
-        document.getElementById('nav-personnel').href = `/personnel?game_id=${gameId}`;
-        document.getElementById('nav-treasury').href = `/treasury?game_id=${gameId}`;
-        document.getElementById('nav-missions').href = `/missions?game_id=${gameId}`;
-    }
+
 </script>
 {% endblock %}

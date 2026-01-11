@@ -23,15 +23,15 @@ class GameCalendar:
         Convierte fecha en string a tupla (año, mes, día)
         
         Args:
-            date_str: Fecha en formato "1-01-05" o "1-1-5"
+            date_str: Fecha en formato "dd-mm-yy" (ejemplo: "05-01-1")
         
         Returns:
             Tupla (año, mes, día)
         """
         parts = date_str.split('-')
-        year = int(parts[0])
-        month = int(parts[1])
-        day = int(parts[2])
+        day = int(parts[0])    # Primero es día
+        month = int(parts[1])  # Segundo es mes
+        year = int(parts[2])   # Tercero es año
         return (year, month, day)
     
     @staticmethod
@@ -43,9 +43,9 @@ class GameCalendar:
             year, month, day: Componentes de la fecha
         
         Returns:
-            String en formato "1-01-05"
+            String en formato "dd-mm-yy" (ejemplo: "05-01-1")
         """
-        return f"{year}-{month:02d}-{day:02d}"
+        return f"{day:02d}-{month:02d}-{year}"
     
     @staticmethod
     def add_days(date_str: str, days: int) -> str:
@@ -198,26 +198,30 @@ class EventQueue:
     @staticmethod
     def add_event(events: List[Dict], event_type: str, date: str, data: Dict) -> List[Dict]:
         """
-        Añade un evento a la cola y la ordena
+        Añade un evento a la cola y la ordena por fecha + ID
         
         Args:
             events: Lista actual de eventos
-            event_type: Tipo de evento ("task_completion", "salary_payment", etc.)
-            date: Fecha del evento
+            event_type: Tipo de evento (mapea a un handler)
+            date: Fecha del evento (formato dd-mm-yy)
             data: Datos específicos del evento
         
         Returns:
             Lista de eventos actualizada y ordenada
         """
+        # Calcular próximo ID secuencial
+        next_id = max([e.get("id", 0) for e in events], default=0) + 1
+        
         event = {
+            "id": next_id,
             "type": event_type,
             "date": date,
             "data": data
         }
         events.append(event)
         
-        # Ordenar por fecha
-        events.sort(key=lambda e: GameCalendar.parse_date(e["date"]))
+        # Ordenar por fecha (tupla año,mes,día), luego por ID
+        events.sort(key=lambda e: (GameCalendar.parse_date(e["date"]), e.get("id", 0)))
         
         return events
     

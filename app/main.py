@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Form, Request, HTTPException, Depends
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -17,6 +18,9 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="app/templates")
 templates.env.globals.update(chr=chr)
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Initialize database on startup
 @app.on_event("startup")
@@ -49,6 +53,10 @@ async def treasury_page(request: Request):
 @app.get("/missions", response_class=HTMLResponse)
 async def missions_page(request: Request):
     return templates.TemplateResponse("missions.html", {"request": request})
+
+@app.get("/logs", response_class=HTMLResponse)
+async def logs_page(request: Request):
+    return templates.TemplateResponse("logs.html", {"request": request})
 
 
 # ===== GAME MANAGEMENT API =====
@@ -109,6 +117,25 @@ async def update_game_state(
     
     game.save()
     return {"state": game.state}
+
+
+@app.get("/api/games/{game_id}/logs")
+async def get_logs(
+    game_id: str,
+    limit: Optional[int] = None,
+    event_type: Optional[str] = None
+):
+    """Get event logs for a game"""
+    from app.event_logger import EventLogger
+    
+    logger = EventLogger(game_id)
+    logs = logger.get_logs(limit=limit, event_type=event_type)
+    
+    return {
+        "logs": logs,
+        "count": len(logs)
+    }
+
 
 
 @app.post("/api/games/{game_id}/update-location")
@@ -360,6 +387,60 @@ async def roll_dice(request: Request, num_dices: int = Form(1), manual_result: s
         "details": details,
         "is_manual": is_manual
     })
+
+
+@app.post("/api/dice/roll")
+async def roll_dice_universal(request: Request):
+    """
+    Universal dice rolling endpoint for DiceRollerUI component
+    
+    Accepts JSON body:
+    {
+        "num_dice": 2,
+        "dice_sides": 6,
+        "manual_values": [3, 5]  // optional
+    }
+    
+    Returns:
+    {
+        "dice": [3, 5],
+        "sum": 8,
+        "mode": "manual" or "automatic"
+    }
+    """
+    try:
+        data = await request.json()
+        num_dice = data.get('num_dice', 1)
+        dice_sides = data.get('dice_sides', 6)
+        manual_values = data.get('manual_values')
+        
+        if manual_values:
+            # Validate manual values
+            if len(manual_values) != num_dice:
+                raise HTTPException(400, f"Expected {num_dice} dice values, got {len(manual_values)}")
+            for val in manual_values:
+                if val < 1 or val > dice_sides:
+                    raise HTTPException(400, f"All dice values must be between 1 and {dice_sides}")
+            results = manual_values
+            mode = "manual"
+        else:
+            # Automatic roll
+            results = DiceRoller.roll_dice(num_dice, dice_sides)
+            mode = "automatic"
+        
+        return {
+            "dice": results,
+            "sum": sum(results),
+            "mode": mode,
+            "num_dice": num_dice,
+            "dice_sides": dice_sides
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in universal dice roll: {e}")
+        raise HTTPException(500, str(e))
+
 
 @app.post("/api/games/{game_id}/roll")
 async def roll_dice_json(
@@ -1011,6 +1092,44 @@ async def create_mission(
     db.commit()
     db.refresh(mission)
     
+    # Log mission creation
+    from app.event_logger import EventLogger
+    game = GameState(game_id)
+    
+    if mission_type == "campaign":
+        mission_desc = f"Objetivo #{objective_number} de campaña"
+    else:
+        mission_desc = f"Misión especial {mission_code} (pág. {book_page})"
+    
+    EventLogger._log_to_game(
+        game,
+        f"🎯 Nueva misión: {mission_desc} en {execution_place}",
+        event_type="info"
+    )
+    
+    # ========== CREATE MISSION DEADLINE EVENT IF NEEDED ==========
+    if max_date:
+        from app.time_manager import EventQueue
+        
+        game.state["event_queue"] = EventQueue.add_event(
+            game.state.get("event_queue", []),
+            "mission_deadline",
+            max_date,
+            {
+                "mission_id": mission.id,
+                "mission_type": mission_type,
+                "objective": mission_desc
+            }
+        )
+        game.save()
+        
+        EventLogger._log_to_game(
+            game,
+            f"📅 Fecha límite de misión programada: {max_date}",
+            event_type="info"
+        )
+    # ========== END MISSION DEADLINE EVENT ==========
+    
     return {
         "status": "success",
         "mission_id": mission.id,
@@ -1051,6 +1170,79 @@ async def update_mission_result(
         "status": "success",
         "mission_id": mission.id,
         "result": result
+    }
+
+
+@app.post("/api/games/{game_id}/missions/{mission_id}/resolve")
+async def resolve_mission_deadline(
+    game_id: str,
+    mission_id: int,
+    success: bool = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Resolve a mission deadline event (from mission_deadline handler)
+    
+    Args:
+        success: True if mission was successful, False if failed
+    """
+    from app.time_manager import GameCalendar
+    
+    game = GameState(game_id)
+    mission = db.query(Mission).filter(
+        Mission.id == mission_id,
+        Mission.game_id == game_id
+    ).first()
+    
+    if not mission:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    
+    # Get current game date
+    current_date = GameCalendar.date_to_string(
+        game.state.get('year', 1),
+        game.state.get('month', 1),
+        game.state.get('day', 1)
+    )
+    
+    # Update mission status
+    mission.result = "exito" if success else "fracaso"
+    mission.completed_date = current_date
+    
+    # Update reputation based on success
+    if success:
+        game.state["reputation"] = game.state.get("reputation", 0) + 1
+    else:
+        game.state["reputation"] = max(0, game.state.get("reputation", 0) - 1)
+    
+    # Remove mission_deadline event from queue
+    game.state["event_queue"] = [
+        e for e in game.state.get("event_queue", [])
+        if not (e["type"] == "mission_deadline" and e["data"]["mission_id"] == mission_id)
+    ]
+    
+    game.save()
+    db.commit()
+    
+    # Log result
+    from app.event_logger import EventLogger
+    
+    if mission.mission_type == "campaign":
+        mission_desc = f"Objetivo #{mission.objective_number}"
+    else:
+        mission_desc = f"Misión {mission.mission_code}"
+    
+    result_text = "completada con éxito ✅" if success else "fallida ❌"
+    EventLogger._log_to_game(
+        game,
+        f"🎯 Misión {result_text}: {mission_desc}. Reputación: {game.state.get('reputation', 0)}",
+        event_type="success" if success else "warning"
+    )
+    
+    return {
+        "status": "resolved",
+        "success": success,
+        "new_reputation": game.state.get("reputation", 0),
+        "mission_result": mission.result
     }
 
 
@@ -1116,6 +1308,7 @@ async def start_hire_search(
     game_id: str,
     position: str = Form(...),
     experience_level: str = Form(...),
+    manual_dice_days: Optional[str] = Form(None),  # ← AÑADIR
     db: Session = Depends(get_db)
 ):
     """Start a new hire search task for the Director Gerente"""
@@ -1140,12 +1333,29 @@ async def start_hire_search(
     
     # Calculate search days
     position_data = POSITIONS_CATALOG[position]
-    dice_roller = DiceRoller()
-    search_days = calculate_hire_time(
-        position_data["search_time_dice"],
-        experience_level,
-        dice_roller
-    )
+    # Procesar dados manuales si se proporcionan
+    if manual_dice_days:
+        try:
+            days_dice = [int(x.strip()) for x in manual_dice_days.split(',')]
+            if len(days_dice) != 2:
+                raise ValueError("Se requieren 2 dados")
+            if any(d < 1 or d > 6 for d in days_dice):
+                raise ValueError("Dados deben estar entre 1 y 6")
+        
+            # Aplicar modificador de experiencia
+            exp_mod = {'Novato': -1, 'Estándar': 0, 'Veterano': 1}.get(experience_level, 0)
+            search_days = sum(days_dice) + exp_mod
+            search_days = max(1, search_days)  # Mínimo 1 día
+        except ValueError as e:
+            raise HTTPException(400, f"Dados inválidos: {str(e)}")
+    else:
+        # Fallback automático (no debería usarse si frontend usa DiceRollerUI)
+        dice_roller = DiceRoller()
+        search_days = calculate_hire_time(
+            position_data["search_time_dice"],
+            experience_level,
+            dice_roller
+        )
     
     # Calculate salary
     final_salary = calculate_hire_salary(position_data["base_salary"], experience_level)
@@ -1184,6 +1394,10 @@ async def start_hire_search(
     db.add(task)
     db.commit()
     db.refresh(task)
+    
+    # Log event for ALL hire searches (not just first in queue)
+    from app.event_logger import EventLogger
+    EventLogger._log_to_game(game, EventLogger.format_hire_start(position, experience_level, search_days))
     
     # If it's the first task, start it immediately
     if queue_position == 1:
@@ -1370,11 +1584,20 @@ async def advance_time(
     manual_dice: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
-    """Advance time to the next event and process it"""
+    """
+    Avanza el tiempo al próximo evento y lo procesa usando el sistema de handlers
+    
+    Sistema modular:
+    - Cada tipo de evento tiene su propio handler
+    - Main dispatcher simplemente llama al handler apropiado
+    - Handler decide si el evento se borra de la cola
+    """
+    from app.event_handlers import get_event_handler
     
     game = GameState(game_id)
     event_queue = game.state.get("event_queue", [])
     
+    # Check if there are events
     if not event_queue:
         return {"status": "no_events", "message": "No hay eventos pendientes"}
     
@@ -1383,178 +1606,59 @@ async def advance_time(
     if not next_event:
         return {"status": "no_events"}
     
-    # Advance to event date
-    old_date = f"{game.state.get('year', 1)}-{game.state.get('month', 1):02d}-{game.state.get('day', 1):02d}"
-    new_year, new_month, new_day = GameCalendar.parse_date(next_event["date"])
+    # Store old date
+    old_date = GameCalendar.date_to_string(
+        game.state.get('year', 1),
+        game.state.get('month', 1),
+        game.state.get('day', 1)
+    )
     
+    # Advance calendar to event date
+    new_year, new_month, new_day = GameCalendar.parse_date(next_event["date"])
     game.state["year"] = new_year
     game.state["month"] = new_month
     game.state["day"] = new_day
-    
-    # Process event based on type
-    event_result = {}
-    
-    if next_event["type"] == "task_completion":
-        # Resolve hire task
-        task_id = next_event["data"]["task_id"]
-        task = db.query(EmployeeTask).get(task_id)
-        
-        if task and task.status == "in_progress":
-            task_data = json.loads(task.task_data)
-            
-            # Get Director Gerente
-            director = db.query(Personnel).get(task.employee_id)
-            
-            # Calculate modifiers
-            exp_mod = {"N": -1, "E": 0, "V": 1}.get(director.experience, 0)
-            morale_mod = {"B": -1, "M": 0, "A": 1}.get(director.morale, 0)
-            rep_mod = game.state.get("reputation", 0)
-            total_mod = exp_mod + morale_mod + rep_mod
-            
-            
-            # Roll 2d6 (or use manual values)
-            if manual_dice:
-                dice_values = [int(x) for x in manual_dice.split(',')]
-            else:
-                dice_roller = DiceRoller()
-                dice_values = dice_roller.roll_dice(2, 6)
-            dice_sum = sum(dice_values)
-            final_result = dice_sum + total_mod
-            
-            # Check success
-            threshold = task_data["hire_threshold"]
-            success = final_result >= threshold
-            
-            # Update employee evolution
-            if final_result >= 10:
-                # Increase morale
-                if director.morale == "B":
-                    director.morale = "M"
-                elif director.morale == "M":
-                    director.morale = "A"
-            elif final_result <= 4:
-                # Decrease morale
-                if director.morale == "A":
-                    director.morale = "M"
-                elif director.morale == "M":
-                    director.morale = "B"
-            
-            # Check for double 6 (experience increase)
-            if dice_values[0] == 6 and dice_values[1] == 6:
-                if director.experience == "N":
-                    director.experience = "E"
-                elif director.experience == "E":
-                    director.experience = "V"
-            
-            new_employee_id = None
-            if success:
-                # Create new employee
-                from app.name_suggestions import get_random_personal_name
-                
-                new_employee = Personnel(
-                    game_id=game_id,
-                    position=task_data["position"],
-                    name=get_random_personal_name(),
-                    monthly_salary=task_data["final_salary"],
-                    experience=task_data["experience_level"][0],  # N, E, V
-                    morale="M",  # Always start with Medium morale
-                    hire_date=next_event["date"],
-                    is_active=True,
-                    notes="Contratado automáticamente"
-                )
-                db.add(new_employee)
-                db.flush()  # Get ID
-                new_employee_id = new_employee.id
-            
-            # Update task
-            task.status = "completed" if success else "failed"
-            task.finished_date = next_event["date"]
-            task.result_data = json.dumps({
-                "dice_values": dice_values,
-                "dice_sum": dice_sum,
-                "modifiers": {
-                    "experience": exp_mod,
-                    "morale": morale_mod,
-                    "reputation": rep_mod,
-                    "total": total_mod
-                },
-                "final_result": final_result,
-                "threshold": threshold,
-                "success": success,
-                "employee_id": new_employee_id
-            })
-            
-            event_result = {
-                "type": "hire_resolution",
-                "position": task_data["position"],
-                "experience_level": task_data["experience_level"],
-                "dice": dice_values,
-                "modifiers": {
-                    "experience": exp_mod,
-                    "morale": morale_mod,
-                    "reputation": rep_mod,
-                    "total": total_mod
-                },
-                "total": final_result,
-                "threshold": threshold,
-                "success": success,
-                "new_employee_id": new_employee_id,
-                "director_evolution": {
-                    "old_morale": director.morale,
-                    "old_experience": director.experience
-                }
-            }
-            
-            # Reorganize queue and start next task
-            remaining_tasks = db.query(EmployeeTask).filter(
-                EmployeeTask.game_id == game_id,
-                EmployeeTask.employee_id == task.employee_id,
-                EmployeeTask.status == "pending"
-            ).order_by(EmployeeTask.queue_position).all()
-            
-            for t in remaining_tasks:
-                t.queue_position -= 1
-            
-            # Start next task if exists
-            if remaining_tasks:
-                next_task = remaining_tasks[0]  # Now position 1
-                next_task.status = "in_progress"
-                next_task.started_date = next_event["date"]
-                
-                task_data_next = json.loads(next_task.task_data)
-                next_task.completion_date = GameCalendar.add_days(
-                    next_event["date"],
-                    task_data_next["search_days"]
-                )
-                
-                # Add new event
-                game.state["event_queue"] = EventQueue.add_event(
-                    game.state.get("event_queue", []),
-                    "task_completion",
-                    next_task.completion_date,
-                    {"task_id": next_task.id, "employee_id": task.employee_id}
-                )
-                
-                event_result["next_task_started"] = {
-                    "task_id": next_task.id,
-                    "position": task_data_next["position"],
-                    "completion_date": next_task.completion_date
-                }
-    
-    # Remove processed event
-    game.state["event_queue"] = EventQueue.remove_event(event_queue, next_event)
-    
-    db.commit()
     game.save()
     
-    return {
-        "status": "success",
-        "old_date": old_date,
-        "new_date": next_event["date"],
-        "event_type": next_event["type"],
-        "event_result": event_result,
-        "next_event": EventQueue.get_next_event(game.state.get("event_queue", []))
-    }
+    # Get handler for event type
+    handler = get_event_handler(next_event["type"])
+    
+    if not handler:
+        return {
+            "status": "error",
+            "message": f"No handler for event type: {next_event['type']}"
+        }
+    
+    # Execute handler
+    try:
+        result = handler(next_event, game, db, manual_dice)
+        
+        # Remove from queue if handler says so
+        if result.remove_from_queue:
+            game.state["event_queue"] = EventQueue.remove_event(
+                game.state.get("event_queue", []),
+                next_event
+            )
+            game.save()
+        
+        db.commit()
+        
+        # Return result
+        return {
+            "status": "success",
+            "old_date": old_date,
+            "new_date": next_event["date"],
+            "event_result": result.to_dict()
+        }
+        
+    except Exception as e:
+        db.rollback()
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 
 # ===== SETUP COMPLETION WITH DIFFICULTY =====
@@ -1591,6 +1695,19 @@ async def complete_setup(
     game.state["setup_complete"] = True
     game.save()
     
+    # Log game start with more immersive details
+    from app.event_logger import EventLogger
+    company_name = game.state.get("company_name", "Compañía Desconocida")
+    ship_name = game.state.get("ship_name", "Nave Sin Nombre")
+    current_planet = game.state.get("current_planet_code", "???")
+    
+    EventLogger._log_to_game(
+        game,
+        f"📜 La empresa {company_name} inicia sus operaciones con la nave {ship_name} desde el planeta {current_planet}. "
+        f"Dificultad: {difficulty.upper()}. Fondos iniciales: {difficulty_funds[difficulty]} SC",
+        event_type="success"
+    )
+    
     # Create initial personnel
     hire_date = date.today().isoformat()
     
@@ -1609,8 +1726,46 @@ async def complete_setup(
     
     db.commit()
     
+    # Log initial personnel
+    for emp_data in INITIAL_PERSONNEL:
+        EventLogger._log_to_game(
+            game,
+            f"👥 {emp_data['name']} se une como {emp_data['position']} por {emp_data['salary']} SC/mes",
+            event_type="info"
+        )
+    
     # Calculate total salaries
     total_salaries = sum(emp["salary"] for emp in INITIAL_PERSONNEL)
+    
+    # ========== CREATE INITIAL SALARY PAYMENT EVENT ==========
+    from app.time_manager import GameCalendar, EventQueue
+    
+    current_date = GameCalendar.date_to_string(
+        game.state.get('year', 1),
+        game.state.get('month', 1),
+        game.state.get('day', 1)
+    )
+    
+    # Create first salary payment event for day 35
+    next_salary_date = GameCalendar.next_day_35(current_date)
+    
+    if "event_queue" not in game.state:
+        game.state["event_queue"] = []
+    
+    game.state["event_queue"] = EventQueue.add_event(
+        game.state.get("event_queue", []),
+        "salary_payment",
+        next_salary_date,
+        {"monthly_payment": True}
+    )
+    game.save()
+    
+    EventLogger._log_to_game(
+        game,
+        f"📅 Próximo pago de salarios programado para el día 35 ({next_salary_date})",
+        event_type="info"
+    )
+    # ========== END SALARY PAYMENT EVENT ==========
     
     return {
         "status": "success",

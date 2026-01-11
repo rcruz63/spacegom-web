@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - Spacegom{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-space-900 p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-orbitron text-neon-blue">REGISTRO DE EVENTOS</h1>
+            <p class="text-gray-400 text-sm mt-1" id="game-id-display">Game ID: <span id="current-game-id"></span></p>
+            <p class="text-gray-400 text-sm mt-1" id="game-date-display">Fecha: <span id="current-date">1-01-01</span>
+            </p>
+        </div>
+        <a href="/dashboard" id="back-dashboard"
+            class="px-4 py-2 bg-space-800 border border-gray-700 rounded text-gray-300 hover:border-neon-blue">
+            ← Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Total Eventos</div>
+            <div class="text-3xl font-orbitron text-neon-blue" id="total-logs">0</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Último Evento</div>
+            <div class="text-sm font-orbitron text-neon-green" id="last-event-date">-</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Filtro</div>
+            <select id="event-filter"
+                class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white text-sm">
+                <option value="">Todos los eventos</option>
+                <option value="info">Info</option>
+                <option value="success">Éxito</option>
+                <option value="warning">Advertencia</option>
+                <option value="error">Error</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Event Logs -->
+    <div class="glass-panel tech-border rounded overflow-hidden">
+        <div class="bg-space-800 border-b border-gray-700 p-4">
+            <h2 class="text-xl font-orbitron text-white">📜 HISTORIAL DE EVENTOS</h2>
+        </div>
+        <div id="logs-container" class="max-h-[600px] overflow-y-auto">
+            <div id="logs-list" class="divide-y divide-gray-800">
+                <!-- Logs loaded via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let gameId = null;
+
+    window.onload = async function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        gameId = urlParams.get('game_id');
+
+        if (!gameId) {
+            showToast('No game ID provided', 'error');
+            window.location.href = '/';
+            return;
+        }
+
+        document.getElementById('current-game-id').textContent = gameId;
+        document.getElementById('back-dashboard').href = `/dashboard?game_id=${gameId}`;
+
+        await loadLogs();
+        await loadGameDate();
+    };
+
+    async function loadGameDate() {
+        try {
+            const response = await fetch(`/api/games/${gameId}`);
+            const data = await response.json();
+            const year = data.state.year || 1;
+            const month = data.state.month || 1;
+            const day = data.state.day || 1;
+            document.getElementById('current-date').textContent = `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
+
+            // Update header
+            await updateHeaderGameDate(gameId);
+        } catch (error) {
+            console.error('Error loading game date:', error);
+        }
+    }
+
+    async function loadLogs() {
+        try {
+            const filter = document.getElementById('event-filter').value;
+            const url = `/api/games/${gameId}/logs${filter ? `?event_type=${filter}` : ''}`;
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            document.getElementById('total-logs').textContent = data.count;
+
+            if (data.logs.length > 0) {
+                document.getElementById('last-event-date').textContent = data.logs[0].game_date;
+            }
+
+            const logsList = document.getElementById('logs-list');
+            logsList.innerHTML = '';
+
+            if (data.logs.length === 0) {
+                logsList.innerHTML = '<div class="text-center py-12 text-gray-500">No hay eventos registrados</div>';
+                return;
+            }
+
+            data.logs.forEach(log => {
+                const logEntry = createLogEntry(log);
+                logsList.appendChild(logEntry);
+            });
+
+        } catch (error) {
+            console.error('Error loading logs:', error);
+            showToast('Error cargando logs', 'error');
+        }
+    }
+
+    function createLogEntry(log) {
+        const entry = document.createElement('div');
+        entry.className = 'p-4 hover:bg-space-800 transition-colors';
+
+        const typeColors = {
+            'info': 'text-blue-400',
+            'success': 'text-neon-green',
+            'warning': 'text-yellow-400',
+            'error': 'text-neon-red'
+        };
+
+        const typeIcons = {
+            'info': 'ℹ️',
+            'success': '✅',
+            'warning': '⚠️',
+            'error': '❌'
+        };
+
+        const colorClass = typeColors[log.type] || 'text-gray-300';
+        const icon = typeIcons[log.type] || '📝';
+
+        entry.innerHTML = `
+            <div class="flex items-start gap-4">
+                <div class="text-2xl">${icon}</div>
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-1">
+                        <span class="font-orbitron text-neon-blue text-sm">[${log.game_date}]</span>
+                        <span class="text-xs text-gray-500">${new Date(log.timestamp).toLocaleString('es-ES')}</span>
+                    </div>
+                    <div class="${colorClass}">${log.message}</div>
+                </div>
+            </div>
+        `;
+
+        return entry;
+    }
+
+    // Filter change handler
+    document.getElementById('event-filter').addEventListener('change', () => {
+        loadLogs();
+    });
+</script>
+{% endblock %}

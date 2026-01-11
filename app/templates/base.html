@@ -183,6 +183,78 @@
             </div>
         </header>
 
+        <!-- Global Navigation Bar -->
+        <div id="global-nav" class="hidden mb-6">
+            <!-- Navigation Tabs -->
+            <div class="glass-panel rounded-t-lg border-b-0">
+                <div class="flex flex-wrap gap-1 p-2">
+                    <a href="#" id="nav-tab-dashboard" data-page="dashboard"
+                        class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-neon-blue hover:text-neon-blue">
+                        🏠 Dashboard
+                    </a>
+                    <a href="#" id="nav-tab-personnel" data-page="personnel"
+                        class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-neon-green hover:text-neon-green">
+                        👥 Personal
+                    </a>
+                    <a href="#" id="nav-tab-treasury" data-page="treasury"
+                        class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-neon-blue hover:text-neon-blue">
+                        💰 Tesorería
+                    </a>
+                    <a href="#" id="nav-tab-missions" data-page="missions"
+                        class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-purple-500 hover:text-purple-400">
+                        📋 Misiones
+                    </a>
+                    <a href="#" id="nav-tab-logs" data-page="logs"
+                        class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-yellow-500 hover:text-yellow-400">
+                        📜 Logs
+                    </a>
+                </div>
+            </div>
+
+            <!-- Game Info Bar -->
+            <div class="glass-panel rounded-b-lg border-t-0 p-3">
+                <div class="flex flex-wrap items-center gap-4 text-xs">
+                    <!-- Game Info -->
+                    <div class="flex flex-wrap gap-3 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">📅</span>
+                            <span class="text-gray-400">Fecha:</span>
+                            <span id="global-date" class="text-neon-blue font-orbitron">--</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">🌍</span>
+                            <span class="text-gray-400">Planeta:</span>
+                            <span id="global-planet" class="text-neon-green font-orbitron">--</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">💰</span>
+                            <span class="text-gray-400">Saldo:</span>
+                            <span id="global-treasury" class="text-neon-green font-orbitron">--</span>
+                            <span class="text-gray-500">SC</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">💸</span>
+                            <span class="text-gray-400">Gastos:</span>
+                            <span id="global-expenses" class="text-neon-red font-orbitron">--</span>
+                            <span class="text-gray-500">SC/mes</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-500">⏱️</span>
+                            <span class="text-gray-400">Próx. Evento:</span>
+                            <span id="global-next-event" class="text-purple-400 font-orbitron">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Advance Time Button -->
+                    <button id="global-advance-time-btn" onclick="globalAdvanceTime()"
+                        class="px-4 py-2 bg-neon-green bg-opacity-10 border-2 border-neon-green text-neon-green rounded font-orbitron text-sm hover:bg-opacity-20 transition-all flex items-center gap-2">
+                        <span>▶️</span>
+                        <span>Avanzar Tiempo</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <main>
             {% block content %}{% endblock %}
         </main>
@@ -207,6 +279,9 @@
     </div>
 
     <!-- Global Notification System JS -->
+    <!-- Sistema Universal de Dados -->
+    <script src="/static/js/dice-roller.js"></script>
+
     <script>
         function showToast(message, type = 'info', duration = 4000) {
             const container = document.getElementById('toast-container');
@@ -332,6 +407,375 @@
                 console.error('Error updating header date:', error);
             }
         }
+
+        // Global Navigation Initialization
+        async function initGlobalNav() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+
+            if (!gameId) {
+                // No game ID, hide global nav
+                return;
+            }
+
+            // Show global navigation
+            document.getElementById('global-nav')?.classList.remove('hidden');
+
+            // Update navigation links with game_id
+            document.getElementById('nav-tab-dashboard').href = `/dashboard?game_id=${gameId}`;
+            document.getElementById('nav-tab-personnel').href = `/personnel?game_id=${gameId}`;
+            document.getElementById('nav-tab-treasury').href = `/treasury?game_id=${gameId}`;
+            document.getElementById('nav-tab-missions').href = `/missions?game_id=${gameId}`;
+            document.getElementById('nav-tab-logs').href = `/logs?game_id=${gameId}`;
+
+            // Highlight active tab based on current page
+            highlightActiveTab();
+
+            // Load and display global game info
+            await loadGlobalGameInfo(gameId);
+        }
+
+        function highlightActiveTab() {
+            const currentPath = window.location.pathname;
+            const tabs = document.querySelectorAll('.nav-tab');
+
+            tabs.forEach(tab => {
+                const page = tab.getAttribute('data-page');
+                tab.classList.remove('border-neon-blue', 'border-neon-green', 'border-purple-500', 'border-yellow-500', 'text-white');
+
+                if (currentPath.includes(page)) {
+                    tab.classList.add('text-white');
+                    // Add appropriate color based on page
+                    if (page === 'dashboard') tab.classList.add('border-neon-blue');
+                    else if (page === 'personnel') tab.classList.add('border-neon-green');
+                    else if (page === 'treasury') tab.classList.add('border-neon-blue');
+                    else if (page === 'missions') tab.classList.add('border-purple-500');
+                    else if (page === 'logs') tab.classList.add('border-yellow-500');
+                }
+            });
+        }
+
+        async function loadGlobalGameInfo(gameId) {
+            try {
+                // Fetch game state
+                const gameResponse = await fetch(`/api/games/${gameId}`);
+                const gameData = await gameResponse.json();
+                const state = gameData.state;
+
+                // Fetch treasury info
+                const treasuryResponse = await fetch(`/api/games/${gameId}/treasury`);
+                const treasuryData = await treasuryResponse.json();
+
+                // Update date
+                const day = String(state.day || 1).padStart(2, '0');
+                const month = String(state.month || 1).padStart(2, '0');
+                const year = state.year || 1;
+                document.getElementById('global-date').textContent = `${day}-${month}-${year}`;
+
+                // Update planet with name and code
+                const planetCode = state.current_planet_code || '???';
+                let planetDisplay = planetCode;
+
+                if (planetCode !== '???') {
+                    try {
+                        const planetResponse = await fetch(`/api/planets/${planetCode}`);
+                        const planetData = await planetResponse.json();
+                        planetDisplay = `${planetData.planet.name} (${planetCode})`;
+                    } catch (e) {
+                        console.warn('Could not fetch planet name:', e);
+                        planetDisplay = planetCode;
+                    }
+                }
+
+                document.getElementById('global-planet').textContent = planetDisplay;
+
+                // Update treasury
+                const balance = treasuryData.current_balance || 0;
+                document.getElementById('global-treasury').textContent = balance;
+
+                // Update expenses
+                const expenses = treasuryData.monthly_expenses?.total || 0;
+                document.getElementById('global-expenses').textContent = expenses;
+
+                // Update next event
+                const nextEvent = state.event_queue?.[0];
+                document.getElementById('global-next-event').textContent = nextEvent?.date || '-';
+
+            } catch (error) {
+                console.error('Error loading global game info:', error);
+            }
+        }
+
+        // Global Advance Time Function - with proper dice handling
+        async function globalAdvanceTime() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+
+            if (!gameId) {
+                showToast('No se encontró ID de juego', 'error');
+                return;
+            }
+
+            // Show dice mode selection modal
+            const modal = document.createElement('div');
+            modal.id = 'global-dice-mode-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="glass-panel tech-border p-8 rounded-lg max-w-md w-full">
+                    <h3 class="text-2xl font-orbitron text-neon-blue mb-6">🎲 Avanzar Tiempo</h3>
+                    <p class="text-gray-400 mb-6">¿Cómo deseas resolver la tirada (si es necesaria)?</p>
+                    <div class="space-y-3">
+                        <button onclick="globalProceedWithDice('auto')" 
+                            class="w-full py-4 bg-neon-blue bg-opacity-20 border-2 border-neon-blue text-neon-blue rounded hover:bg-opacity-30 font-orbitron">
+                            🤖 AUTOMÁTICA<div class="text-xs text-gray-400 mt-1">El sistema tira los dados si es necesario</div>
+                        </button>
+                        <button onclick="globalProceedWithDice('manual')" 
+                            class="w-full py-4 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
+                            🎯 MANUAL<div class="text-xs text-gray-400 mt-1">Introduces tus dados físicos</div>
+                        </button>
+                    </div>
+                    <button onclick="document.getElementById('global-dice-mode-modal').remove()" 
+                        class="w-full mt-4 py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                        Cancelar
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        async function globalProceedWithDice(mode) {
+            document.getElementById('global-dice-mode-modal')?.remove();
+
+            if (mode === 'manual') {
+                globalShowManualDice();
+            } else {
+                globalExecuteTimeAdvance();
+            }
+        }
+
+        function globalShowManualDice() {
+            const modal = document.createElement('div');
+            modal.id = 'global-manual-dice-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="glass-panel tech-border p-8 rounded-lg max-w-md w-full">
+                    <h3 class="text-2xl font-orbitron text-neon-blue mb-6">🎲 Tira 2d6</h3>
+                    <p class="text-gray-400 mb-4">Introduce los resultados:</p>
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm text-gray-500 mb-2">Dado 1</label>
+                            <input type="number" id="global-dice1" min="1" max="6" 
+                                class="w-full bg-space-800 border border-gray-700 rounded px-4 py-3 text-white text-center text-2xl font-orbitron">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-500 mb-2">Dado 2</label>
+                            <input type="number" id="global-dice2" min="1" max="6" 
+                                class="w-full bg-space-800 border border-gray-700 rounded px-4 py-3 text-white text-center text-2xl font-orbitron">
+                        </div>
+                    </div>
+                    <button onclick="globalSubmitManualDice()" 
+                        class="w-full py-3 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron mb-2">
+                        Confirm
+                    </button>
+                    <button onclick="document.getElementById('global-manual-dice-modal').remove()" 
+                        class="w-full py-2 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                        Cancelar
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('global-dice1').focus();
+        }
+
+        async function globalSubmitManualDice() {
+            const d1 = parseInt(document.getElementById('global-dice1').value);
+            const d2 = parseInt(document.getElementById('global-dice2').value);
+
+            if (!d1 || !d2 || d1 < 1 || d1 > 6 || d2 < 1 || d2 > 6) {
+                showToast('Valores inválidos (1-6)', 'warning');
+                return;
+            }
+
+            document.getElementById('global-manual-dice-modal')?.remove();
+            globalExecuteTimeAdvance([d1, d2]);
+        }
+
+        async function globalExecuteTimeAdvance(manualDice = null) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+
+            try {
+                const formData = new FormData();
+                if (manualDice) {
+                    formData.append('manual_dice', manualDice.join(','));
+                }
+
+                const response = await fetch(`/api/games/${gameId}/time/advance`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'no_events') {
+                    showToast('No hay eventos pendientes', 'info');
+                    return;
+                }
+
+                if (response.ok && data.event_result) {
+                    const result = data.event_result;
+
+                    showToast(`⏰ Avanzado: ${data.old_date} → ${data.new_date}`, 'info');
+
+                    // Handle different event types
+                    if (result.type === 'hire_resolution') {
+                        // Show hire result if showHireResult function exists
+                        if (typeof window.showHireResult === 'function') {
+                            window.showHireResult(result);
+                        }
+                    } else if (result.type === 'salary_payment') {
+                        // Show salary payment modal
+                        showSalaryPaymentModal(result);
+                    } else if (result.type === 'mission_deadline' && result.requires_user_input) {
+                        // Show mission deadline modal - don't refresh yet
+                        showMissionDeadlineModal(result, gameId);
+                        return; // Exit early, will refresh after user resolves mission
+                    }
+
+                    // Refresh global nav info
+                    await loadGlobalGameInfo(gameId);
+
+                    // Refresh header date  
+                    await updateHeaderGameDate(gameId);
+
+                    // Reload current page data if functions exist
+                    if (typeof window.loadDirectorTasks === 'function') {
+                        await window.loadDirectorTasks();
+                    }
+                    if (typeof window.loadPersonnel === 'function') {
+                        await window.loadPersonnel();
+                    }
+                    if (typeof window.loadGameDate === 'function') {
+                        await window.loadGameDate();
+                    }
+                    if (typeof window.loadLogs === 'function') {
+                        await window.loadLogs();
+                    }
+                } else {
+                    showToast('Error: ' + (data.detail || 'Error desconocido'), 'error');
+                }
+            } catch (error) {
+                console.error('Error advancing time:', error);
+                showToast('Error avanzando el tiempo', 'error');
+            }
+        }
+
+        // ========== SALARY PAYMENT MODAL ==========
+        function showSalaryPaymentModal(result) {
+            const modal = document.createElement('div');
+            modal.id = 'salary-payment-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="glass-panel tech-border p-8 rounded-lg max-w-md w-full">
+                    <h3 class="text-2xl font-orbitron text-yellow-400 mb-6">💸 Pago de Salarios</h3>
+                    <div class="space-y-3 mb-6">
+                        <div class="flex justify-between py-2 border-b border-gray-700">
+                            <span class="text-gray-400">Empleados:</span>
+                            <span class="text-white font-bold">${result.employees_count}</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-gray-700">
+                            <span class="text-gray-400">Total pagado:</span>
+                            <span class="text-neon-red font-bold">${result.total_paid} SC</span>
+                        </div>
+                        <div class="flex justify-between py-2 border-b border-gray-700">
+                            <span class="text-gray-400">Saldo anterior:</span>
+                            <span class="text-gray-300">${result.old_balance} SC</span>
+                        </div>
+                        <div class="flex justify-between py-2">
+                            <span class="text-gray-400">Saldo actual:</span>
+                            <span class="text-neon-green font-bold text-xl">${result.new_balance} SC</span>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('salary-payment-modal').remove()" 
+                        class="w-full py-3 bg-neon-blue bg-opacity-20 border-2 border-neon-blue text-neon-blue rounded hover:bg-opacity-30 font-orbitron">
+                        Aceptar
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // ========== MISSION DEADLINE MODAL ==========
+        function showMissionDeadlineModal(missionData, gameId) {
+            const modal = document.createElement('div');
+            modal.id = 'mission-deadline-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="glass-panel tech-border p-8 rounded-lg max-w-md w-full">
+                    <h3 class="text-2xl font-orbitron text-yellow-400 mb-6">⏰ Fecha Límite de Misión</h3>
+                    <div class="mb-6">
+                        <p class="text-neon-blue font-orbitron mb-2 text-lg">${missionData.objective}</p>
+                        <p class="text-gray-400 text-sm mb-2">📍 ${missionData.execution_place}</p>
+                        ${missionData.notes ? `<p class="text-gray-500 text-sm italic">${missionData.notes}</p>` : ''}
+                    </div>
+                    <p class="text-gray-300 mb-6">¿La misión se completó con éxito?</p>
+                    <div class="space-y-3">
+                        <button onclick="resolveMission(${missionData.mission_id}, true, '${gameId}')" 
+                            class="w-full py-4 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
+                            ✅ MISIÓN EXITOSA
+                        </button>
+                        <button onclick="resolveMission(${missionData.mission_id}, false, '${gameId}')" 
+                            class="w-full py-4 bg-neon-red bg-opacity-20 border-2 border-neon-red text-neon-red rounded hover:bg-opacity-30 font-orbitron">
+                            ❌ MISIÓN FALLIDA
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // ========== MISSION RESOLUTION ==========
+        async function resolveMission(missionId, success, gameId) {
+            document.getElementById('mission-deadline-modal')?.remove();
+
+            const formData = new FormData();
+            formData.append('success', success);
+
+            try {
+                const response = await fetch(`/api/games/${gameId}/missions/${missionId}/resolve`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast(`Misión resuelta: ${success ? '✅ Éxito' : '❌ Fracaso'}`, success ? 'success' : 'warning');
+
+                    // Refresh all game data
+                    await loadGlobalGameInfo(gameId);
+                    await updateHeaderGameDate(gameId);
+
+                    // Refresh page-specific data if functions exist
+                    if (typeof window.loadDirectorTasks === 'function') {
+                        await window.loadDirectorTasks();
+                    }
+                    if (typeof window.loadLogs === 'function') {
+                        await window.loadLogs();
+                    }
+                } else {
+                    showToast('Error: ' + (data.detail || 'Error desconocido'), 'error');
+                }
+            } catch (error) {
+                console.error('Error resolving mission:', error);
+                showToast('Error resolviendo misión', 'error');
+            }
+        }
+
+        // Auto-initialize global nav on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initGlobalNav();
+        });
     </script>
 </body>
 
