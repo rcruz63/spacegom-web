@@ -170,84 +170,108 @@
 
     <!-- GRID: Navegación y Plantilla -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- MÓDULO DE NAVEGACIÓN - VISTA DE CUADRANTE -->
+        <!-- MÓDULO DE NAVEGACIÓN - VISTA DE ÁREA -->
         <div class="glass-panel tech-border p-6 rounded-lg">
-            <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-2">
+            <!-- Area Navigation Header -->
+            <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-3">
                 <h2 class="text-xl font-orbitron text-neon-blue">
-                    VISTA DE CUADRANTE
+                    VISTA DE ÁREA
                 </h2>
-                <div class="flex gap-2">
-                    <span id="jump-badge"
-                        class="px-2 py-0.5 bg-space-800 border border-neon-blue text-neon-blue text-[10px] rounded uppercase font-tech">Salto:
-                        --</span>
-                    <span id="area-badge"
-                        class="px-2 py-0.5 bg-space-800 border border-gray-700 text-gray-400 text-[10px] rounded uppercase font-tech">Área:
-                        --</span>
+                <div class="flex items-center gap-3">
+                    <button onclick="navigateArea('prev')" id="area-prev-btn"
+                        class="px-3 py-1 bg-space-800 border border-gray-700 hover:border-neon-blue text-xs font-tech transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        ◄ Anterior
+                    </button>
+                    <span id="current-area-display" class="text-2xl font-orbitron text-neon-green px-3">
+                        ÁREA 2
+                    </span>
+                    <button onclick="navigateArea('next')" id="area-next-btn"
+                        class="px-3 py-1 bg-space-800 border border-gray-700 hover:border-neon-blue text-xs font-tech transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        Siguiente ►
+                    </button>
                 </div>
             </div>
 
+            <!-- Ship Stats Badges -->
+            <div class="flex gap-2 mb-4">
+                <span id="jump-badge"
+                    class="px-2 py-0.5 bg-space-800 border border-neon-blue text-neon-blue text-[10px] rounded uppercase font-tech">Salto:
+                    --</span>
+                <span id="quadrant-badge"
+                    class="px-2 py-0.5 bg-space-800 border border-neon-green text-neon-green text-[10px] rounded uppercase font-tech">Posición:
+                    --</span>
+            </div>
+
             <!-- Quadrant Container with Labels -->
-            <div class="relative pt-6 pl-6 star-background rounded-lg border border-gray-800 p-4">
-                <!-- Column Labels (A-F) -->
-                <div
-                    class="absolute top-0 left-6 right-0 grid grid-cols-6 text-center text-[10px] text-gray-500 font-tech">
-                    <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span>
-                </div>
+            <div class="pt-6 pl-6 star-background rounded-lg border border-gray-800 p-4">
 
-                <!-- Row Labels (1-6) -->
-                <div
-                    class="absolute top-6 left-0 bottom-0 w-6 grid grid-rows-6 items-center text-center text-[10px] text-gray-500 font-tech">
-                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
-                </div>
+                <div class="relative">
 
-                <!-- Column Markers (Triangles) -->
-                <div id="col-markers" class="absolute top-4 left-6 right-0 grid grid-cols-6 pointer-events-none">
-                    {% for i in range(6) %}
-                    <div id="marker-col-{{ i+1 }}" class="flex justify-center opacity-0 transition-opacity">
-                        <div
-                            class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-neon-blue">
-                        </div>
+                    <div
+                        class="absolute -top-5 left-0 right-0 grid grid-cols-6 gap-1 text-center text-[10px] text-gray-500 font-tech">
+                        <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span>
                     </div>
-                    {% endfor %}
-                </div>
 
-                <!-- Row Markers (Triangles) -->
-                <div id="row-markers" class="absolute top-6 left-4 bottom-0 w-2 grid grid-rows-6 pointer-events-none">
-                    {% for i in range(6) %}
-                    <div id="marker-row-{{ i+1 }}" class="flex items-center opacity-0 transition-opacity">
-                        <div
-                            class="w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-neon-blue">
-                        </div>
+                    <div
+                        class="absolute top-0 -left-5 bottom-0 w-4 flex flex-col gap-1 text-[10px] text-gray-500 font-tech py-0">
+                        <div class="flex-1 flex items-center justify-center">1</div>
+                        <div class="flex-1 flex items-center justify-center">2</div>
+                        <div class="flex-1 flex items-center justify-center">3</div>
+                        <div class="flex-1 flex items-center justify-center">4</div>
+                        <div class="flex-1 flex items-center justify-center">5</div>
+                        <div class="flex-1 flex items-center justify-center">6</div>
                     </div>
-                    {% endfor %}
-                </div>
 
-                <!-- Grid 6x6 -->
-                <div class="grid grid-cols-6 gap-1 mb-4 relative">
-                    {% for r in range(6) %}
-                    {% for c in range(6) %}
-                    {% set i = r * 6 + c %}
-                    <div id="quad-row-{{ r+1 }}-col-{{ c+1 }}" data-row="{{ r+1 }}" data-col="{{ c+1 }}"
-                        class="quadrant-cell aspect-square bg-space-800 border border-gray-700 hover:border-neon-blue cursor-pointer transition-all rounded flex items-center justify-center text-xs font-tech relative overflow-hidden"
-                        onclick="onQuadrantClick(this)">
-                        <div
-                            class="fog-overlay absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm z-20 transition-opacity">
+                    <div id="col-markers"
+                        class="absolute -top-2 left-0 right-0 grid grid-cols-6 gap-1 pointer-events-none">
+                        {% for i in range(6) %}
+                        <div id="marker-col-{{ i+1 }}" class="flex justify-center opacity-0 transition-opacity">
+                            <div
+                                class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-neon-blue">
+                            </div>
                         </div>
-                        <span class="text-gray-600 text-[8px] z-10 absolute top-1 left-1">{{ chr(64 + c + 1) }}{{ r+1
-                            }}</span>
-                        <div
-                            class="planet-code-label text-neon-blue font-bold z-10 absolute top-1 right-1 text-[10px] hidden">
-                            ---</div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                    {% endfor %}
+
+                    <div id="row-markers"
+                        class="absolute top-0 -left-2 bottom-0 w-2 flex flex-col gap-1 pointer-events-none justify-start py-0">
+                        {% for i in range(6) %}
+                        <div id="marker-row-{{ i+1 }}"
+                            class="flex-1 flex items-center justify-center opacity-0 transition-opacity">
+                            <div
+                                class="w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-neon-blue">
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="grid grid-cols-6 gap-1 relative">
+                        {% for r in range(6) %}
+                        {% for c in range(6) %}
+                        {% set i = r * 6 + c %}
+                        <div id="quad-row-{{ r+1 }}-col-{{ c+1 }}" data-row="{{ r+1 }}" data-col="{{ c+1 }}"
+                            class="quadrant-cell aspect-square bg-space-800 border border-gray-700 transition-all rounded flex items-center justify-center text-xs font-tech relative overflow-hidden">
+                            <div
+                                class="fog-overlay absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm z-20 transition-opacity">
+                            </div>
+                            <span class="text-gray-600 text-[8px] z-10 absolute top-1 left-1">{{ chr(64 + c + 1) }}{{
+                                r+1
+                                }}</span>
+                            <div
+                                class="planet-code-label text-neon-blue font-bold z-10 absolute top-1 right-1 text-[10px] hidden">
+                                ---</div>
+                        </div>
+                        {% endfor %}
+                        {% endfor %}
+                    </div>
+
                 </div>
 
                 <!-- UBICACIÓN EN EL MUNDO -->
-                <div class="mt-4 border-t border-gray-700 pt-4">
+                <div class="mt-6 border-t border-gray-700 pt-4">
                     <div class="text-[10px] text-gray-500 uppercase mb-2 tracking-widest text-center">LOCALIZACIÓN NAVE
                     </div>
-                    <div class="grid grid-cols-4 gap-2">
+                    <div class="grid grid-cols-5 gap-2">
                         <button onclick="updateShipLocation('Mundo')" id="loc-Mundo"
                             class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
                             <span>🌍</span> MUNDO
@@ -260,304 +284,505 @@
                             class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
                             <span>🛰️</span> ORBITAL
                         </button>
+                        <button onclick="updateShipLocation('En ruta')" id="loc-En ruta"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>🚀</span> EN RUTA
+                        </button>
                         <button onclick="updateShipLocation('Estación')" id="loc-Estación"
                             class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
                             <span>⚡</span> ESTACIÓN
                         </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Panel de Información del Planeta -->
-            <div id="planet-info" class="hidden">
-                <div class="bg-space-800 border border-neon-blue rounded p-4">
-                    <div class="flex items-start justify-between mb-3">
-                        <div>
-                            <div class="text-neon-blue font-orbitron text-lg" id="planet-name">PLANETA</div>
-                            <div class="text-gray-500 text-xs" id="planet-code">Código: ---</div>
+                <!-- Panel de Información del Planeta EXPANDIDO -->
+                <div id="planet-info" class="hidden mt-4">
+                    <div class="bg-space-800 border border-neon-blue rounded p-4">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <div class="text-neon-blue font-orbitron text-lg" id="planet-name">PLANETA</div>
+                                <div class="text-gray-500 text-xs" id="planet-code">Código: ---</div>
+                            </div>
+                            <button onclick="closePlanetInfo()" class="text-gray-500 hover:text-neon-red">✕</button>
                         </div>
-                        <button onclick="closePlanetInfo()" class="text-gray-500 hover:text-neon-red">✕</button>
-                    </div>
 
-                    <div class="space-y-2 text-sm">
-                        <div class="flex justify-between border-b border-gray-700 pb-2">
-                            <span class="text-gray-400">Soporte Vital:</span>
-                            <span class="text-neon-green" id="planet-life-support">-</span>
+                        <!-- Main Information Grid -->
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs mb-3">
+                            <!-- Existing Fields -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Soporte Vital:</span>
+                                <span class="text-neon-green font-tech" id="planet-life-support">-</span>
+                            </div>
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Nivel Tech:</span>
+                                <span class="text-neon-blue font-tech" id="planet-tech">-</span>
+                            </div>
+
+                            <!-- NEW: Riesgo de Contagio -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Riesgo Contagio:</span>
+                                <span class="text-white font-tech" id="planet-contagion">-</span>
+                            </div>
+
+                            <!-- NEW: Convenio Spacegom -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Convenio Spacegom:</span>
+                                <span class="text-white font-tech" id="planet-convenio">-</span>
+                            </div>
+
+                            <!-- NEW: Días a Hiperdisparo -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Días a Hiperdisparo:</span>
+                                <span class="text-neon-blue font-tech" id="planet-hyperspace-days">-</span>
+                            </div>
+
+                            <!-- NEW: Ordenamiento Legal -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Orden Legal:</span>
+                                <span class="text-white font-tech" id="planet-legal-order">-</span>
+                            </div>
+
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Población:</span>
+                                <span class="text-white font-tech" id="planet-population">-</span>
+                            </div>
+
+                            <!-- NEW: Autosuficiencia -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Autosuficiencia:</span>
+                                <span class="text-neon-green font-tech" id="planet-self-sufficiency">-</span>
+                            </div>
+
+                            <!-- NEW: UCN por Pedido -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">UCN/Pedido:</span>
+                                <span class="text-white font-tech" id="planet-ucn">-</span>
+                            </div>
+
+                            <!-- NEW: Pasajeros Máximos -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1">
+                                <span class="text-gray-400">Pasajeros Máx:</span>
+                                <span class="text-white font-tech" id="planet-passengers">-</span>
+                            </div>
+
+                            <!-- NEW: Misiones Especiales -->
+                            <div class="flex justify-between border-b border-gray-700 pb-1 col-span-2">
+                                <span class="text-gray-400">Misiones Especiales:</span>
+                                <span class="text-neon-blue font-tech" id="planet-missions">-</span>
+                            </div>
                         </div>
-                        <div class="flex justify-between border-b border-gray-700 pb-2">
-                            <span class="text-gray-400">Espaciopuerto:</span>
-                            <span class="text-white" id="planet-spaceport">-</span>
+
+                        <!-- Espaciopuerto Section -->
+                        <div class="mb-3 p-2 bg-space-900 rounded border border-gray-700">
+                            <div class="text-gray-400 text-[10px] uppercase mb-1">Espaciopuerto</div>
+                            <div id="planet-spaceport" class="text-xs">-</div>
                         </div>
-                        <div class="flex justify-between border-b border-gray-700 pb-2">
-                            <span class="text-gray-400">Nivel Tecnológico:</span>
-                            <span class="text-neon-blue" id="planet-tech">-</span>
-                        </div>
-                        <div class="flex justify-between border-b border-gray-700 pb-2">
-                            <span class="text-gray-400">Población:</span>
-                            <span class="text-white" id="planet-population">-</span>
-                        </div>
-                        <div class="border-t border-gray-700 pt-2 mt-2">
-                            <div class="text-gray-400 text-xs mb-2">Instalaciones Orbitales:</div>
+
+                        <!-- Instalaciones Orbitales -->
+                        <div class="mb-3">
+                            <div class="text-gray-400 text-[10px] uppercase mb-1">Instalaciones Orbitales</div>
                             <div id="planet-facilities" class="flex flex-wrap gap-1">
-                                <span class="text-gray-500 italic">Ninguna</span>
+                                <span class="text-gray-500 italic text-xs">Ninguna</span>
+                            </div>
+                        </div>
+
+                        <!-- NEW: Productos Disponibles -->
+                        <div>
+                            <div class="text-gray-400 text-[10px] uppercase mb-1">Productos Disponibles</div>
+                            <div id="planet-products" class="flex flex-wrap gap-1">
+                                <span class="text-gray-500 italic text-xs">Ninguno</span>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ARCHIVOS ESTELARES - HOJA DE MUNDOS -->
-            <div class="mt-6 bg-space-900 border border-gray-700 rounded-lg p-4">
-                <h3 class="text-xs font-orbitron text-gray-400 mb-3 tracking-widest uppercase flex items-center">
-                    <span class="mr-2">📁</span> ARCHIVOS ESTELARES - HOJA DE MUNDOS
-                </h3>
-                <div class="space-y-1 max-h-48 overflow-y-auto pr-2 custom-scrollbar" id="world-log">
-                    <div class="text-xs text-gray-600 italic py-2">No se han registrado mundos todavía...</div>
+                <!-- ARCHIVOS ESTELARES - HOJA DE MUNDOS -->
+                <div class="mt-6 bg-space-900 border border-gray-700 rounded-lg p-4">
+                    <h3 class="text-xs font-orbitron text-gray-400 mb-3 tracking-widest uppercase flex items-center">
+                        <span class="mr-2">📁</span> ARCHIVOS ESTELARES - HOJA DE MUNDOS
+                    </h3>
+                    <div class="space-y-1 max-h-48 overflow-y-auto pr-2 custom-scrollbar" id="world-log">
+                        <div class="text-xs text-gray-600 italic py-2">No se han registrado mundos todavía...</div>
+                    </div>
+                </div>
+
+                <!-- NEW: PLANETAS DEL ÁREA ACTUAL -->
+                <div class="mt-6 bg-space-900 border border-neon-blue rounded-lg p-4">
+                    <h3 class="text-sm font-orbitron text-neon-blue mb-3 flex items-center justify-between">
+                        <span>🌍 PLANETAS EN ÁREA <span id="area-planets-number">--</span></span>
+                        <span class="text-xs text-gray-500">(<span id="area-planets-count">0</span> descubiertos)</span>
+                    </h3>
+                    <div id="area-planets-list" class="space-y-2 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                        <div class="text-xs text-gray-600 italic py-2">Navega para descubrir planetas...</div>
+                    </div>
                 </div>
             </div>
+
         </div>
 
     </div>
 
-</div>
+    <script>
+        // Estado del juego
+        let gameState = {
+            fuel: 18,
+            storage: 16,
+            month: 1,
+            reputation: 0,
+            area: null,
+            world_density: null,
+            ship_row: null,
+            ship_col: null,
+            setup_complete: false,
+            ship_pos_complete: false,
+            damages: {
+                light: false,
+                moderate: false,
+                severe: false
+            },
+            explored_quadrants: []
+        };
 
-<script>
-    // Estado del juego
-    let gameState = {
-        fuel: 18,
-        storage: 16,
-        month: 1,
-        reputation: 0,
-        area: null,
-        world_density: null,
-        ship_row: null,
-        ship_col: null,
-        setup_complete: false,
-        ship_pos_complete: false,
-        damages: {
-            light: false,
-            moderate: false,
-            severe: false
-        },
-        explored_quadrants: []
-    };
-
-    const SHIP_ICON = `
+        const SHIP_ICON = `
     <div class="ship-icon absolute inset-0 flex items-center justify-center z-30 pointer-events-none animate-pulse">
         <svg viewBox="0 0 24 24" class="w-8 h-8 text-neon-green filter drop-shadow-[0_0_5px_rgba(0,255,157,0.8)]" fill="currentColor">
             <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z"/>
         </svg>
     </div>`;
 
-    // Funciones de ajuste
-    function adjustFuel(delta) {
-        gameState.fuel = Math.max(0, Math.min(30, gameState.fuel + delta));
-        updateFuelDisplay();
-    }
-
-    function adjustStorage(delta) {
-        gameState.storage = Math.max(0, Math.min(gameState.storage_max || 40, gameState.storage + delta));
-        updateStorageDisplay();
-    }
-
-    function adjustReputation(delta) {
-        gameState.reputation = Math.max(-5, Math.min(5, gameState.reputation + delta));
-        updateReputationDisplay();
-    }
-
-    function updateFuelDisplay() {
-        const percentage = (gameState.fuel / 30) * 100;
-        document.getElementById('fuel-level').style.height = percentage + '%';
-        document.getElementById('fuel-value').textContent = gameState.fuel;
-
-        // Cambiar color si está bajo
-        const fuelLevel = document.getElementById('fuel-level');
-        if (gameState.fuel < 10) {
-            fuelLevel.className = fuelLevel.className.replace('from-neon-blue to-cyan-400', 'from-neon-red to-red-400');
-        } else {
-            fuelLevel.className = fuelLevel.className.replace('from-neon-red to-red-400', 'from-neon-blue to-cyan-400');
-        }
-    }
-
-    function updateStorageDisplay() {
-        const max = gameState.storage_max || 40;
-        const percentage = (gameState.storage / max) * 100;
-        document.getElementById('storage-level').style.height = percentage + '%';
-        document.getElementById('storage-value').textContent = gameState.storage;
-    }
-
-    function updateReputationDisplay() {
-        const el = document.getElementById('reputation-value');
-        const val = gameState.reputation;
-        el.textContent = val >= 0 ? '+' + val : val;
-
-        // Color según reputación
-        if (val >= 3) el.style.color = '#00ff9d';
-        else if (val >= 0) el.style.color = '#00f3ff';
-        else if (val >= -2) el.style.color = '#ffa500';
-        else el.style.color = '#ff2a6d';
-    }
-
-    function toggleDamage(type) {
-        gameState.damages[type] = !gameState.damages[type];
-        const el = document.getElementById('damage-' + type);
-
-        if (gameState.damages[type]) {
-            el.classList.add('bg-opacity-100');
-            if (type === 'light') el.className = el.className.replace('border-yellow-500', 'border-yellow-500 bg-yellow-500');
-            if (type === 'moderate') el.className = el.className.replace('border-orange-500', 'border-orange-500 bg-orange-500');
-            if (type === 'severe') el.className = el.className.replace('border-neon-red', 'border-neon-red bg-neon-red');
-        } else {
-            if (type === 'light') el.className = 'w-4 h-4 rounded-full border-2 border-yellow-500';
-            if (type === 'moderate') el.className = 'w-4 h-4 rounded-full border-2 border-orange-500';
-            if (type === 'severe') el.className = 'w-4 h-4 rounded-full border-2 border-neon-red';
-        }
-
-        // Mostrar alerta crítica si hay daños graves
-        const alert = document.getElementById('critical-alert');
-        if (gameState.damages.severe) {
-            alert.classList.remove('hidden');
-        } else {
-            alert.classList.add('hidden');
-        }
-    }
-
-    // Initialize UI from state
-    async function initDashboard() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('game_id');
-
-        if (!gameId) {
-            console.error("No game_id found in URL");
-            return;
-        }
-
-        // Setup navigation links
-        // No longer needed - global nav handles this
-
-        try {
-            const response = await fetch(`/api/games/${gameId}`);
-            const data = await response.json();
-            gameState = data.state;
-            const shipStats = data.ship_stats;
-
-            // Update Company Header
-            document.getElementById('company-name-display').textContent = gameState.company_name || 'Nueva Compañía';
-            document.getElementById('game-id-display').textContent = gameId;
-            document.getElementById('ship-name-display').textContent = gameState.ship_name || 'Fénix Dorado';
-            document.getElementById('ship-model-display').textContent = gameState.ship_model || 'Basic Starfall';
-
-            console.log("Game state loaded:", gameState);
-
-            // Update HUD
+        // Funciones de ajuste
+        function adjustFuel(delta) {
+            gameState.fuel = Math.max(0, Math.min(30, gameState.fuel + delta));
             updateFuelDisplay();
+        }
+
+        function adjustStorage(delta) {
+            gameState.storage = Math.max(0, Math.min(gameState.storage_max || 40, gameState.storage + delta));
             updateStorageDisplay();
+        }
+
+        function adjustReputation(delta) {
+            gameState.reputation = Math.max(-5, Math.min(5, gameState.reputation + delta));
             updateReputationDisplay();
-            document.getElementById('day-value').textContent = gameState.day || 1;
-            document.getElementById('month-value').textContent = gameState.month || 1;
-            document.getElementById('year-value').textContent = gameState.year || 1;
-
-            // Update Area/Density badges
-            if (gameState.area) {
-                document.getElementById('area-badge').textContent = `Área: ${gameState.area}`;
-            }
-            if (gameState.world_density) {
-                // density-badge was replaced by jump-badge in some versions, ensuring it exists
-                const densityBadge = document.getElementById('density-badge');
-                if (densityBadge) densityBadge.textContent = `Densidad: ${gameState.world_density}`;
-            }
-
-            if (shipStats) {
-                document.getElementById('jump-badge').textContent = `Salto: ${shipStats.jump} Cuad.`;
-                document.getElementById('storage-value').nextElementSibling.textContent = `/${shipStats.storage}`;
-
-                // Update passenger capacity (future proofing)
-                // For now just show in logs or info
-            }
-
-            // Update Ship Position
-            if (gameState.ship_pos_complete) {
-                updateGridPosition(gameState.ship_row, gameState.ship_col);
-            }
-
-            // Load Starting Planet Info
-            if (gameState.starting_planet_code) {
-                console.log("Starting planet detected:", gameState.starting_planet_code);
-                // We could automatically show the planet info panel here if desired
-                showPlanetDetails(gameState.starting_planet_code);
-            }
-
-            // Show Explored Quadrants
-            if (gameState.explored_quadrants) {
-                gameState.explored_quadrants.forEach(coord => {
-                    const [r, c] = coord.split(',').map(Number);
-                    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-                    if (cell) {
-                        const fog = cell.querySelector('.fog-overlay');
-                        if (fog) {
-                            fog.classList.add('opacity-0');
-                            setTimeout(() => fog.remove(), 300);
-                        }
-                        cell.classList.add('border-neon-green');
-                        cell.style.backgroundColor = 'rgba(31, 38, 64, 0.4)';
-                    }
-                });
-            }
-
-            // Update quadrant planet codes
-            if (gameState.quadrant_planets) {
-                Object.entries(gameState.quadrant_planets).forEach(([coord, code]) => {
-                    const [r, c] = coord.split(',').map(Number);
-                    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-                    if (cell) {
-                        const label = cell.querySelector('.planet-code-label');
-                        if (label) {
-                            label.textContent = code;
-                            label.classList.remove('hidden');
-                        }
-                    }
-                });
-            }
-
-            // Load World Log
-            updateWorldLog();
-
-            // Set Ship Location UI
-            updateLocationUI(gameState.ship_location_on_planet || 'Mundo');
-
-            // Load Treasury Data
-            await loadTreasuryData(gameId);
-
-            // Actualizar fecha del header
-            await updateHeaderGameDate(gameId);
-
-        } catch (error) {
-            console.error("Error loading game state:", error);
-        }
-    }
-
-    async function updateWorldLog() {
-        const logContainer = document.getElementById('world-log');
-        if (!gameState.discovered_planets || Object.keys(gameState.discovered_planets).length === 0) {
-            return;
         }
 
-        logContainer.innerHTML = '';
+        function updateFuelDisplay() {
+            const percentage = (gameState.fuel / 30) * 100;
+            document.getElementById('fuel-level').style.height = percentage + '%';
+            document.getElementById('fuel-value').textContent = gameState.fuel;
 
-        // Fetch details for all discovered planets to show names
-        for (const [code, info] of Object.entries(gameState.discovered_planets)) {
+            // Cambiar color si está bajo
+            const fuelLevel = document.getElementById('fuel-level');
+            if (gameState.fuel < 10) {
+                fuelLevel.className = fuelLevel.className.replace('from-neon-blue to-cyan-400', 'from-neon-red to-red-400');
+            } else {
+                fuelLevel.className = fuelLevel.className.replace('from-neon-red to-red-400', 'from-neon-blue to-cyan-400');
+            }
+        }
+
+        function updateStorageDisplay() {
+            const max = gameState.storage_max || 40;
+            const percentage = (gameState.storage / max) * 100;
+            document.getElementById('storage-level').style.height = percentage + '%';
+            document.getElementById('storage-value').textContent = gameState.storage;
+        }
+
+        function updateReputationDisplay() {
+            const el = document.getElementById('reputation-value');
+            const val = gameState.reputation;
+            el.textContent = val >= 0 ? '+' + val : val;
+
+            // Color según reputación
+            if (val >= 3) el.style.color = '#00ff9d';
+            else if (val >= 0) el.style.color = '#00f3ff';
+            else if (val >= -2) el.style.color = '#ffa500';
+            else el.style.color = '#ff2a6d';
+        }
+
+        function toggleDamage(type) {
+            gameState.damages[type] = !gameState.damages[type];
+            const el = document.getElementById('damage-' + type);
+
+            if (gameState.damages[type]) {
+                el.classList.add('bg-opacity-100');
+                if (type === 'light') el.className = el.className.replace('border-yellow-500', 'border-yellow-500 bg-yellow-500');
+                if (type === 'moderate') el.className = el.className.replace('border-orange-500', 'border-orange-500 bg-orange-500');
+                if (type === 'severe') el.className = el.className.replace('border-neon-red', 'border-neon-red bg-neon-red');
+            } else {
+                if (type === 'light') el.className = 'w-4 h-4 rounded-full border-2 border-yellow-500';
+                if (type === 'moderate') el.className = 'w-4 h-4 rounded-full border-2 border-orange-500';
+                if (type === 'severe') el.className = 'w-4 h-4 rounded-full border-2 border-neon-red';
+            }
+
+            // Mostrar alerta crítica si hay daños graves
+            const alert = document.getElementById('critical-alert');
+            if (gameState.damages.severe) {
+                alert.classList.remove('hidden');
+            } else {
+                alert.classList.add('hidden');
+            }
+        }
+
+        // Initialize UI from state
+        async function initDashboard() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+
+            if (!gameId) {
+                console.error("No game_id found in URL");
+                return;
+            }
+
+            // Setup navigation links
+            // No longer needed - global nav handles this
+
             try {
-                const response = await fetch(`/api/planets/${code}`);
+                const response = await fetch(`/api/games/${gameId}`);
                 const data = await response.json();
-                const planet = data.planet;
+                gameState = data.state;
+                const shipStats = data.ship_stats;
 
-                const colLetter = String.fromCharCode(64 + parseInt(info.quadrant.split(',')[1]));
-                const rowNum = info.quadrant.split(',')[0];
+                // Update Company Header
+                document.getElementById('company-name-display').textContent = gameState.company_name || 'Nueva Compañía';
+                document.getElementById('game-id-display').textContent = gameId;
+                document.getElementById('ship-name-display').textContent = gameState.ship_name || 'Fénix Dorado';
+                document.getElementById('ship-model-display').textContent = gameState.ship_model || 'Basic Starfall';
 
-                const entry = document.createElement('div');
-                entry.className = 'flex items-center justify-between py-1 border-b border-gray-800 hover:bg-space-800 cursor-pointer px-1 rounded transition-colors';
-                entry.onclick = () => showPlanetDetails(code);
-                entry.innerHTML = `
+                console.log("Game state loaded:", gameState);
+
+                // Update HUD
+                updateFuelDisplay();
+                updateStorageDisplay();
+                updateReputationDisplay();
+                document.getElementById('day-value').textContent = gameState.day || 1;
+                document.getElementById('month-value').textContent = gameState.month || 1;
+                document.getElementById('year-value').textContent = gameState.year || 1;
+
+                // Area and density are now shown in different places (current-area-display)
+                // These old badges don't exist anymore, removed to prevent null errors
+
+                if (shipStats) {
+                    document.getElementById('jump-badge').textContent = `Salto: ${shipStats.jump} Cuad.`;
+                    document.getElementById('storage-value').nextElementSibling.textContent = `/${shipStats.storage}`;
+
+                    // Update passenger capacity (future proofing)
+                    // For now just show in logs or info
+                }
+
+                // Update Ship Position
+                if (gameState.ship_pos_complete) {
+                    updateGridPosition(gameState.ship_row, gameState.ship_col);
+                }
+
+                // Load Starting Planet Info
+                if (gameState.starting_planet_code) {
+                    console.log("Starting planet detected:", gameState.starting_planet_code);
+                    // We could automatically show the planet info panel here if desired
+                    showPlanetDetails(gameState.starting_planet_code);
+                }
+
+                // Show Explored Quadrants
+                if (gameState.explored_quadrants) {
+                    gameState.explored_quadrants.forEach(coord => {
+                        const [r, c] = coord.split(',').map(Number);
+                        // explored_quadrants uses 0-based coords, but HTML grid uses 1-based data attributes
+                        const cell = document.querySelector(`[data-row="${r + 1}"][data-col="${c + 1}"]`);
+                        if (cell) {
+                            const fog = cell.querySelector('.fog-overlay');
+                            if (fog) {
+                                fog.classList.add('opacity-0');
+                                setTimeout(() => fog.remove(), 300);
+                            }
+                            cell.style.backgroundColor = 'rgba(31, 38, 64, 0.4)';
+                        }
+                    });
+                }
+
+                // Update quadrant planet codes
+                if (gameState.quadrant_planets) {
+                    Object.entries(gameState.quadrant_planets).forEach(([coord, code]) => {
+                        const [r, c] = coord.split(',').map(Number);
+                        // quadrant_planets uses 0-based coords, but HTML grid uses 1-based data attributes
+                        const cell = document.querySelector(`[data-row="${r + 1}"][data-col="${c + 1}"]`);
+                        if (cell) {
+                            const label = cell.querySelector('.planet-code-label');
+                            if (label) {
+                                label.textContent = code;
+                                label.classList.remove('hidden');
+                            }
+                        }
+                    });
+                }
+
+                // Load World Log
+                updateWorldLog();
+
+                // Set Ship Location UI
+                updateLocationUI(gameState.ship_location_on_planet || 'Mundo');
+
+                // Load Treasury Data
+                await loadTreasuryData(gameId);
+
+                // Actualizar fecha del header
+                await updateHeaderGameDate(gameId);
+
+                // Update quadrant badge
+                const quadLetter = String.fromCharCode(64 + (gameState.ship_col || 1));
+                document.getElementById('quadrant-badge').textContent = `Posición: ${quadLetter}${gameState.ship_row || 1}`;
+
+                // Update area display and load area data
+                document.getElementById('current-area-display').textContent = `ÁREA ${gameState.area || 2}`;
+                updateAreaNavigationButtons(gameState.area || 2);
+                await loadAreaData(gameState.area || 2);
+
+            } catch (error) {
+                console.error("Error loading game state:", error);
+            }
+        }
+
+        // NEW:Area Navigation Functions
+        async function navigateArea(direction) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+            if (!gameId) return;
+
+            console.log(`Navigating ${direction} from area ${gameState.area}`);
+
+            try {
+                const formData = new FormData();
+                formData.append('direction', direction);
+
+                const response = await fetch(`/api/games/${gameId}/navigate-area`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Navigation response:', data);
+                    if (data.success) {
+                        // Reload full game state to ensure consistency
+                        const stateResponse = await fetch(`/api/games/${gameId}`);
+                        const stateData = await stateResponse.json();
+                        gameState = stateData.state;
+
+                        console.log('Updated gameState.area:', gameState.area);
+                        document.getElementById('current-area-display').textContent = `ÁREA ${gameState.area}`;
+                        updateAreaNavigationButtons(gameState.area);
+                        await loadAreaData(gameState.area);
+                    }
+                }
+            } catch (error) {
+                console.error("Error navigating area:", error);
+            }
+        }
+
+        async function loadAreaData(areaNumber) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+            if (!gameId || !areaNumber) return;
+
+            try {
+                const response = await fetch(`/api/games/${gameId}/area/${areaNumber}/planets`);
+                const data = await response.json();
+
+                // Update area display
+                document.getElementById('area-planets-number').textContent = areaNumber;
+                document.getElementById('area-planets-count').textContent = data.count;
+
+                // Update planets list
+                updateAreaPlanetsList(data.planets, data.ship_quadrant, data.current_planet_code);
+
+            } catch (error) {
+                console.error("Error loading area data:", error);
+            }
+        }
+
+        function updateAreaPlanetsList(planets, shipQuadrant, currentPlanetCode) {
+            const listEl = document.getElementById('area-planets-list');
+            listEl.innerHTML = '';
+
+            if (planets.length === 0) {
+                listEl.innerHTML = '<div class="text-xs text-gray-600 italic py-2">No hay planetas descubiertos en esta área...</div>';
+                return;
+            }
+
+            planets.forEach(planet => {
+                const isCurrent = planet.code === currentPlanetCode || planet.quadrant === shipQuadrant;
+                // planet.quadrant uses 0-based coords, convert to 1-based for display
+                const [row, col] = planet.quadrant.split(',').map(Number);
+                const quadLetter = String.fromCharCode(64 + col + 1);  // +1 to convert to 1-based
+                const quadRow = row + 1;  // +1 to convert to 1-based
+
+                // Create compact planet card
+                const card = document.createElement('div');
+                card.className = `p-2 bg-space-800 border rounded cursor-pointer transition-colors hover:border-neon-blue ${isCurrent ? 'border-neon-green' : 'border-gray-700'}`;
+                card.onclick = () => showPlanetDetails(planet.code);
+
+                card.innerHTML = `
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-neon-blue font-bold text-sm">${planet.code}</span>
+                        <span class="text-white text-xs uppercase">${planet.name}</span>
+                        ${isCurrent ? '<span class="text-neon-green text-[10px]">★ ACTUAL</span>' : ''}
+                    </div>
+                    <span class="text-gray-500 text-[10px] font-tech">${quadLetter}${quadRow}</span>
+                </div>
+                <div class="flex gap-1 flex-wrap text-[9px]">
+                    <span class="text-gray-400">Soporte: <span class="text-neon-green">${planet.life_support.type}</span></span>
+                    <span class="text-gray-400">| Tech: <span class="text-neon-blue">${planet.bootstrap_data.tech_level || '?'}</span></span>
+                    <span class="text-gray-400">| Puerto: <span class="text-white">${planet.spaceport.quality_code}</span></span>
+                </div>
+            `;
+
+                listEl.appendChild(card);
+            });
+        }
+
+        function updateAreaNavigationButtons(currentArea) {
+            const prevBtn = document.getElementById('area-prev-btn');
+            const nextBtn = document.getElementById('area-next-btn');
+
+            // Disable/enable buttons based on area limits
+            if (currentArea <= 2) {
+                prevBtn.disabled = true;
+            } else {
+                prevBtn.disabled = false;
+            }
+
+            if (currentArea >= 12) {
+                nextBtn.disabled = true;
+            } else {
+                nextBtn.disabled = false;
+            }
+        }
+
+        window.onload = initDashboard;
+
+        async function updateWorldLog() {
+            const logContainer = document.getElementById('world-log');
+            if (!gameState.discovered_planets || Object.keys(gameState.discovered_planets).length === 0) {
+                return;
+            }
+
+            logContainer.innerHTML = '';
+
+            // Fetch details for all discovered planets to show names
+            for (const [code, info] of Object.entries(gameState.discovered_planets)) {
+                try {
+                    const response = await fetch(`/api/planets/${code}`);
+                    const data = await response.json();
+                    const planet = data.planet;
+
+                    // discovered_planets uses 0-based coords, convert to 1-based for display
+                    const [quadRow, quadCol] = info.quadrant.split(',').map(Number);
+                    const colLetter = String.fromCharCode(64 + quadCol + 1);  // +1 to convert to 1-based (A=1)
+                    const rowNum = quadRow + 1;  // +1 to convert to 1-based
+
+                    const entry = document.createElement('div');
+                    entry.className = 'flex items-center justify-between py-1 border-b border-gray-800 hover:bg-space-800 cursor-pointer px-1 rounded transition-colors';
+                    entry.onclick = () => showPlanetDetails(code);
+                    entry.innerHTML = `
                     <div class="flex items-center gap-2">
                         <span class="text-neon-blue font-bold min-w-[30px]">${code}</span>
                         <span class="text-white uppercase text-[10px]">${planet.name}</span>
@@ -566,196 +791,264 @@
                         AREA ${info.area} <span class="text-neon-blue ml-1">${colLetter}${rowNum}</span>
                     </div>
                 `;
-                logContainer.appendChild(entry);
-            } catch (e) {
-                console.error(`Error loading planet log entry ${code}:`, e);
+                    logContainer.appendChild(entry);
+                } catch (e) {
+                    console.error(`Error loading planet log entry ${code}:`, e);
+                }
             }
         }
-    }
 
-    function onQuadrantClick(cell) {
-        const row = parseInt(cell.getAttribute('data-row'));
-        const col = parseInt(cell.getAttribute('data-col'));
-        selectQuadrant(row, col);
-    }
-
-    async function selectQuadrant(row, col) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('game_id');
-
-        if (!gameId) return;
-
-        // Visual update only for now if move is intended
-        updateGridPosition(row, col);
-
-        try {
-            // Save exploration to API
-            const formData = new FormData();
-            formData.append('row', row);
-            formData.append('col', col);
-
-            await fetch(`/api/games/${gameId}/explore`, {
-                method: 'POST',
-                body: formData
-            });
-        } catch (error) {
-            console.error("Error saving exploration:", error);
+        function onQuadrantClick(cell) {
+            const row = parseInt(cell.getAttribute('data-row'));
+            const col = parseInt(cell.getAttribute('data-col'));
+            selectQuadrant(row, col);
         }
-    }
 
-    function updateGridPosition(row, col) {
-        // Remove old ship icon
-        document.querySelectorAll('.ship-icon').forEach(el => el.remove());
+        async function selectQuadrant(row, col) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
 
-        // Update markers
-        document.querySelectorAll('[id^="marker-"]').forEach(el => el.classList.add('opacity-0'));
+            if (!gameId) return;
 
-        const colMarker = document.getElementById(`marker-col-${col}`);
-        const rowMarker = document.getElementById(`marker-row-${row}`);
+            // Visual update only for now if move is intended
+            updateGridPosition(row, col);
 
-        if (colMarker) colMarker.classList.remove('opacity-0');
-        if (rowMarker) rowMarker.classList.remove('opacity-0');
+            try {
+                // Save exploration to API
+                const formData = new FormData();
+                formData.append('row', row);
+                formData.append('col', col);
 
-        // Add ship to new cell
-        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
-        if (cell) {
-            cell.insertAdjacentHTML('beforeend', SHIP_ICON);
-
-            // Auto-reveal fog for ship position
-            const fog = cell.querySelector('.fog-overlay');
-            if (fog) {
-                fog.classList.add('opacity-0');
-                setTimeout(() => fog.remove(), 300);
+                await fetch(`/api/games/${gameId}/explore`, {
+                    method: 'POST',
+                    body: formData
+                });
+            } catch (error) {
+                console.error("Error saving exploration:", error);
             }
         }
-    }
 
-    window.onload = initDashboard;
+        function updateGridPosition(row, col) {
+            // Remove old ship icon
+            document.querySelectorAll('.ship-icon').forEach(el => el.remove());
 
-    async function showPlanetDetails(code) {
-        try {
-            const response = await fetch(`/api/planets/${code}`);
-            const data = await response.json();
-            const planet = data.planet;
+            // Update markers
+            document.querySelectorAll('[id^="marker-"]').forEach(el => el.classList.add('opacity-0'));
 
-            document.getElementById('planet-info').classList.remove('hidden');
-            document.getElementById('planet-name').textContent = planet.name.toUpperCase();
-            document.getElementById('planet-code').textContent = 'Código: ' + planet.code;
+            const colMarker = document.getElementById(`marker-col-${col}`);
+            const rowMarker = document.getElementById(`marker-row-${row}`);
 
-            // Usar datos decodificados del nuevo formato
-            document.getElementById('planet-life-support').textContent =
-                planet.life_support.description || planet.life_support.type || 'Desconocido';
-            document.getElementById('planet-spaceport').innerHTML = `
-                <div class="text-xs space-y-1">
-                    <div>Calidad: <span class="text-neon-blue">${planet.spaceport.quality || 'Medio'}</span></div>
-                    <div>Combustible: <span class="text-neon-green">${planet.spaceport.fuel || 'Densidad Media'}</span></div>
-                    <div>Amarre: <span class="text-white">${planet.spaceport.docking_price || 0} SC</span></div>
+            if (colMarker) colMarker.classList.remove('opacity-0');
+            if (rowMarker) rowMarker.classList.remove('opacity-0');
+
+            // Add ship to new cell
+            const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            if (cell) {
+                cell.insertAdjacentHTML('beforeend', SHIP_ICON);
+
+                // Auto-reveal fog for ship position
+                const fog = cell.querySelector('.fog-overlay');
+                if (fog) {
+                    fog.classList.add('opacity-0');
+                    setTimeout(() => fog.remove(), 300);
+                }
+            }
+        }
+
+        window.onload = initDashboard;
+
+        async function showPlanetDetails(code) {
+            try {
+                const response = await fetch(`/api/planets/${code}`);
+                const data = await response.json();
+                const planet = data.planet;
+
+                document.getElementById('planet-info').classList.remove('hidden');
+                document.getElementById('planet-name').textContent = planet.name.toUpperCase();
+                document.getElementById('planet-code').textContent = 'Código: ' + planet.code;
+
+                // Existing fields
+                document.getElementById('planet-life-support').textContent =
+                    planet.life_support.description || planet.life_support.type || 'Desconocido';
+                document.getElementById('planet-tech').textContent =
+                    planet.bootstrap_data.tech_level_description || planet.bootstrap_data.tech_level || 'Desconocido';
+
+                // NEW: Riesgo de Contagio
+                document.getElementById('planet-contagion').textContent =
+                    planet.life_support.local_contagion_risk || 'NO';
+
+                // NEW: Convenio Spacegom
+                document.getElementById('planet-convenio').textContent =
+                    planet.bootstrap_data.convenio_spacegom ? 'SÍ' : 'NO';
+
+                // NEW: Días a Hiperdisparo
+                document.getElementById('planet-hyperspace-days').textContent =
+                    planet.life_support.days_to_hyperspace || '0';
+
+                // NEW: Ordenamiento Legal
+                document.getElementById('planet-legal-order').textContent =
+                    planet.life_support.legal_order_threshold || '0';
+
+                // Población
+                const population = planet.bootstrap_data.population_over_1000 ? '>1.000 hab.' : '<1.000 hab.';
+                document.getElementById('planet-population').textContent = population;
+
+                // NEW: Autosuficiencia
+                const selfSuff = planet.trade_info.self_sufficiency_level;
+                document.getElementById('planet-self-sufficiency').textContent = selfSuff > 0 ? `+${selfSuff}` : selfSuff;
+
+                // NEW: UCN por Pedido
+                document.getElementById('planet-ucn').textContent = planet.trade_info.ucn_per_order || '0';
+
+                // NEW: Pasajeros Máximos
+                document.getElementById('planet-passengers').textContent = planet.trade_info.max_passengers || '0';
+
+                // NEW: Misiones Especiales
+                document.getElementById('planet-missions').textContent = planet.trade_info.mission_threshold || '0';
+
+                // Espaciopuerto
+                document.getElementById('planet-spaceport').innerHTML = `
+                <div class="flex justify-between text-xs">
+                    <span>Calidad: <span class="text-neon-blue">${planet.spaceport.quality || 'Medio'}</span></span>
+                    <span>Combustible: <span class="text-neon-green">${planet.spaceport.fuel || 'DM'}</span></span>
+                    <span>Amarre: <span class="text-white">${planet.spaceport.docking_price || 0} SC</span></span>
                 </div>
             `;
-            document.getElementById('planet-tech').textContent =
-                planet.bootstrap_data.tech_level_description || planet.bootstrap_data.tech_level || 'Desconocido';
 
-            // Población
-            const population = planet.bootstrap_data.population_over_1000 ? '>1.000 hab.' : '<1.000 hab.';
-            document.getElementById('planet-population').textContent = population;
+                // Instalaciones Orbitales
+                const facilitiesEl = document.getElementById('planet-facilities');
+                facilitiesEl.innerHTML = '';
 
-            // Handle orbital facilities as booleans
-            const facilitiesEl = document.getElementById('planet-facilities');
-            facilitiesEl.innerHTML = '';
+                const facilities = [];
+                if (planet.orbital_facilities.cartography_center) facilities.push('CC: Cartografía');
+                if (planet.orbital_facilities.hackers) facilities.push('PI: Piratas Info');
+                if (planet.orbital_facilities.supply_depot) facilities.push('DS: Suministros');
+                if (planet.orbital_facilities.astro_academy) facilities.push('AA: Academia');
 
-            const facilities = [];
-            if (planet.orbital_facilities.cartography_center) facilities.push('Centro Cartografía');
-            if (planet.orbital_facilities.hackers) facilities.push('Piratas Informáticos');
-            if (planet.orbital_facilities.supply_depot) facilities.push('Depósitos Suministros');
-            if (planet.orbital_facilities.astro_academy) facilities.push('Academia Astronavegación');
+                if (facilities.length > 0) {
+                    facilities.forEach(name => {
+                        facilitiesEl.insertAdjacentHTML('beforeend',
+                            `<span class="px-2 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue rounded text-[10px]">${name}</span>`);
+                    });
+                } else {
+                    facilitiesEl.innerHTML = '<span class="text-gray-500 italic text-xs">Ninguna</span>';
+                }
 
-            if (facilities.length > 0) {
-                facilities.forEach(name => {
-                    facilitiesEl.insertAdjacentHTML('beforeend',
-                        `<span class="px-2 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue rounded text-xs">${name}</span>`);
+                // NEW: Productos Disponibles
+                const productsEl = document.getElementById('planet-products');
+                productsEl.innerHTML = '';
+
+                const productColors = {
+                    'INDU': 'bg-indigo-500 bg-opacity-20 border-indigo-500',
+                    'BASI': 'bg-yellow-500 bg-opacity-20 border-yellow-500',
+                    'ALIM': 'bg-green-500 bg-opacity-20 border-green-500',
+                    'MADE': 'bg-amber-700 bg-opacity-20 border-amber-700',
+                    'AGUA': 'bg-cyan-500 bg-opacity-20 border-cyan-500',
+                    'MICO': 'bg-gray-500 bg-opacity-20 border-gray-500',
+                    'MIRA': 'bg-purple-500 bg-opacity-20 border-purple-500',
+                    'MIPR': 'bg-yellow-300 bg-opacity-20 border-yellow-300',
+                    'PAVA': 'bg-blue-400 bg-opacity-20 border-blue-400',
+                    'A': 'bg-red-500 bg-opacity-20 border-red-500',
+                    'AE': 'bg-red-600 bg-opacity-20 border-red-600',
+                    'AEI': 'bg-red-700 bg-opacity-20 border-red-700',
+                    'COM': 'bg-orange-500 bg-opacity-20 border-orange-500'
+                };
+
+                const productsList = [];
+                Object.entries(planet.products).forEach(([code, available]) => {
+                    if (available) {
+                        productsList.push(code);
+                    }
                 });
-            } else {
-                facilitiesEl.innerHTML = '<span class="text-gray-500 italic">Ninguna</span>';
+
+                if (productsList.length > 0) {
+                    productsList.forEach(code => {
+                        const color = productColors[code] || 'bg-gray-500 bg-opacity-20 border-gray-500';
+                        productsEl.insertAdjacentHTML('beforeend',
+                            `<span class="px-2 py-0.5 ${color} border rounded text-[10px] font-tech">${code}</span>`);
+                    });
+                } else {
+                    productsEl.innerHTML = '<span class="text-gray-500 italic text-xs">Ninguno</span>';
+                }
+
+            } catch (error) {
+                console.error("Error fetching planet details:", error);
             }
-
-        } catch (error) {
-            console.error("Error fetching planet details:", error);
         }
-    }
 
-    function showPlanetInfo(planet) {
-        // Legacy or simple view
-        showPlanetDetails(planet.code);
-    }
+        function showPlanetInfo(planet) {
+            // Legacy or simple view
+            showPlanetDetails(planet.code);
+        }
 
-    function closePlanetInfo() {
-        document.getElementById('planet-info').classList.add('hidden');
-    }
+        function closePlanetInfo() {
+            document.getElementById('planet-info').classList.add('hidden');
+        }
 
-    function updatePrice(select, index) {
-        const basePrices = [500, 1200, 800, 2500];
-        const modifier = parseFloat(select.value);
-        const finalPrice = Math.round(basePrices[index] * modifier);
-        document.getElementById('price-' + index).textContent = finalPrice + ' CR';
-    }
+        function updatePrice(select, index) {
+            const basePrices = [500, 1200, 800, 2500];
+            const modifier = parseFloat(select.value);
+            const finalPrice = Math.round(basePrices[index] * modifier);
+            document.getElementById('price-' + index).textContent = finalPrice + ' CR';
+        }
 
-    async function updateShipLocation(location) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('game_id');
-        if (!gameId) return;
+        async function updateShipLocation(location) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const gameId = urlParams.get('game_id');
+            if (!gameId) return;
 
-        try {
-            const formData = new FormData();
-            formData.append('location', location);
+            try {
+                const formData = new FormData();
+                formData.append('location', location);
 
-            const response = await fetch(`/api/games/${gameId}/update-location`, {
-                method: 'POST',
-                body: formData
+                const response = await fetch(`/api/games/${gameId}/update-location`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    gameState.ship_location_on_planet = location;
+                    updateLocationUI(location);
+                }
+            } catch (error) {
+                console.error("Error updating ship location:", error);
+            }
+        }
+
+        function updateLocationUI(location) {
+            // Remove active class from all
+            document.querySelectorAll('.location-btn').forEach(btn => {
+                btn.classList.remove('active');
             });
 
-            if (response.ok) {
-                gameState.ship_location_on_planet = location;
-                updateLocationUI(location);
+            // Add active class to current
+            const activeBtn = document.getElementById('loc-' + location);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
             }
-        } catch (error) {
-            console.error("Error updating ship location:", error);
         }
-    }
 
-    function updateLocationUI(location) {
-        // Remove active class from all
-        document.querySelectorAll('.location-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
+        async function loadTreasuryData(gameId) {
+            try {
+                const response = await fetch(`/api/games/${gameId}/treasury`);
+                const data = await response.json();
 
-        // Add active class to current
-        const activeBtn = document.getElementById('loc-' + location);
-        if (activeBtn) {
-            activeBtn.classList.add('active');
+                // Update treasury value
+                document.getElementById('treasury-value').textContent = data.current_balance || 0;
+
+                // Update monthly expenses
+                const monthlyExpenses = data.monthly_expenses?.total || 0;
+                document.getElementById('monthly-expenses-value').textContent = monthlyExpenses;
+
+                // Store in gameState for reference
+                gameState.treasury = data.current_balance;
+                gameState.monthly_expenses = monthlyExpenses;
+
+            } catch (error) {
+                console.error("Error loading treasury:", error);
+            }
         }
-    }
-
-    async function loadTreasuryData(gameId) {
-        try {
-            const response = await fetch(`/api/games/${gameId}/treasury`);
-            const data = await response.json();
-
-            // Update treasury value
-            document.getElementById('treasury-value').textContent = data.current_balance || 0;
-
-            // Update monthly expenses
-            const monthlyExpenses = data.monthly_expenses?.total || 0;
-            document.getElementById('monthly-expenses-value').textContent = monthlyExpenses;
-
-            // Store in gameState for reference
-            gameState.treasury = data.current_balance;
-            gameState.monthly_expenses = monthlyExpenses;
-
-        } catch (error) {
-            console.error("Error loading treasury:", error);
-        }
-    }
 
 
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}

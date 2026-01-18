@@ -338,5 +338,54 @@ WHERE game_id = 'test_game' AND is_active = 1 AND morale = 'B';
 
 ---
 
-**Última actualización**: 2026-01-08  
-**Versión del esquema**: v2.0 (Refactorizado + Personnel)
+---
+
+## Tabla: `missions`
+
+La tabla `missions` gestiona tanto los objetivos de campaña como las misiones especiales del juego.
+
+### Esquema de la Tabla
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INTEGER | Clave primaria |
+| `game_id` | VARCHAR | ID del juego |
+| `mission_type` | VARCHAR | Tipo: "campaign" o "special" |
+| `origin_world` | VARCHAR | Código/nombre del planeta de origen |
+| `execution_place` | VARCHAR | Lugar donde se ejecuta la misión |
+| `max_date` | VARCHAR | Fecha límite (formato juego o DD-MM-YY) |
+| `result` | VARCHAR | Estado: "" (activa), "exito", "fracaso" |
+| `objective_number` | INTEGER | Solo campañas: Número de objetivo (ej: 1) |
+| `mission_code` | VARCHAR | Solo especiales: Código (ej: "M-47") |
+| `book_page` | INTEGER | Solo especiales: Página del libro |
+| `created_date` | VARCHAR | Fecha de aceptación |
+| `completed_date` | VARCHAR | Fecha de finalización |
+| `notes` | TEXT | Notas adicionales |
+
+---
+
+## Tabla: `employee_tasks`
+
+La tabla `employee_tasks` gestiona la cola de trabajo del Director Gerente y otros empleados, principalmente para búsquedas de personal.
+
+### Esquema de la Tabla
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INTEGER | Clave primaria |
+| `game_id` | VARCHAR | ID del juego |
+| `employee_id` | INTEGER | FK a personnel.id (quien realiza la tarea) |
+| `task_type` | VARCHAR | Tipo de tarea (ej: "hire_search") |
+| `status` | VARCHAR | Estado: "pending", "in_progress", "completed", "failed" |
+| `queue_position` | INTEGER | Posición en la cola (1, 2, 3...) |
+| `task_data` | TEXT | JSON con parámetros de la tarea (puesto, salario...) |
+| `result_data` | TEXT | JSON con resultados (dados, éxito/fallo) |
+| `created_date` | VARCHAR | Fecha creación |
+| `started_date` | VARCHAR | Fecha inicio |
+| `completion_date` | VARCHAR | Fecha prevista finalización |
+| `finished_date` | VARCHAR | Fecha real finalización |
+
+---
+
+**Última actualización**: 2026-01-18
+**Versión del esquema**: v3.0 (Misiones + Tareas de Empleado)

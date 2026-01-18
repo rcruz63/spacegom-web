@@ -2,13 +2,13 @@
 
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-    <!-- Main Dashboard Area -->
+    <!-- Command Center -->
     <div class="md:col-span-2">
         <div class="glass-panel tech-border p-6 rounded-lg mb-8">
             <h2 class="text-2xl font-orbitron text-white mb-4 border-b border-gray-700 pb-2">
                 <span class="text-neon-blue">COMMAND</span> CENTER
             </h2>
-            <p class="mb-4">Welcome back, Commander. Status is GREEN. Awaiting orders.</p>
+            <p class="mb-6 text-gray-300">Bienvenido, Comandante. Sistema operativo. Esperando órdenes.</p>
 
             <!-- Navigation Options -->
             <div class="mb-6 flex gap-4">
@@ -16,51 +16,181 @@
                     class="flex-1 bg-neon-green bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-green text-neon-green px-6 py-3 rounded font-orbitron uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(0,255,157,0.5)] text-center">
                     🎲 NUEVA PARTIDA
                 </a>
-                <a href="/dashboard"
-                    class="flex-1 bg-neon-blue bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-blue text-neon-blue px-6 py-3 rounded font-orbitron uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(0,243,255,0.5)] text-center">
-                    ▶ PANEL DE CONTROL
-                </a>
+                <button id="continue-btn" onclick="continueLastGame()" disabled
+                    class="flex-1 bg-neon-blue bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-blue text-neon-blue px-6 py-3 rounded font-orbitron uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(0,243,255,0.5)] text-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    ▶ CONTINUAR ÚLTIMA
+                </button>
             </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <!-- Games Summary Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-space-800 p-3 rounded border border-gray-700">
-                    <div class="text-xs text-gray-500 uppercase">Hull Integrity</div>
-                    <div class="text-neon-green font-orbitron text-xl">100%</div>
+                    <div class="text-xs text-gray-500 uppercase">Total Partidas</div>
+                    <div class="text-neon-green font-orbitron text-xl" id="total-games">0</div>
                 </div>
                 <div class="bg-space-800 p-3 rounded border border-gray-700">
-                    <div class="text-xs text-gray-500 uppercase">Fuel Levels</div>
-                    <div class="text-neon-blue font-orbitron text-xl">87%</div>
+                    <div class="text-xs text-gray-500 uppercase">Partidas Activas</div>
+                    <div class="text-neon-blue font-orbitron text-xl" id="active-games">0</div>
                 </div>
                 <div class="bg-space-800 p-3 rounded border border-gray-700">
-                    <div class="text-xs text-gray-500 uppercase">Oxygen</div>
-                    <div class="text-neon-green font-orbitron text-xl">NORMAL</div>
+                    <div class="text-xs text-gray-500 uppercase">Última Actividad</div>
+                    <div class="text-white font-tech text-sm" id="last-activity">---</div>
                 </div>
                 <div class="bg-space-800 p-3 rounded border border-gray-700">
-                    <div class="text-xs text-gray-500 uppercase">Alert Level</div>
-                    <div class="text-gray-400 font-orbitron text-xl">NONE</div>
+                    <div class="text-xs text-gray-500 uppercase">Áreas Exploradas</div>
+                    <div class="text-neon-blue font-orbitron text-xl" id="areas-explored">0</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Dice Widget Area -->
-    <div class="md:col-span-1">
-        {% include "components/dice_widget.html" %}
-    </div>
-
-    <!-- Log / Auxiliary Area -->
+    <!-- Saved Games List -->
     <div class="md:col-span-1">
         <div class="glass-panel tech-border p-6 rounded-lg h-full">
-            <h3 class="font-orbitron text-neon-blue mb-4 text-sm tracking-wider">MISSION LOG</h3>
-            <div class="h-64 overflow-y-auto font-mono text-xs space-y-2 text-gray-400" id="mission-log">
-                <div class="border-l-2 border-neon-green pl-2 mb-2">
-                    <span class="text-neon-green">[01:20:00]</span> System initialized.
+            <h3 class="font-orbitron text-neon-blue mb-4 text-sm tracking-wider flex items-center gap-2">
+                <span>📁</span> PARTIDAS GUARDADAS
+            </h3>
+            <div id="games-list" class="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+                <div class="text-gray-500 italic text-sm">Cargando partidas...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="md:col-span-1">
+        <div class="glass-panel tech-border p-6 rounded-lg h-full">
+            <h3 class="font-orbitron text-neon-blue mb-4 text-sm tracking-wider flex items-center gap-2">
+                <span>ℹ️</span> INFORMACIÓN DEL SISTEMA
+            </h3>
+            <div class="space-y-3 text-sm text-gray-300">
+                <div class="flex justify-between border-b border-gray-700 pb-2">
+                    <span class="text-gray-400">Versión:</span>
+                    <span class="text-neon-green font-tech">Spacegom v1.0</span>
                 </div>
-                <div class="border-l-2 border-gray-700 pl-2">
-                    <span class="text-gray-500">[01:20:05]</span> Connecting to main database... OK.
+                <div class="flex justify-between border-b border-gray-700 pb-2">
+                    <span class="text-gray-400">Base de Datos:</span>
+                    <span class="text-white font-tech">216 planetas</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-700 pb-2">
+                    <span class="text-gray-400">Áreas Disponibles:</span>
+                    <span class="text-neon-blue font-tech">2 - 12</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-700 pb-2">
+                    <span class="text-gray-400">Estado del Sistema:</span>
+                    <span class="text-neon-green font-tech">● OPERATIVO</span>
+                </div>
+                <div class="mt-4 p-3 bg-space-800 rounded border border-gray-700">
+                    <div class="text-xs text-gray-500 uppercase mb-2">Última Actualización</div>
+                    <div class="text-[10px] text-gray-400 font-mono">
+                        2026-01-18 | Dashboard rediseñado<br>
+                        Gestión de áreas y planetas mejorada
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    async function loadGames() {
+        try {
+            const response = await fetch('/api/games');
+            const data = await response.json();
+
+            const gamesList = document.getElementById('games-list');
+            const continueBtn = document.getElementById('continue-btn');
+
+            // Update stats
+            document.getElementById('total-games').textContent = data.games.length;
+            document.getElementById('active-games').textContent = data.games.length;
+
+            // Get unique areas
+            const areas = new Set(data.games.map(g => g.area).filter(a => a));
+            document.getElementById('areas-explored').textContent = areas.size;
+
+            // Find most recent
+            if (data.games.length > 0) {
+                const sorted = data.games.sort((a, b) =>
+                    new Date(b.updated_at) - new Date(a.updated_at)
+                );
+
+                const latest = new Date(sorted[0].updated_at);
+                const now = new Date();
+                const diff = Math.floor((now - latest) / 1000 / 60); // minutes
+
+                if (diff < 60) {
+                    document.getElementById('last-activity').textContent = `Hace ${diff}m`;
+                } else if (diff < 1440) {
+                    document.getElementById('last-activity').textContent = `Hace ${Math.floor(diff / 60)}h`;
+                } else {
+                    document.getElementById('last-activity').textContent = `Hace ${Math.floor(diff / 1440)}d`;
+                }
+
+                // Populate games list
+                gamesList.innerHTML = '';
+                sorted.forEach(game => {
+                    const card = createGameCard(game);
+                    gamesList.appendChild(card);
+                });
+
+                // Enable continue button
+                continueBtn.disabled = false;
+            } else {
+                gamesList.innerHTML = '<div class="text-gray-500 italic text-sm py-4 text-center">No hay partidas guardadas.<br>¡Comienza una nueva aventura!</div>';
+                continueBtn.disabled = true;
+            }
+
+        } catch (error) {
+            console.error('Error loading games:', error);
+            document.getElementById('games-list').innerHTML =
+                '<div class="text-neon-red text-sm">Error al cargar partidas</div>';
+        }
+    }
+
+    function createGameCard(game) {
+        const card = document.createElement('div');
+        card.className = 'bg-space-800 border border-gray-700 hover:border-neon-blue rounded p-3 cursor-pointer transition-all';
+        card.onclick = () => window.location.href = `/dashboard?game_id=${game.game_id}`;
+
+        const date = new Date(game.updated_at);
+        const dateStr = date.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        card.innerHTML = `
+            <div class="flex items-start justify-between mb-2">
+                <div class="flex-1">
+                    <div class="text-neon-blue font-orbitron text-sm">${game.company_name || game.game_id}</div>
+                    <div class="text-[10px] text-gray-500 font-tech">${game.ship_name || 'Sin nombre'}</div>
+                </div>
+                <div class="text-xs text-gray-400 font-mono">${dateStr}</div>
+            </div>
+            <div class="flex gap-2 text-[10px]">
+                ${game.area ? `<span class="px-2 py-0.5 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded">Área ${game.area}</span>` : ''}
+                ${game.world_density ? `<span class="px-2 py-0.5 bg-gray-700 border border-gray-600 text-gray-300 rounded">${game.world_density}</span>` : ''}
+                ${game.ship_model ? `<span class="px-2 py-0.5 bg-gray-700 border border-gray-600 text-gray-300 rounded">${game.ship_model}</span>` : ''}
+            </div>
+        `;
+
+        return card;
+    }
+
+    function continueLastGame() {
+        fetch('/api/games')
+            .then(r => r.json())
+            .then(data => {
+                if (data.games.length > 0) {
+                    const latest = data.games.sort((a, b) =>
+                        new Date(b.updated_at) - new Date(a.updated_at)
+                    )[0];
+                    window.location.href = `/dashboard?game_id=${latest.game_id}`;
+                }
+            });
+    }
+
+    window.onload = loadGames;
+</script>
 {% endblock %}

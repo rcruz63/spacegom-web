@@ -30,3 +30,19 @@
 ## Review 3
 
 - DETAIL: la zona scrollable con últimos eventos quisiera que fuera una zona de log, donde pudiera ver todos los eventos y consultar el historico, debe ser muy sencilla, fecha del juego: mensaje de texto "Iniciada busqqueda Piloto Novato tardará dos dias" "Se paga los salarios por un total de XX y el saldo resultante es YYY" "Contratado Axistente de vuelo ..." "Fallo en la busqueda de Piloto Experto..." y en el futuro se iria agregando mas eventos. DONE
+
+## Review 4
+
+- DESEABLE: En la tiradas de dados de accciones del personal cuando se muestre el resultado además de Exito o Fracaso se debe indicar si ha habido modificación en la experiencia o la moral.
+- NECESARIO: He añadido una nueva busqueda de personal cuando ya había otras y ha añadido el primero en la cola de busqueda, no sé en que circustancias se ha producido, porque las veces anteriores se ha comportado como se esperaba añadiendo al final de la cola.
+- NECESARIO: Los ID de los trabajadores deben ser únicos por partida.
+
+## Pagina inicial
+
+La pagina inicial se quedó obsoleta, tiene una primera sección denominada COMMAND CENTER donde me permite iniciar una nueva partida y Acceder a un Panel de control ¡¡Vacio!!
+
+En la parte de abajo tiene un modulo de DICE que no tiene uso y un panel de Mission LOG que juraría que es de atrezzo.
+
+Me gustan los adornos, te introducen en el juego, pero además necesitaría que me dejara continuar con la última partida o acceder a otras. El modulo del dado no sirve ni para dar ambiente.
+
+## Contexto

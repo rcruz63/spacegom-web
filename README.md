@@ -69,6 +69,15 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
   - Moral: Baja (B), Media (M), Alta (A)
   - Salarios mensuales: 76 SC/mes iniciales
   - Notas personalizadas por empleado
+  - **Cola de Tareas del Director**: Gestión automática de búsquedas de personal en el tiempo
+  - **Resultados con Dados Visuales**: Panel lateral con detalles de la tirada
+
+### 🎯 Gestión de Misiones
+- **Sistema de Misiones** (/missions):
+  - **Objetivos de Campaña**: Tracking de objetivos principales
+  - **Misiones Especiales**: Gestión de misiones del libro (código y página)
+  - **Fechas Límite**: Eventos automáticos en el calendario
+  - **Resolución**: Éxito/Fracaso con impacto en reputación
 
 ### 🎯 Sistema de Dificultad
 - **Tres niveles al iniciar partida**:

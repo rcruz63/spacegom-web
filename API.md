@@ -630,6 +630,89 @@ curl -X POST http://localhost:8000/api/planets/466/update-notes \
 
 ---
 
+---
+
+## 🕰️ Time Management
+
+### Advance Time
+```http
+POST /api/games/{game_id}/time/advance
+```
+Avanza el tiempo hasta el próximo evento en la cola y lo resuelve.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "old_date": "1-01-01",
+  "new_date": "1-01-08",
+  "event_result": {
+    "type": "task_completion",
+    "success": true,
+    "message": "..."
+  }
+}
+```
+
+---
+
+## 🎯 Missions
+
+### Get All Missions
+```http
+GET /api/games/{game_id}/missions
+```
+Obtiene todas las misiones separadas por estado (activas, completadas, fallidas).
+
+### Create Mission
+```http
+POST /api/games/{game_id}/missions
+Content-Type: application/x-www-form-urlencoded
+
+mission_type=campaign
+objective_number=1
+execution_place=Orbita
+max_date=35-01-1 (optional)
+```
+
+### Resolve Mission Deadline
+```http
+POST /api/games/{game_id}/missions/{mission_id}/resolve
+Content-Type: application/x-www-form-urlencoded
+
+success=true
+```
+Resuelve manualmente un evento de fecha límite de misión.
+
+---
+
+## 👔 Advanced Personnel (Hiring)
+
+### Get Available Positions
+```http
+GET /api/games/{game_id}/hire/available-positions
+```
+Lista los puestos disponibles para contratar según el nivel tecnológico del planeta actual.
+
+### Start Hiring Search
+```http
+POST /api/games/{game_id}/hire/start
+Content-Type: application/x-www-form-urlencoded
+
+position=Piloto
+experience_level=Novato
+manual_dice_days=3,4 (optional)
+```
+Inicia una tarea de búsqueda de personal en la cola del Director Gerente.
+
+### Get Employee Tasks
+```http
+GET /api/games/{game_id}/personnel/{employee_id}/tasks
+```
+Obtiene la cola de tareas (pendientes y completadas) de un empleado (ej: Director Gerente).
+
+---
+
 ## 🔄 Códigos de Estado
 
 - `200 OK`: Operación exitosa

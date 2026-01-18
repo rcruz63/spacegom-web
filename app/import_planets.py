@@ -81,6 +81,9 @@ def import_planets_from_excel(excel_path: str):
     # Read Excel
     df = pd.read_excel(excel_path)
     
+    # Normalize column names - strip whitespace and tabs
+    df.columns = df.columns.str.strip()
+    
     # Create session
     db = SessionLocal()
     

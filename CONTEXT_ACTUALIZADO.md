@@ -2,7 +2,7 @@
 
 ## 📝 Resumen Ejecutivo
 
-Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema de Personal con Contratación Automatizada + Gestión Temporal + UX Mejorado - Completamente Funcional**.
+Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema de Personal + Misiones + Gestión Temporal + UX Mejorado - Completamente Funcional y Documentado**.
 
 ---
 
@@ -255,7 +255,6 @@ spacegom-web/
 - Sin navegación entre áreas (bloqueante para exploración avanzada)
 
 ### Deuda Técnica
-- API.md desactualizado (faltan 10 endpoints nuevos)
 - Sin tests automatizados
 - employee_number debería ser por juego, no global
 
@@ -263,12 +262,12 @@ spacegom-web/
 
 ## 📈 Métricas
 
-**Líneas de Código Nuevas**: ~1400  
+**Líneas de Código Nuevas**: ~1500  
 **Archivos Nuevos**: 1 (time_manager.py)  
-**Archivos Significativamente Modificados**: 5  
-**Endpoints Nuevos**: 10  
-**Tablas Nuevas**: 1 (employee_tasks)  
-**Funcionalidades Completas Nuevas**: 3 (Contratación, Temporal, Notificaciones)
+**Archivos Significativamente Modificados**: 6  
+**Endpoints Nuevos**: 14  
+**Tablas Nuevas**: 2 (employee_tasks, missions)  
+**Funcionalidades Completas Nuevas**: 4 (Contratación, Temporal, Notificaciones, Misiones)
 
 ---
 
@@ -281,6 +280,9 @@ uvicorn app.main:app --reload
 # Ver cola de tareas
 sqlite3 data/spacegom.db "SELECT * FROM employee_tasks WHERE game_id='test' ORDER BY queue_position;"
 
+# Ver misiones
+sqlite3 data/spacegom.db "SELECT * FROM missions WHERE game_id='test';"
+
 # Ver eventos pendientes
 sqlite3 data/spacegom.db "SELECT state FROM games WHERE id='test';" | jq '.event_queue'
 
@@ -290,7 +292,7 @@ rm -rf data/games/test
 
 ---
 
-**Última actualización**: 2026-01-09 13:54  
-**Versión**: 3.0  
-**Estado**: Funcional y probado ✅  
+**Última actualización**: 2026-01-18 20:30  
+**Versión**: 3.1  
+**Estado**: Funcional y documentado ✅  
 **Próximo objetivo**: Navegación entre Áreas + Pantalla de Selección

@@ -316,12 +316,12 @@ async def initial_position_setup(
     col_val = col_results[0]
     game.record_dice_roll(1, col_results, col_is_manual, "initial_col")
     
-    # Update game state (offset 0-5 for internal grid if needed, but keeping 1-6 as per user request)
+    # Update game state (storing 1-6 in ship_row/ship_col for display)
     game.state["ship_row"] = row_val
     game.state["ship_col"] = col_val
     game.state["ship_pos_complete"] = True
     
-    # First exploration of current quadrant
+    # First exploration of current quadrant (internal storage uses 0-based)
     game.explore_quadrant(row_val - 1, col_val - 1)
     
     game.add_event(
@@ -686,13 +686,18 @@ async def set_starting_planet(game_id: str, code: int = Form(...)):
     game.state["current_planet_code"] = code
     game.state["starting_planet_code"] = code
     
+    # Set default ship location to Mundo (surface)
+    if "ship_location_on_planet" not in game.state or not game.state["ship_location_on_planet"]:
+        game.state["ship_location_on_planet"] = "Mundo"
+    
     # Also record it in the current quadrant
+    # ship_row and ship_col are 1-based (1-6), but internal storage is 0-based (0-5)
     row = game.state.get("ship_row")
     col = game.state.get("ship_col")
     if row and col:
-        game.discover_planet(row, col, code)
-        # Mark as explored as well
-        game.explore_quadrant(row, col)
+        # Convert to 0-based for internal storage
+        game.discover_planet(row - 1, col - 1, code)
+        game.explore_quadrant(row - 1, col - 1)
         
     game.save()
     return {"status": "success", "code": code}
@@ -797,6 +802,77 @@ async def explore_quadrant(
         "explored": True,
         "quadrant": f"{row},{col}",
         "explored_quadrants": game.state["explored_quadrants"]
+    }
+
+
+@app.post("/api/games/{game_id}/navigate-area")
+async def navigate_area(
+    game_id: str,
+    direction: str = Form(...)
+):
+    """
+    Navigate to adjacent area (prev/next)
+    
+    Args:
+        game_id: Game identifier
+        direction: "prev" or "next"
+        
+    Returns:
+        JSON with new area number and status
+    """
+    game = GameState(game_id)
+    current_area = game.state.get("area", 2)
+    
+    if direction == "prev" and current_area > 2:
+        game.state["area"] = current_area - 1
+        game.save()
+        return {"success": True, "new_area": current_area - 1}
+    elif direction == "next" and current_area < 12:
+        game.state["area"] = current_area + 1
+        game.save()
+        return {"success": True, "new_area": current_area + 1}
+    else:
+        return {"success": False, "new_area": current_area, "message": "Area limit reached"}
+
+
+@app.get("/api/games/{game_id}/area/{area_number}/planets")
+async def get_area_planets(
+    game_id: str,
+    area_number: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all discovered planets in a specific area
+    
+    Args:
+        game_id: Game identifier
+        area_number: Area number (2-12)
+        
+    Returns:
+        JSON with list of planets discovered in the area with full data
+    """
+    game = GameState(game_id)
+    
+    # Filter discovered planets by area
+    area_planets = []
+    for code, info in game.state.get("discovered_planets", {}).items():
+        if info["area"] == area_number:
+            planet = db.query(Planet).filter(Planet.code == int(code)).first()
+            if planet:
+                planet_data = format_planet_data(planet)
+                planet_data["quadrant"] = info["quadrant"]  # Add quadrant info
+                area_planets.append(planet_data)
+    
+    # Get current ship position info
+    current_planet_code = game.state.get("current_planet_code")
+    ship_quadrant = f"{game.state.get('ship_row')},{game.state.get('ship_col')}"
+    
+    return {
+        "planets": area_planets,
+        "area": area_number,
+        "count": len(area_planets),
+        "current_planet_code": current_planet_code,
+        "ship_quadrant": ship_quadrant
     }
 
 # ===== PERSONNEL API =====
@@ -1371,7 +1447,11 @@ async def start_hire_search(
     
     # Get current date
     game = GameState(game_id)
-    current_date = f"{game.state.get('year', 1)}-{game.state.get('month', 1):02d}-{game.state.get('day', 1):02d}"
+    current_date = GameCalendar.date_to_string(
+        game.state.get('year', 1),
+        game.state.get('month', 1),
+        game.state.get('day', 1)
+    )
     
     # Create task
     task = EmployeeTask(
