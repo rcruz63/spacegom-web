@@ -45,4 +45,7 @@ En la parte de abajo tiene un modulo de DICE que no tiene uso y un panel de Miss
 
 Me gustan los adornos, te introducen en el juego, pero además necesitaría que me dejara continuar con la última partida o acceder a otras. El modulo del dado no sirve ni para dar ambiente.
 
-## Contexto
+## Accion de comercio
+
+- NECESARIO: - Detectado problema en embarque de pasajeros sigue permitiendo repetir el embarque en el mismo mundo.
+

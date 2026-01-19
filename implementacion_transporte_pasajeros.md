@@ -13,7 +13,7 @@ Tambien habrá que comprobar si hay MEGACORPORACIONES, en este momento no vamos 
 
 Para ejecutar la accion de transporte de pasajeros hay que proceder de la siguiente manera:
 
-1. Se lanza 2D6 (el procedimeinto es muy similar al que se uso para la busqueda de personal) aplicando los bonificadores del responsable de soporte a pasajeros segun su nivel de experiencia, moral y reputación/2 de la compañía.
+1. Se lanza 2D6 (el procedimeinto es muy similar al que se uso para la busqueda de personal, consultar si se puede reutilizar el codigo, creo que está descrito en @DICE_SYSTEM.md) aplicando los bonificadores del responsable de soporte a pasajeros segun su nivel de experiencia, moral y reputación/2 de la compañía.
 
 * Si el resultado es inferior a 7, se obtiene la mitad de pasajeros promedio indicados en la información del planeta, redondeando decimales a la baja. Se alojan los pasajeros que se desen siempre que la la cantidad no supere el aforo disponible en la nave. Además, el responsable de soporte a pasjeros podrá perder moral segun lo explicado en el documento @primer_objetivo.md en el parrafo "Cambios en la Moral y la Experiencia de los trabajadores", esto será una costante en el juego en todas las acciones.
 * Si el resultado es entre 7 y 9, se obtendran exactamente la cantidad promedio que se refleja en la información del planeta, se alojaran los que el jugador quiera siempre que no se supere la capacidad de la nave.

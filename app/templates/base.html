@@ -200,6 +200,10 @@
                         class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-neon-blue hover:text-neon-blue">
                         💰 Tesorería
                     </a>
+                    <a href="#" id="nav-tab-trade" data-page="trade"
+                        class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-orange-500 hover:text-orange-400">
+                        ⚖️ Comercio
+                    </a>
                     <a href="#" id="nav-tab-missions" data-page="missions"
                         class="nav-tab px-4 py-2 rounded font-orbitron text-sm transition-all border-b-2 border-transparent hover:border-purple-500 hover:text-purple-400">
                         📋 Misiones
@@ -425,7 +429,9 @@
             document.getElementById('nav-tab-dashboard').href = `/dashboard?game_id=${gameId}`;
             document.getElementById('nav-tab-personnel').href = `/personnel?game_id=${gameId}`;
             document.getElementById('nav-tab-treasury').href = `/treasury?game_id=${gameId}`;
+            document.getElementById('nav-tab-trade').href = `/trade?game_id=${gameId}`;
             document.getElementById('nav-tab-missions').href = `/missions?game_id=${gameId}`;
+            document.getElementById('nav-tab-logs').href = `/logs?game_id=${gameId}`;
             document.getElementById('nav-tab-logs').href = `/logs?game_id=${gameId}`;
 
             // Highlight active tab based on current page
@@ -449,6 +455,7 @@
                     if (page === 'dashboard') tab.classList.add('border-neon-blue');
                     else if (page === 'personnel') tab.classList.add('border-neon-green');
                     else if (page === 'treasury') tab.classList.add('border-neon-blue');
+                    else if (page === 'trade') tab.classList.add('border-orange-500');
                     else if (page === 'missions') tab.classList.add('border-purple-500');
                     else if (page === 'logs') tab.classList.add('border-yellow-500');
                 }

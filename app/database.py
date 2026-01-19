@@ -317,6 +317,62 @@ FIRST_OBJECTIVE = {
 }
 
 
+class TradeOrder(Base):
+    """
+    Modelo de pedidos de comercio de mercancías (Trading)
+    
+    Cada fila representa una entrada en la tabla de comercio del usuario.
+    Reglas:
+    - 25 filas máximo por AREA (controlado por lógica de negocio)
+    - Al vender en munods NO adscritos al convenio, se pierde trazabilidad
+    """
+    __tablename__ = "trade_orders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    game_id = Column(String, nullable=False, index=True)
+    
+    # Area a la que pertenece este pedido (hay una hoja de pedidos por Área)
+    area = Column(Integer, nullable=False)
+    
+    # Detalles de COMPRA
+    buy_planet_code = Column(Integer, nullable=False)
+    buy_planet_name = Column(String) # Guardamos nombre por si acaso
+    product_code = Column(String, nullable=False) # INDU, BASI, etc.
+    quantity = Column(Integer, nullable=False) # UCN
+    
+    # Precios
+    buy_price_per_unit = Column(Integer, nullable=False)
+    total_buy_price = Column(Integer, nullable=False)
+    
+    # Fecha de COMPRA (Día, Mes, Año) - Guardamos como string o estructurado?
+    # El juego usa "Día, Mes y Año". Usaremos formato string YYYY-MM-DD para consistencia
+    buy_date = Column(String, nullable=False) 
+    
+    # Trazabilidad Convenio Spacegom
+    # True = Cumple (Sí), False = No cumple (No)
+    traceability = Column(Boolean, default=True)
+    
+    # Estado del pedido
+    # "in_transit": Comprado y en almacén (o cargando)
+    # "sold": Vendido
+    status = Column(String, default="in_transit") 
+    
+    # Detalles de VENTA (se llenan al vender)
+    sell_planet_code = Column(Integer, nullable=True)
+    sell_planet_name = Column(String, nullable=True)
+    sell_price_total = Column(Integer, nullable=True)
+    sell_date = Column(String, nullable=True)
+    profit = Column(Integer, nullable=True) # Ganancia o pérdida calculada
+    
+    # Metadata
+    created_at = Column(String)
+    updated_at = Column(String)
+    
+    def __repr__(self):
+        return f"<TradeOrder {self.id}: {self.product_code} x{self.quantity} ({self.status})>"
+
+
+
 class EmployeeTask(Base):
     """
     Cola de tareas para empleados (principalmente Director Gerente)

@@ -1,8 +1,8 @@
-# SPACEGOM-WEB - Contexto Actualizado (2026-01-09)
+# SPACEGOM-WEB - Contexto Actualizado (2026-01-20)
 
 ## 📝 Resumen Ejecutivo
 
-Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema de Personal + Misiones + Gestión Temporal + UX Mejorado - Completamente Funcional y Documentado**.
+Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema de Personal + Misiones + Gestión Temporal + Comercio de Mercancías + UX Mejorado - Completamente Funcional y Documentado**.
 
 ---
 
@@ -19,109 +19,83 @@ Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrol
 2. **Dashboard Principal**
    - HUD: Combustible, Almacén, Daños, Mes, Reputación, Tesorería
    - Vista cuadrante 6x6 con exploración
-   - Navegación a Personal/Tesorería/Misiones
-   - **LIMPIO**: Eliminados componentes obsoletos (Tripulación, Terminal Comercial)
+   - Navegación global a subsistemas
+   - **LIMPIO**: Eliminados componentes obsoletos
 
-3. **Sistema de Personal** (/personnel) ⭐ NUEVO
-   - **Contratación Automatizada**:
-     - Modal con 29 puestos catalogados
-     - Filtrado por nivel tecnológico del planeta
-     - 3 niveles experiencia (Novato/Estándar/Veterano)
-     - Cálculo automático tiempo/salario
-   - **Cola de Tareas del Director Gerente**:
-     - Vista actual + pendientes + completadas
-     - Eliminar tareas pendientes
-     - Auto-inicio de siguiente tarea
-   - **Avance Temporal**:
-     - Botón "⏩ AVANZAR TIEMPO"
-     - Resolución con tiradas 2d6 + modificadores
-     - Creación automática de empleados
-     - Evolución de moral/experiencia del Director
+3. **Sistema de Personal** (/personnel)
+   - **Contratación Automatizada**: Modal con 29 puestos, filtrado por tech level, cálculo de salario y tiempos.
+   - **Cola de Tareas del Director**: Gestión ordenada de contrataciones.
+   - **Avance Temporal**: Resolución automática de eventos con tiradas y modificadores.
 
-4. **Sistema de Notificaciones** ⭐ NUEVO
-   - **Toast Notifications** (esquina superior derecha):
-     - 4 tipos: success, error, info, warning
-     - Animaciones slide-in/out
-   - **Panel Lateral de Resultados**:
-     - Slide-in desde derecha
-     - Dados visuales con colores
-     - Detalles completos de contratación
-     - Info de siguiente tarea auto-iniciada
+4. **Sistema de Comercio de Mercancías** (/trade) ⭐ NUEVO
+   - **Terminal de Comercio**:
+     - Vista de OFERTA (Comprar) filtrada por capacidad productiva del planeta.
+     - Vista de DEMANDA (Vender) filtrada por stock y restricciones de producción local.
+     - Ledger (Registro de Pedidos) con histórico de transacciones (trazabilidad).
+   - **Lógica de Negocio**:
+     - Negociación de precios con tiradas 2d6 (Manual/Auto).
+     - Modificadores por Reputación y Habilidad.
+     - Restricción de venta (no vender producto donde se produce).
+     - Tracking de Fechas (DD-MM-YYYY) y beneficio.
+   - **Base de Datos**: Tabla `trade_orders` dedicada.
 
-5. **Sistema Temporal** (`time_manager.py` - 323 líneas) ⭐ NUEVO
-   - **GameCalendar**: 35 días/mes, 12 meses/año
-   - **EventQueue**: Cola ordenada de eventos
-   - Funciones: `calculate_hire_time()`, `calculate_hire_salary()`
+5. **Sistema de Transporte de Pasajeros** ⭐ NUEVO
+   - **Widget en Dashboard**: Visible solo en superficie planetaria.
+   - **Lógica de Negocio**: Cálculo de capacidad vs demanda, ingresos x auxiliares.
+   - **Reglas Universales**: Moral/Experiencia integrada.
 
-6. **Sistema de Tesorería** (/treasury)
-   - Saldo, transacciones, historial
-   - Categorías de gastos
+6. **Sistema de Notificaciones & UX**
+   - **Toast Notifications**: Feedback no bloqueante (Success/Error/Info).
+   - **Panel Lateral**: Detalles de resultados de tiradas y eventos.
 
-7. **Sistema de Misiones** (/missions)
-   - Objetivos de campaña
-   - Misiones especiales
-   - Estado y tracking
+7. **Sistema Temporal** (`time_manager.py`)
+   - **GameCalendar**: Gestión de fechas personalizada (35 días/mes).
+   - **EventQueue**: Cola de eventos futuros.
 
-8. **Base de Datos**
-   - 216 planetas
-   - Tabla `personnel`
-   - Tabla `employee_tasks` ⭐ NUEVO
-   - Catálogo de 29 puestos ⭐ NUEVO
+8. **Sistemas Base** (/treasury, /missions)
+   - Gestión de tesorería y misiones de campaña operativa.
 
 ---
 
 ## 🗄️ Estructura de Base de Datos
 
-### Tabla `employee_tasks` (NUEVA)
+### Tablas Principales
+- `games`: Estado serializado (JSON).
+- `planets`: Datos estáticos de 216 planetas.
+- `personnel`: Lista de empleados.
+- `missions`: Objetivos y estado.
+
+### Tabla `trade_orders` (NUEVA)
+```python
+- id, game_id, area
+- buy_planet_code, product_code, quantity
+- buy_price_per_unit, total_buy_price, buy_date
+- sell_planet_code, total_sell_price, sell_date, profit
+- status (in_transit/sold), traceability (bool)
+```
+
+### Tabla `employee_tasks`
 ```python
 - id, game_id, employee_id
 - task_type ("hire_search")
-- status (pending/in_progress/completed/failed)
-- queue_position (1, 2, 3...)
-- task_data (JSON): position, experience, days, salary, threshold
-- result_data (JSON): dice, modifiers, success, new_employee_id
-- created_date, started_date, completion_date, finished_date
-```
-
-### Catálogos Nuevos
-- **POSITIONS_CATALOG**: 29 puestos x nivel tecnológico
-- **TECH_LEVEL_REQUIREMENTS**: Compatibilidad planeta-puesto
-
-### Game State (JSON) - ACTUALIZADO
-```json
-{
-  "year": 1,
-  "day": 1,
-  "event_queue": [...],  // NUEVO
-  "difficulty": "normal",
-  "treasury": 500,
-  "reputation": 0,
-  "transactions": [...],
-  "fuel": 18,
-  "current_planet_code": 111,
-  "discovered_planets": {...}
-}
+- status, queue_position, task_data (JSON), result_data (JSON)
+- Timestamps: created, started, completion, finished
 ```
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 API Endpoints Clave
 
-### Personal y Contratación (NUEVO)
-- `GET /api/games/{id}/hire/available-positions` - Puestos disponibles
-- `POST /api/games/{id}/hire/start` - Iniciar búsqueda
-- `GET /api/games/{id}/personnel/{emp_id}/tasks` - Cola de tareas
-- `PUT /api/games/{id}/tasks/{task_id}/reorder` - Reordenar cola
-- `DELETE /api/games/{id}/tasks/{task_id}` - Eliminar tarea
-- `POST /api/games/{id}/time/advance` ⭐ - Avanzar tiempo
+### Comercio (NUEVO)
+- `GET /api/games/{id}/trade/market` - Datos de mercado (compra/venta)
+- `GET /api/games/{id}/trade/orders` - Historial de pedidos
+- `POST /api/games/{id}/trade/negotiate` - Simulación de negociación (dados manuales/auto)
+- `POST /api/games/{id}/trade/buy` - Ejecutar compra
+- `POST /api/games/{id}/trade/sell` - Ejecutar venta
 
-### Misiones (NUEVO)
-- `GET /api/games/{id}/missions` - Listar misiones
-- `POST /api/games/{id}/missions` - Crear misión
-- `PUT /api/games/{id}/missions/{mission_id}` - Actualizar
-- `DELETE /api/games/{id}/missions/{mission_id}` - Eliminar
-
-### (resto de endpoints anteriores...)
+### Personal y Tiempo
+- `POST /api/games/{id}/hire/start` - Iniciar contratación
+- `POST /api/games/{id}/time/advance` - Avanzar tiempo y resolver cola
 
 ---
 
@@ -130,90 +104,20 @@ Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrol
 ```
 spacegom-web/
 ├── app/
-│   ├── main.py
-│   ├── database.py
+│   ├── main.py                # Endpoints registrados
+│   ├── database.py            # Modelos (incluye TradeOrder)
 │   ├── game_state.py
-│   ├── time_manager.py        # NUEVO - 323 líneas
-│   ├── dice.py
-│   ├── name_suggestions.py
+│   ├── trade_manager.py       # NUEVO - Lógica de negocio comercio
+│   ├── time_manager.py
 │   └── templates/
-│       ├── base.html          # ACTUALIZADO - Sistema notificaciones
-│       ├── dashboard.html     # LIMPIADO - 273 líneas eliminadas
-│       ├── personnel.html     # REESCRITO - Sistema contratación
-│       ├── treasury.html
-│       └── missions.html      # NUEVO
+│       ├── base.html          # Nav global actualizada
+│       ├── dashboard.html
+│       ├── personnel.html
+│       ├── trade.html         # NUEVO - Terminal de comercio
+│       └── ...
 ├── data/
-│   ├── spacegom.db
-│   └── games/{game_id}/state.json
-└── files/
+│   └── spacegom.db
 ```
-
----
-
-## 🎮 Flujo de Usuario - Sistema de Contratación
-
-```
-1. Usuario va a /personnel?game_id=X
-
-2. Click "+ INICIAR BÚSQUEDA"
-   → Modal se abre
-   → Selecciona puesto (filtrado por tech_level planeta)
-   → Elige experiencia (Novato/Estándar/Veterano)
-   → Ve resumen: días estimados, salario final
-   → Click "Iniciar Búsqueda"
-
-3. Toast verde: "Búsqueda iniciada - Cola #1"
-   → Tarea aparece en cola como "EN PROCESO"
-
-4. Click "⏩ AVANZAR TIEMPO"
-   → Confirm dialog
-   → Toast azul: "Tiempo avanzado: 1-01-01 → 1-01-02"
-   → Panel lateral desliza desde derecha:
-      • Dados visuales [5] + [6] = 11
-      • Modificadores +2
-      • Resultado: 13 vs Umbral: 8
-      • ✅ ÉXITO - Empleado contratado
-      • Siguiente tarea auto-iniciada
-
-5. Tabla actualizada con nuevo empleado
-   → Cola actualizada (siguiente tarea "EN PROCESO")
-```
-
----
-
-## 🔧 Decisiones de Diseño Nuevas
-
-### 1. Cola de Tareas del Director
-**Por qué**: El manual establece que el Director Gerente gestiona las contrataciones.
-
-**Implementación**:
-- Una tarea activa a la vez (`status: "in_progress"`)
-- Tareas pendientes en cola ordenada (`queue_position`)
-- Auto-inicio de siguiente tarea al completar actual
-
-### 2. Sistema Temporal con Eventos
-**Por qué**: Necesario para gestionar múltiples tareas futuras.
-
-**Implementación**:
-- `event_queue` en game_state
-- Eventos con tipo, fecha y datos
-- Procesamiento ordenado por fecha
-
-### 3. Sistema de Notificaciones Integrado
-**Por qué**: Los `alert()` del navegador son feos y bloquean la UI.
-
-**Implementación**:
-- Toast notifications no-bloqueantes
-- Panel lateral para resultados detallados
-- Funciones globales en `base.html`
-
-### 4. Dashboard Limpiado
-**Por qué**: Componentes "Tripulación" y "Terminal Comercial" eran prototipos obsoletos.
-
-**Cambios**:
-- Eliminadas 273 líneas de código
-- Dashboard enfocado en Vista Cuadrante + HUD
-- Uso de /personnel y /treasury en su lugar
 
 ---
 
@@ -221,78 +125,33 @@ spacegom-web/
 
 ### Alta Prioridad
 1. **Navegación Entre Áreas**
-   - Selector de área explorada
-   - Persistencia de datos por área
-   - Switch entre cuadrantes
+   - Selector de área explorada y persistencia.
+   - Switch entre cuadrantes.
 
 2. **Pantalla de Selección de Partidas**
-   - Landing page con grid de partidas
-   - Botones: Continuar, Borrar, Nueva
-   - Metadata visible
+   - Landing page para cargar/crear partidas.
 
 ### Media Prioridad
 3. **Mejoras UX**
-   - Fix fondo estrellado (canvas estrellas)
-   - employee_number por compañía
-   - Reordenar cola con drag & drop
+   - Fix fondo estrellado.
+   - Reordenar cola de tareas (Drag & Drop).
 
 ### Implementaciones Futuras
-4. **Sistema de Comercio Completo**
-5. **Eventos Aleatorios**
-6. **Mejoras de Nave**
+4. **Eventos Aleatorios**
+5. **Mejoras de Nave**
 
 ---
 
-## ⚠️ Puntos de Atención
+## 📈 Métricas Actualizadas
 
-### Bugs Conocidos
-- Ninguno crítico identificado
-
-### Limitaciones Actuales
-- No se puede reordenar cola visualmente (endpoint existe, UI pendiente)
-- Fondo estrellado no visible
-- Sin pantalla de selección de partidas (dificulta gestión multi-juego)
-- Sin navegación entre áreas (bloqueante para exploración avanzada)
-
-### Deuda Técnica
-- Sin tests automatizados
-- employee_number debería ser por juego, no global
+**Líneas de Código Nuevas**: ~2000+
+**Archivos Nuevos**: `trade_manager.py`, `trade.html`
+**Endpoints Nuevos**: ~20 total
+**Tablas Nuevas**: 3 (`employee_tasks`, `missions`, `trade_orders`)
+**Funcionalidades Completas**: 5 (Personal, Tiempo, Notificaciones, Misiones, Comercio)
 
 ---
 
-## 📈 Métricas
-
-**Líneas de Código Nuevas**: ~1500  
-**Archivos Nuevos**: 1 (time_manager.py)  
-**Archivos Significativamente Modificados**: 6  
-**Endpoints Nuevos**: 14  
-**Tablas Nuevas**: 2 (employee_tasks, missions)  
-**Funcionalidades Completas Nuevas**: 4 (Contratación, Temporal, Notificaciones, Misiones)
-
----
-
-## 💡 Comandos Útiles
-
-```bash
-# Iniciar servidor
-uvicorn app.main:app --reload
-
-# Ver cola de tareas
-sqlite3 data/spacegom.db "SELECT * FROM employee_tasks WHERE game_id='test' ORDER BY queue_position;"
-
-# Ver misiones
-sqlite3 data/spacegom.db "SELECT * FROM missions WHERE game_id='test';"
-
-# Ver eventos pendientes
-sqlite3 data/spacegom.db "SELECT state FROM games WHERE id='test';" | jq '.event_queue'
-
-# Limpiar partida de prueba
-rm -rf data/games/test
-```
-
----
-
-**Última actualización**: 2026-01-18 20:30  
-**Versión**: 3.1  
-**Estado**: Funcional y documentado ✅  
-**Próximo objetivo**: Navegación entre Áreas + Pantalla de Selección
+**Última actualización**: 2026-01-20
+**Versión**: 3.2
+**Estado**: Funcional y documentado ✅

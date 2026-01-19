@@ -99,7 +99,10 @@ class GameState:
             
             # History / Events
             "events": [],
-            "dice_rolls": []
+            "dice_rolls": [],
+            
+            # Action Flags
+            "passenger_transport_available": True  # Reset on movement
         }
     
     def save(self):
@@ -195,7 +198,10 @@ class GameState:
         coord = f"{row},{col}"
         if coord not in self.state["explored_quadrants"]:
             self.state["explored_quadrants"].append(coord)
-            self.save()
+            
+        # Reset movement-based flags
+        self.state["passenger_transport_available"] = True
+        self.save()
     
     def discover_planet(self, row: int, col: int, planet_code: int):
         """Record a planet discovery in a specific quadrant"""

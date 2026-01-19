@@ -684,7 +684,75 @@ success=true
 ```
 Resuelve manualmente un evento de fecha límite de misión.
 
+
 ---
+
+## ✈️ Passenger Transport
+
+### Get Transport Info
+```http
+GET /api/games/{game_id}/passenger-transport/info
+```
+Retorna información sobre capacidad, pasajeros actuales, media del planeta y modificadores.
+
+**Response:**
+```json
+{
+  "max_passengers": 12.5,
+  "ship_capacity": 10,
+  "current_passengers": 0,
+  "planet_avg_passengers": 12,
+  "modifiers": {
+    "has_manager": true,
+    "manager_name": "Juan Perez",
+    "manager_bonus": 1,
+    "attendants_count": 2
+  },
+  "location": "Mundo",
+  "available": true
+}
+```
+
+### Execute Transport
+```http
+POST /api/games/{game_id}/passenger-transport/execute
+Content-Type: application/x-www-form-urlencoded
+
+manual_dice=3,4 (optional)
+```
+Ejecuta la acción de transporte. Requiere estar en "Mundo" y no haberla realizado en la visita actual.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "total_roll": 8,
+  "dice": [3, 4],
+  "modifiers": {"Responsable": 1},
+  "outcome": "average",
+  "passengers": {
+    "capacity": 10,
+    "avg": 12,
+    "calculated": 12,
+    "boarded": 10
+  },
+  "revenue": {
+    "base": 100,
+    "multiplier": 3,
+    "veteran_bonus": 10,
+    "novice_penalty": 0,
+    "total": 310
+  },
+  "personnel_changes": {
+    "moral_change": 0,
+    "xp_change": 0,
+    "messages": []
+  }
+}
+```
+
+---
+
 
 ## 👔 Advanced Personnel (Hiring)
 

@@ -176,16 +176,12 @@ def handle_task_completion(
     success = final_result >= threshold
     
     # Update director's morale and experience
-    if final_result >= 10:
-        if director.morale == "B": director.morale = "M"
-        elif director.morale == "M": director.morale = "A"
-    elif final_result <= 4:
-        if director.morale == "A": director.morale = "M"
-        elif director.morale == "M": director.morale = "B"
+    from app.personnel_manager import update_employee_roll_stats
+    stats_changes = update_employee_roll_stats(director, dice_values, final_result)
     
-    if dice_values[0] == 6 and dice_values[1] == 6:
-        if director.experience == "N": director.experience = "E"
-        elif director.experience == "E": director.experience = "V"
+    # Log detailed stats changes if any
+    for msg in stats_changes["messages"]:
+        EventLogger._log_to_game(game, f"👔 Director: {msg}", event_type="info")
     
     new_employee_id = None
     if success:

@@ -420,9 +420,48 @@
 
         </div>
 
+        <!-- RIGHT COLUMN -->
+        <div class="space-y-6">
+            <!-- WIDGET TRANSPORTE DE PASAJEROS -->
+            <div id="passenger-transport-widget" class="glass-panel tech-border p-6 rounded-lg">
+                <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-3">
+                    <h2 class="text-xl font-orbitron text-neon-blue">
+                        TRANSPORTE DE PASAJEROS
+                    </h2>
+                    <div class="text-2xl">✈️</div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="bg-space-800 p-3 rounded border border-gray-700">
+                        <div class="text-[10px] text-gray-500 uppercase tracking-widest">Capacidad Nave</div>
+                        <div id="pt-capacity" class="text-xl font-orbitron text-white">--</div>
+                    </div>
+                    <div class="bg-space-800 p-3 rounded border border-gray-700">
+                        <div class="text-[10px] text-gray-500 uppercase tracking-widest">Media Planeta</div>
+                        <div id="pt-planet-avg" class="text-xl font-orbitron text-neon-green">--</div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Modificadores Activos</div>
+                    <ul id="pt-modifiers-list" class="text-xs space-y-1 bg-space-900 p-2 rounded border border-gray-800">
+                        <li class="text-gray-500 italic">Cargando datos...</li>
+                    </ul>
+                </div>
+
+                <button id="btn-transport-passengers" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded border border-blue-500 transition-all shadow-[0_0_10px_rgba(37,99,235,0.5)] uppercase tracking-wider font-orbitron">
+                    INICIAR EMBARQUE
+                </button>
+            </div>
+        </div>
+
     </div>
 
+    <!-- Scripts -->
+    <script src="/static/js/passenger_transport.js"></script>
     <script>
+        // ... existing scripts ...
         // Estado del juego
         let gameState = {
             fuel: 18,
