@@ -187,34 +187,69 @@ La aplicación estará disponible en: `http://localhost:8000`
 ```
 spacegom-web/
 ├── app/
+│   ├── __init__.py
+│   ├── database.py          # Modelos SQLAlchemy y conexión a BD
+│   ├── dice.py              # Utilidades de dados y tiradas
+│   ├── event_handlers.py    # Manejo de eventos del juego
+│   ├── event_logger.py      # Logging de eventos
+│   ├── game_state.py        # Lógica de persistencia del estado del juego
+│   ├── import_planets.py    # Script de importación de datos de planetas
 │   ├── main.py              # FastAPI app y API endpoints
-│   ├── game_state.py        # Lógica de persistencia del estado
+│   ├── models.py            # Modelos de datos adicionales
+│   ├── name_suggestions.py  # Sugerencias de nombres para compañías y naves
+│   ├── personnel_manager.py # Gestión de personal y empleados
+│   ├── run.py               # Script de ejecución principal
 │   ├── ship_data.py         # Modelos de naves y estadísticas
-│   ├── dice.py              # Utilidades de dados
-│   ├── database.py          # Modelos SQLAlchemy
-│   ├── import_planets.py    # Script de importación de datos
-│   └── templates/
-│       ├── base.html        # Template base con estilos
-│       ├── index.html       # Página de inicio
-│       ├── setup.html       # Setup de nueva partida
-│       └── dashboard.html   # Panel de control principal
-├── data/
-│   ├── spacegom.db          # Base de datos SQLite
-│   ├── Base_de_datos_de_planetas.xlsx
-│   └── games/               # Estados guardados
-├── files/                   # Materiales de referencia del juego y archivos de datos
-│   ├── Calendario_de_Campana.pdf
-│   ├── Ficha_de_Compania.pdf
-│   ├── Hoja_de_Mundos.pdf
-│   ├── Tesoreria.pdf
+│   ├── time_manager.py      # Gestión del tiempo y calendario
+│   ├── trade_manager.py     # Lógica de comercio y transacciones
+│   ├── update_planets_from_excel.py # Actualización de planetas desde Excel
+│   ├── utils.py             # Utilidades generales
+│   ├── static/
+│   │   ├── js/
+│   │       ├── dice-roller.js      # Lógica JavaScript para tiradas de dados
+│   │       └── passenger_transport.js # Gestión de transporte de pasajeros
+│   │   └── templates/
+│   │       ├── base.html           # Template base con estilos
+│   │       ├── dashboard.html      # Panel de control principal
+│   │       ├── dashboard.html.bak
+│   │       ├── dashboard.html.bak2
+│   │       ├── index.html          # Página de inicio
+│   │       ├── logs.html           # Página de logs
+│   │       ├── missions.html       # Gestión de misiones
+│   │       ├── personnel.html      # Gestión de personal
+│   │       ├── personnel.html.bak3
+│   │       ├── setup.html          # Setup de nueva partida
+│   │       ├── trade.html          # Terminal comercial
+│   │       ├── treasury.html       # Tesorería y finanzas
+│   │       └── components/
+│   │           ├── dice_result.html # Componente de resultados de dados
+│   │           └── dice_widget.html # Widget de dados
+├── files/                   # Archivos de datos y materiales de referencia
 │   ├── nombres_megacorp.csv    # 470 nombres de compañías
 │   ├── nombres_naves.csv       # 500 nombres de naves
 │   └── nombres_personal.csv    # 1000 nombres de personal
+├── old_docs/                # Documentación antigua y backups
+│   ├── CONTEXT.md
+│   ├── HiringEndpointsNotes.md
+│   ├── IMPLEMENTACION_CONTRATACION.md
+│   ├── migrate_preserve_planets.py
+│   ├── OLD_CONTEXT_ACTUALIZADO.md
+│   ├── OLD_Implementation.md
+│   └── planets_backup.json
+├── accion_comercio_de_mercancias.md
+├── API.md                   # Documentación de la API
+├── campaña.md
+├── CONTEXT_ACTUALIZADO.md
+├── DATABASE.md              # Documentación de la base de datos
+├── DICE_SYSTEM.md
+├── fix_db.py                # Script para reparar la base de datos
+├── implementacion_transporte_pasajeros.md
+├── primer_objetivo.md
 ├── pyproject.toml
 ├── README.md
-├── API.md                   # Documentación de la API
-├── DATABASE.md              # Documentación de la base de datos
-└── CONTEXT.md               # Contexto del proyecto
+├── REGLAS_MORAL_EXPERIENCIA.md
+├── review.md
+└── spacegom.sh              # Script de shell para el proyecto
 ```
 
 ## 📚 Documentación de Referencia

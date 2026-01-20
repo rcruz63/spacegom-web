@@ -1,0 +1,9 @@
+.git
+.venv
+__pycache__
+*.pyc
+.DS_Store
+data/spacegom.db
+data/*.json
+files/*
+old_docs/*

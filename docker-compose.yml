@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Montamos tu código local para que si cambias algo, se refleje (Hot Reload)
+      - ./app:/app/app
+      - ./files:/app/files
+      - ./templates:/app/templates
+      # PERSISTENCIA: Esto asegura que tu SQLite y JSON no se borren al apagar el docker
+      - ./data:/app/data
+    environment:
+      - WATCHFILES_FORCE_POLLING=true # Ayuda al hot-reload en algunos sistemas
+    # Comando modificado para activar el --reload durante el desarrollo
+    command: /app/.venv/bin/uvicorn main:app --app-dir app --host 0.0.0.0 --port 8000 --reload
