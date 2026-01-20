@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Tesorería - Spacegom{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-space-900 p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-orbitron text-neon-blue">TESORERÍA</h1>
+            <p class="text-gray-400 text-sm mt-1" id="game-id-display">Game ID: <span id="current-game-id"></span></p>
+        </div>
+        <a href="/dashboard" id="back-dashboard"
+            class="px-4 py-2 bg-space-800 border border-gray-700 rounded text-gray-300 hover:border-neon-blue">
+            ← Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Saldo Actual</div>
+            <div class="text-3xl font-orbitron text-neon-green" id="current-balance">0</div>
+            <div class="text-xs text-gray-400">SC</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Salarios/Mes</div>
+            <div class="text-2xl font-orbitron text-neon-red" id="monthly-salaries">0</div>
+            <div class="text-xs text-gray-400">SC</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Préstamos/Mes</div>
+            <div class="text-2xl font-orbitron text-neon-red" id="monthly-loans">0</div>
+            <div class="text-xs text-gray-400">SC</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Dificultad</div>
+            <div class="text-2xl font-orbitron text-neon-blue" id="difficulty-level">Normal</div>
+        </div>
+    </div>
+
+    <!-- Add Transaction -->
+    <div class="glass-panel tech-border p-6 rounded mb-6">
+        <h3 class="text-xl font-orbitron text-neon-blue mb-4">Registrar Transacción</h3>
+        <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Monto (SC)</label>
+                <input type="number" name="amount" required placeholder="Positivo: ingreso, Negativo: gasto"
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Categoría</label>
+                <select name="category" required
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+                    <option value="trade">Comercio</option>
+                    <option value="mission">Misión</option>
+                    <option value="supplies">Suministros</option>
+                    <option value="repairs">Reparaciones</option>
+                    <option value="fuel">Combustible</option>
+                    <option value="salary">Salarios</option>
+                    <option value="loan">Préstamo</option>
+                    <option value="other">Otro</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-2">Descripción</label>
+                <input type="text" name="description" required
+                    class="w-full bg-space-800 border border-gray-700 rounded px-3 py-2 text-white">
+            </div>
+            <div class="md:col-span-3">
+                <button type="submit"
+                    class="px-6 py-2 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded hover:bg-opacity-30">
+                    Registrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transactions History -->
+    <div class="glass-panel tech-border rounded overflow-hidden">
+        <div class="bg-space-800 border-b border-gray-700 p-4">
+            <h3 class="text-lg font-orbitron text-neon-blue">Historial de Transacciones</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-space-800 border-b border-gray-700">
+                    <tr>
+                        <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">Fecha</th>
+                        <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">Descripción</th>
+                        <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Categoría</th>
+                        <th class="text-right py-3 px-4 text-xs text-gray-400 font-tech uppercase">Monto</th>
+                    </tr>
+                </thead>
+                <tbody id="transactions-table-body" class="divide-y divide-gray-800">
+                    <!-- Rows loaded via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let gameId = null;
+
+    window.onload = async function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        gameId = urlParams.get('game_id');
+
+        if (!gameId) {
+            alert('No game ID provided');
+            window.location.href = '/';
+            return;
+        }
+
+        document.getElementById('current-game-id').textContent = gameId;
+        document.getElementById('back-dashboard').href = `/dashboard?game_id=${gameId}`;
+
+        await loadTreasury();
+        // Actualizar fecha del header
+        await updateHeaderGameDate(gameId);
+    };
+
+    async function loadTreasury() {
+        try {
+            const response = await fetch(`/api/games/${gameId}/treasury`);
+            const data = await response.json();
+
+            document.getElementById('current-balance').textContent = data.current_balance || 0;
+            document.getElementById('monthly-salaries').textContent = data.monthly_expenses?.salaries || 0;
+            document.getElementById('monthly-loans').textContent = data.monthly_expenses?.loans || 0;
+            document.getElementById('difficulty-level').textContent =
+                data.difficulty ? data.difficulty.charAt(0).toUpperCase() + data.difficulty.slice(1) : 'N/A';
+
+            const tbody = document.getElementById('transactions-table-body');
+            tbody.innerHTML = '';
+
+            const transactions = data.recent_transactions || [];
+
+            if (transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500">No hay transacciones registradas</td></tr>';
+                return;
+            }
+
+            // Show most recent first
+            transactions.reverse().forEach(tx => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-space-800';
+
+                const date = new Date(tx.date);
+                const formattedDate = date.toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const amountClass = tx.amount >= 0 ? 'text-neon-green' : 'text-neon-red';
+                const amountText = tx.amount >= 0 ? `+${tx.amount}` : tx.amount;
+
+                row.innerHTML = `
+                    <td class="py-3 px-4 text-gray-400 text-sm">${formattedDate}</td>
+                    <td class="py-3 px-4 text-white">${tx.description}</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-1 rounded text-xs bg-space-800 border border-gray-700 text-gray-400">
+                            ${tx.category}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-right font-orbitron ${amountClass}">${amountText} SC</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error('Error loading treasury:', error);
+        }
+    }
+
+    document.getElementById('transaction-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(e.target);
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/treasury/transaction`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                e.target.reset();
+                await loadTreasury();
+                alert(`Transacción registrada. Nuevo saldo: ${data.new_balance} SC`);
+            } else {
+                alert('Error registrando transacción');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error registrando transacción');
+        }
+    });
+</script>
+{% endblock %}

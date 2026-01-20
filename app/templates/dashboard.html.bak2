@@ -1,0 +1,952 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .star-background {
+        background-color: #0b0e14;
+        background-image:
+            radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(2px 2px at 50px 160px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 80px 120px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 110px 40px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(2px 2px at 150px 150px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 190px 20px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 210px 100px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(1px 1px at 250px 60px, #ffffff, rgba(0, 0, 0, 0)),
+            radial-gradient(2px 2px at 280px 140px, #ffffff, rgba(0, 0, 0, 0));
+        background-size: 300px 300px;
+    }
+
+    .location-btn.active {
+        background-color: rgba(0, 255, 157, 0.2);
+        border-color: #00ff9d;
+        color: #00ff9d;
+    }
+</style>
+<!-- Main Spacegom Dashboard -->
+<div class="space-y-6">
+    <!-- CABECERA DE COMPAÑÍA -->
+    <div
+        class="flex flex-col md:flex-row justify-between items-center gap-4 bg-space-900 border-b border-neon-blue pb-4">
+        <div class="flex items-center gap-4">
+            <div
+                class="w-16 h-16 bg-neon-blue bg-opacity-10 border-2 border-neon-blue rounded-full flex items-center justify-center text-2xl">
+                🏢
+            </div>
+            <div>
+                <h1 id="company-name-display" class="text-2xl font-orbitron text-white tracking-widest">---</h1>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 font-tech">REGISTRO:</span>
+                    <span id="game-id-display" class="text-xs text-neon-blue font-tech uppercase">---</span>
+                </div>
+            </div>
+        </div>
+        <div class="text-right">
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest">Nave Comandante</div>
+            <div id="ship-name-display" class="text-xl font-orbitron text-neon-green">---</div>
+            <div id="ship-model-display" class="text-[10px] text-gray-400 font-tech uppercase tracking-widest">---</div>
+        </div>
+    </div>
+
+    <!-- HUD SUPERIOR - ESTADO CRÍTICO -->
+    <div class="glass-panel tech-border p-6 rounded-lg">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <!-- Reserva de Combustible -->
+            <div>
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider">COMBUSTIBLE</div>
+                <div class="relative h-32 bg-space-800 rounded border border-gray-700 p-2">
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-neon-blue to-cyan-400 rounded transition-all duration-300"
+                        style="height: 60%;" id="fuel-level">
+                    </div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-3xl font-orbitron text-white font-bold z-10" id="fuel-value">18</span>
+                        <span class="text-sm text-gray-400 ml-1 z-10">/30</span>
+                    </div>
+                </div>
+                <div class="mt-2 flex gap-1">
+                    <button onclick="adjustFuel(-1)"
+                        class="flex-1 bg-space-800 hover:bg-space-700 border border-gray-700 text-neon-red py-1 rounded text-xs">-</button>
+                    <button onclick="adjustFuel(1)"
+                        class="flex-1 bg-space-800 hover:bg-space-700 border border-gray-700 text-neon-green py-1 rounded text-xs">+</button>
+                </div>
+            </div>
+
+            <!-- Capacidad del Almacén -->
+            <div>
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider">ALMACÉN (UCN)</div>
+                <div class="relative h-32 bg-space-800 rounded border border-gray-700 p-2">
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-neon-green to-green-400 rounded transition-all duration-300"
+                        style="height: 40%;" id="storage-level">
+                    </div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-3xl font-orbitron text-white font-bold z-10" id="storage-value">16</span>
+                        <span class="text-sm text-gray-400 ml-1 z-10">/40</span>
+                    </div>
+                </div>
+                <div class="mt-2 flex gap-1">
+                    <button onclick="adjustStorage(-1)"
+                        class="flex-1 bg-space-800 hover:bg-space-700 border border-gray-700 text-neon-red py-1 rounded text-xs">-</button>
+                    <button onclick="adjustStorage(1)"
+                        class="flex-1 bg-space-800 hover:bg-space-700 border border-gray-700 text-neon-green py-1 rounded text-xs">+</button>
+                </div>
+            </div>
+
+            <!-- Sistema de Daños -->
+            <div>
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider">ESTADO DE DAÑOS</div>
+                <div class="space-y-2">
+                    <div class="bg-space-800 border border-gray-700 rounded p-2 flex items-center justify-between cursor-pointer hover:bg-space-700"
+                        onclick="toggleDamage('light')">
+                        <span class="text-xs">LEVES</span>
+                        <div id="damage-light" class="w-4 h-4 rounded-full border-2 border-yellow-500"></div>
+                    </div>
+                    <div class="bg-space-800 border border-gray-700 rounded p-2 flex items-center justify-between cursor-pointer hover:bg-space-700"
+                        onclick="toggleDamage('moderate')">
+                        <span class="text-xs">MODERADOS</span>
+                        <div id="damage-moderate" class="w-4 h-4 rounded-full border-2 border-orange-500"></div>
+                    </div>
+                    <div class="bg-space-800 border border-gray-700 rounded p-2 flex items-center justify-between cursor-pointer hover:bg-space-700"
+                        onclick="toggleDamage('severe')">
+                        <span class="text-xs">GRAVES</span>
+                        <div id="damage-severe" class="w-4 h-4 rounded-full border-2 border-neon-red"></div>
+                    </div>
+                </div>
+                <!-- Alerta Crítica -->
+                <div id="critical-alert"
+                    class="hidden mt-3 bg-neon-red bg-opacity-20 border-2 border-neon-red rounded p-2 animate-pulse">
+                    <div class="text-neon-red text-xs font-bold text-center">⚠ HIPERSALTO DESTRUIDO</div>
+                </div>
+            </div>
+
+            <!-- Calendario y Reputación -->
+            <div>
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider">CALENDARIO</div>
+                <div class="bg-space-800 border border-gray-700 rounded p-3 mb-3">
+                    <div class="text-xs text-gray-400 mb-1">Mes de Campaña</div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="adjustMonth(-1)" class="text-neon-blue hover:text-neon-green">◄</button>
+                        <span class="text-2xl font-orbitron text-neon-blue flex-1 text-center" id="month-value">3</span>
+                        <button onclick="adjustMonth(1)" class="text-neon-blue hover:text-neon-green">►</button>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center mt-1">de 12</div>
+                </div>
+
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider">REPUTACIÓN</div>
+                <div class="bg-space-800 border border-gray-700 rounded p-3">
+                    <div class="flex items-center gap-2">
+                        <button onclick="adjustReputation(-1)" class="text-neon-red hover:text-red-400">◄</button>
+                        <span class="text-2xl font-orbitron flex-1 text-center" id="reputation-value"
+                            style="color: #00ff9d;">+2</span>
+                        <button onclick="adjustReputation(1)" class="text-neon-green hover:text-green-400">►</button>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center mt-1">-5 a +5</div>
+                </div>
+
+                <!-- TESORERÍA -->
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider mt-4">TESORERÍA</div>
+                <div class="bg-space-800 border border-gray-700 rounded p-3">
+                    <div class="text-center">
+                        <span class="text-3xl font-orbitron text-neon-green" id="treasury-value">0</span>
+                        <span class="text-sm text-gray-400 ml-1">SC</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center mt-1">Créditos Spacegom</div>
+                </div>
+
+                <!-- GASTOS MENSUALES -->
+                <div class="text-xs text-gray-500 uppercase mb-2 tracking-wider mt-4">GASTOS/MES</div>
+                <div class="bg-space-800 border border-gray-700 rounded p-3">
+                    <div class="text-center">
+                        <span class="text-xl font-tech text-neon-red" id="monthly-expenses-value">0</span>
+                        <span class="text-sm text-gray-400 ml-1">SC</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-center mt-1">Salarios + Préstamos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK NAVIGATION -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <a href="#" id="nav-personnel"
+            class="glass-panel tech-border p-6 rounded-lg hover:border-neon-green transition-all cursor-pointer group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-orbitron text-neon-green mb-1">PERSONAL</h3>
+                    <p class="text-sm text-gray-400">Gestionar empleados y salarios</p>
+                </div>
+                <div class="text-3xl group-hover:translate-x-1 transition-transform">👥</div>
+            </div>
+        </a>
+
+        <a href="#" id="nav-treasury"
+            class="glass-panel tech-border p-6 rounded-lg hover:border-neon-blue transition-all cursor-pointer group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-orbitron text-neon-blue mb-1">TESORERÍA</h3>
+                    <p class="text-sm text-gray-400">Ver saldo y transacciones</p>
+                </div>
+                <div class="text-3xl group-hover:translate-x-1 transition-transform">💰</div>
+            </div>
+        </a>
+
+        <a href="#" id="nav-missions"
+            class="glass-panel tech-border p-6 rounded-lg hover:border-purple-500 transition-all cursor-pointer group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-orbitron text-purple-400 mb-1">MISIONES</h3>
+                    <p class="text-sm text-gray-400">Objetivos y misiones especiales</p>
+                </div>
+                <div class="text-3xl group-hover:translate-x-1 transition-transform">📋</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- GRID: Navegación y Plantilla -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- MÓDULO DE NAVEGACIÓN - VISTA DE CUADRANTE -->
+        <div class="glass-panel tech-border p-6 rounded-lg">
+            <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-2">
+                <h2 class="text-xl font-orbitron text-neon-blue">
+                    VISTA DE CUADRANTE
+                </h2>
+                <div class="flex gap-2">
+                    <span id="jump-badge"
+                        class="px-2 py-0.5 bg-space-800 border border-neon-blue text-neon-blue text-[10px] rounded uppercase font-tech">Salto:
+                        --</span>
+                    <span id="area-badge"
+                        class="px-2 py-0.5 bg-space-800 border border-gray-700 text-gray-400 text-[10px] rounded uppercase font-tech">Área:
+                        --</span>
+                </div>
+            </div>
+
+            <!-- Quadrant Container with Labels -->
+            <div class="relative pt-6 pl-6 star-background rounded-lg border border-gray-800 p-4">
+                <!-- Column Labels (A-F) -->
+                <div
+                    class="absolute top-0 left-6 right-0 grid grid-cols-6 text-center text-[10px] text-gray-500 font-tech">
+                    <span>A</span><span>B</span><span>C</span><span>D</span><span>E</span><span>F</span>
+                </div>
+
+                <!-- Row Labels (1-6) -->
+                <div
+                    class="absolute top-6 left-0 bottom-0 w-6 grid grid-rows-6 items-center text-center text-[10px] text-gray-500 font-tech">
+                    <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+                </div>
+
+                <!-- Column Markers (Triangles) -->
+                <div id="col-markers" class="absolute top-4 left-6 right-0 grid grid-cols-6 pointer-events-none">
+                    {% for i in range(6) %}
+                    <div id="marker-col-{{ i+1 }}" class="flex justify-center opacity-0 transition-opacity">
+                        <div
+                            class="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-neon-blue">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Row Markers (Triangles) -->
+                <div id="row-markers" class="absolute top-6 left-4 bottom-0 w-2 grid grid-rows-6 pointer-events-none">
+                    {% for i in range(6) %}
+                    <div id="marker-row-{{ i+1 }}" class="flex items-center opacity-0 transition-opacity">
+                        <div
+                            class="w-0 h-0 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent border-l-[6px] border-l-neon-blue">
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Grid 6x6 -->
+                <div class="grid grid-cols-6 gap-1 mb-4 relative">
+                    {% for r in range(6) %}
+                    {% for c in range(6) %}
+                    {% set i = r * 6 + c %}
+                    <div id="quad-row-{{ r+1 }}-col-{{ c+1 }}" data-row="{{ r+1 }}" data-col="{{ c+1 }}"
+                        class="quadrant-cell aspect-square bg-space-800 border border-gray-700 hover:border-neon-blue cursor-pointer transition-all rounded flex items-center justify-center text-xs font-tech relative overflow-hidden"
+                        onclick="onQuadrantClick(this)">
+                        <div
+                            class="fog-overlay absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm z-20 transition-opacity">
+                        </div>
+                        <span class="text-gray-600 text-[8px] z-10 absolute top-1 left-1">{{ chr(64 + c + 1) }}{{ r+1
+                            }}</span>
+                        <div
+                            class="planet-code-label text-neon-blue font-bold z-10 absolute top-1 right-1 text-[10px] hidden">
+                            ---</div>
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <!-- UBICACIÓN EN EL MUNDO -->
+                <div class="mt-4 border-t border-gray-700 pt-4">
+                    <div class="text-[10px] text-gray-500 uppercase mb-2 tracking-widest text-center">LOCALIZACIÓN NAVE
+                    </div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button onclick="updateShipLocation('Mundo')" id="loc-Mundo"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>🌍</span> MUNDO
+                        </button>
+                        <button onclick="updateShipLocation('Espaciopuerto')" id="loc-Espaciopuerto"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>✈️</span> PUERTO
+                        </button>
+                        <button onclick="updateShipLocation('Instalación')" id="loc-Instalación"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>🛰️</span> ORBITAL
+                        </button>
+                        <button onclick="updateShipLocation('Estación')" id="loc-Estación"
+                            class="location-btn px-1 py-2 bg-space-800 border border-gray-700 rounded text-[9px] font-tech transition-all hover:border-gray-500 flex flex-col items-center gap-1">
+                            <span>⚡</span> ESTACIÓN
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de Información del Planeta -->
+            <div id="planet-info" class="hidden">
+                <div class="bg-space-800 border border-neon-blue rounded p-4">
+                    <div class="flex items-start justify-between mb-3">
+                        <div>
+                            <div class="text-neon-blue font-orbitron text-lg" id="planet-name">PLANETA</div>
+                            <div class="text-gray-500 text-xs" id="planet-code">Código: ---</div>
+                        </div>
+                        <button onclick="closePlanetInfo()" class="text-gray-500 hover:text-neon-red">✕</button>
+                    </div>
+
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Soporte Vital:</span>
+                            <span class="text-neon-green" id="planet-life-support">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Espaciopuerto:</span>
+                            <span class="text-white" id="planet-spaceport">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Nivel Tecnológico:</span>
+                            <span class="text-neon-blue" id="planet-tech">-</span>
+                        </div>
+                        <div class="flex justify-between border-b border-gray-700 pb-2">
+                            <span class="text-gray-400">Población:</span>
+                            <span class="text-white" id="planet-population">-</span>
+                        </div>
+                        <div class="border-t border-gray-700 pt-2 mt-2">
+                            <div class="text-gray-400 text-xs mb-2">Instalaciones Orbitales:</div>
+                            <div id="planet-facilities" class="flex flex-wrap gap-1">
+                                <span class="text-gray-500 italic">Ninguna</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ARCHIVOS ESTELARES - HOJA DE MUNDOS -->
+            <div class="mt-6 bg-space-900 border border-gray-700 rounded-lg p-4">
+                <h3 class="text-xs font-orbitron text-gray-400 mb-3 tracking-widest uppercase flex items-center">
+                    <span class="mr-2">📁</span> ARCHIVOS ESTELARES - HOJA DE MUNDOS
+                </h3>
+                <div class="space-y-1 max-h-48 overflow-y-auto pr-2 custom-scrollbar" id="world-log">
+                    <div class="text-xs text-gray-600 italic py-2">No se han registrado mundos todavía...</div>
+                </div>
+            </div>
+        </div>
+
+</div>
+
+<!-- TERMINAL COMERCIAL Y TESORERÍA -->
+<div class="glass-panel tech-border p-6 rounded-lg">
+    <h2 class="text-xl font-orbitron text-neon-blue mb-4 border-b border-gray-700 pb-2">
+        TERMINAL COMERCIAL
+    </h2>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Tabla de Mercancías -->
+        <div class="lg:col-span-2">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left py-2 text-xs text-gray-400 font-tech uppercase">Mercancía</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Precio Base</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Modificador</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Precio Final</th>
+                            <th class="text-center py-2 text-xs text-gray-400 font-tech uppercase">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trade-table" class="font-tech">
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Minerales Básicos</td>
+                            <td class="text-center text-neon-blue">500 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 0)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-0">500 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Componentes Electrónicos</td>
+                            <td class="text-center text-neon-blue">1,200 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 1)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-1">1,200 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Medicamentos</td>
+                            <td class="text-center text-neon-blue">800 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 2)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-2">800 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="border-b border-gray-800 hover:bg-space-800">
+                            <td class="py-3">Armas y Munición</td>
+                            <td class="text-center text-neon-blue">2,500 CR</td>
+                            <td class="text-center">
+                                <select class="bg-space-800 border border-gray-700 rounded px-2 py-1 text-xs"
+                                    onchange="updatePrice(this, 3)">
+                                    <option value="0.8">x0.8 (Mal)</option>
+                                    <option value="1.0" selected>x1.0 (Normal)</option>
+                                    <option value="1.2">x1.2 (Bueno)</option>
+                                </select>
+                            </td>
+                            <td class="text-center text-neon-green font-bold" id="price-3">2,500 CR</td>
+                            <td class="text-center">
+                                <div class="flex gap-1 justify-center">
+                                    <button
+                                        class="px-3 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue text-neon-blue rounded text-xs hover:bg-opacity-30">COMPRAR</button>
+                                    <button
+                                        class="px-3 py-1 bg-neon-green bg-opacity-20 border border-neon-green text-neon-green rounded text-xs hover:bg-opacity-30">VENDER</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Resumen Financiero -->
+        <div class="space-y-4">
+            <!-- Tesorería Actual -->
+            <div class="bg-space-800 border border-neon-blue rounded p-4">
+                <div class="text-xs text-gray-400 uppercase mb-2">Tesorería</div>
+                <div class="text-3xl font-orbitron text-neon-blue">45,230</div>
+                <div class="text-xs text-gray-500">Créditos</div>
+            </div>
+
+            <!-- Administración Semanal -->
+            <div class="bg-space-800 border border-gray-700 rounded p-4">
+                <div class="text-xs text-neon-green uppercase mb-3 border-b border-gray-700 pb-2">Gastos Semanales
+                </div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Salarios:</span>
+                        <span class="text-neon-red">-2,950 CR</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Mantenimiento:</span>
+                        <span class="text-neon-red">-500 CR</span>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-700 pt-2 font-bold">
+                        <span>Total:</span>
+                        <span class="text-neon-red">-3,450 CR</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Administración Mensual -->
+            <div class="bg-space-800 border border-gray-700 rounded p-4">
+                <div class="text-xs text-orange-400 uppercase mb-3 border-b border-gray-700 pb-2">Préstamos
+                    Mensuales</div>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Banco Galáctico:</span>
+                        <span class="text-neon-red">-5,000 CR</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Mejoras Nave:</span>
+                        <span class="text-neon-red">-2,000 CR</span>
+                    </div>
+                    <div class="flex justify-between border-t border-gray-700 pt-2 font-bold">
+                        <span>Total:</span>
+                        <span class="text-neon-red">-7,000 CR</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+    // Estado del juego
+    let gameState = {
+        fuel: 18,
+        storage: 16,
+        month: 1,
+        reputation: 0,
+        area: null,
+        world_density: null,
+        ship_row: null,
+        ship_col: null,
+        setup_complete: false,
+        ship_pos_complete: false,
+        damages: {
+            light: false,
+            moderate: false,
+            severe: false
+        },
+        explored_quadrants: []
+    };
+
+    const SHIP_ICON = `
+    <div class="ship-icon absolute inset-0 flex items-center justify-center z-30 pointer-events-none animate-pulse">
+        <svg viewBox="0 0 24 24" class="w-8 h-8 text-neon-green filter drop-shadow-[0_0_5px_rgba(0,255,157,0.8)]" fill="currentColor">
+            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z"/>
+        </svg>
+    </div>`;
+
+    // Funciones de ajuste
+    function adjustFuel(delta) {
+        gameState.fuel = Math.max(0, Math.min(30, gameState.fuel + delta));
+        updateFuelDisplay();
+    }
+
+    function adjustStorage(delta) {
+        gameState.storage = Math.max(0, Math.min(gameState.storage_max || 40, gameState.storage + delta));
+        updateStorageDisplay();
+    }
+
+    function adjustMonth(delta) {
+        gameState.month = Math.max(1, Math.min(12, gameState.month + delta));
+        document.getElementById('month-value').textContent = gameState.month;
+    }
+
+    function adjustReputation(delta) {
+        gameState.reputation = Math.max(-5, Math.min(5, gameState.reputation + delta));
+        updateReputationDisplay();
+    }
+
+    function updateFuelDisplay() {
+        const percentage = (gameState.fuel / 30) * 100;
+        document.getElementById('fuel-level').style.height = percentage + '%';
+        document.getElementById('fuel-value').textContent = gameState.fuel;
+
+        // Cambiar color si está bajo
+        const fuelLevel = document.getElementById('fuel-level');
+        if (gameState.fuel < 10) {
+            fuelLevel.className = fuelLevel.className.replace('from-neon-blue to-cyan-400', 'from-neon-red to-red-400');
+        } else {
+            fuelLevel.className = fuelLevel.className.replace('from-neon-red to-red-400', 'from-neon-blue to-cyan-400');
+        }
+    }
+
+    function updateStorageDisplay() {
+        const max = gameState.storage_max || 40;
+        const percentage = (gameState.storage / max) * 100;
+        document.getElementById('storage-level').style.height = percentage + '%';
+        document.getElementById('storage-value').textContent = gameState.storage;
+    }
+
+    function updateReputationDisplay() {
+        const el = document.getElementById('reputation-value');
+        const val = gameState.reputation;
+        el.textContent = val >= 0 ? '+' + val : val;
+
+        // Color según reputación
+        if (val >= 3) el.style.color = '#00ff9d';
+        else if (val >= 0) el.style.color = '#00f3ff';
+        else if (val >= -2) el.style.color = '#ffa500';
+        else el.style.color = '#ff2a6d';
+    }
+
+    function toggleDamage(type) {
+        gameState.damages[type] = !gameState.damages[type];
+        const el = document.getElementById('damage-' + type);
+
+        if (gameState.damages[type]) {
+            el.classList.add('bg-opacity-100');
+            if (type === 'light') el.className = el.className.replace('border-yellow-500', 'border-yellow-500 bg-yellow-500');
+            if (type === 'moderate') el.className = el.className.replace('border-orange-500', 'border-orange-500 bg-orange-500');
+            if (type === 'severe') el.className = el.className.replace('border-neon-red', 'border-neon-red bg-neon-red');
+        } else {
+            if (type === 'light') el.className = 'w-4 h-4 rounded-full border-2 border-yellow-500';
+            if (type === 'moderate') el.className = 'w-4 h-4 rounded-full border-2 border-orange-500';
+            if (type === 'severe') el.className = 'w-4 h-4 rounded-full border-2 border-neon-red';
+        }
+
+        // Mostrar alerta crítica si hay daños graves
+        const alert = document.getElementById('critical-alert');
+        if (gameState.damages.severe) {
+            alert.classList.remove('hidden');
+        } else {
+            alert.classList.add('hidden');
+        }
+    }
+
+    // Initialize UI from state
+    async function initDashboard() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+
+        if (!gameId) {
+            console.error("No game_id found in URL");
+            return;
+        }
+
+        // Setup navigation links
+        setupNavigation(gameId);
+
+        try {
+            const response = await fetch(`/api/games/${gameId}`);
+            const data = await response.json();
+            gameState = data.state;
+            const shipStats = data.ship_stats;
+
+            // Update Company Header
+            document.getElementById('company-name-display').textContent = gameState.company_name || 'Nueva Compañía';
+            document.getElementById('game-id-display').textContent = gameId;
+            document.getElementById('ship-name-display').textContent = gameState.ship_name || 'Fénix Dorado';
+            document.getElementById('ship-model-display').textContent = gameState.ship_model || 'Basic Starfall';
+
+            console.log("Game state loaded:", gameState);
+
+            // Update HUD
+            updateFuelDisplay();
+            updateStorageDisplay();
+            updateReputationDisplay();
+            document.getElementById('month-value').textContent = gameState.month;
+
+            // Update Area/Density badges
+            if (gameState.area) {
+                document.getElementById('area-badge').textContent = `Área: ${gameState.area}`;
+            }
+            if (gameState.world_density) {
+                // density-badge was replaced by jump-badge in some versions, ensuring it exists
+                const densityBadge = document.getElementById('density-badge');
+                if (densityBadge) densityBadge.textContent = `Densidad: ${gameState.world_density}`;
+            }
+
+            if (shipStats) {
+                document.getElementById('jump-badge').textContent = `Salto: ${shipStats.jump} Cuad.`;
+                document.getElementById('storage-value').nextElementSibling.textContent = `/${shipStats.storage}`;
+
+                // Update passenger capacity (future proofing)
+                // For now just show in logs or info
+            }
+
+            // Update Ship Position
+            if (gameState.ship_pos_complete) {
+                updateGridPosition(gameState.ship_row, gameState.ship_col);
+            }
+
+            // Load Starting Planet Info
+            if (gameState.starting_planet_code) {
+                console.log("Starting planet detected:", gameState.starting_planet_code);
+                // We could automatically show the planet info panel here if desired
+                showPlanetDetails(gameState.starting_planet_code);
+            }
+
+            // Show Explored Quadrants
+            if (gameState.explored_quadrants) {
+                gameState.explored_quadrants.forEach(coord => {
+                    const [r, c] = coord.split(',').map(Number);
+                    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    if (cell) {
+                        const fog = cell.querySelector('.fog-overlay');
+                        if (fog) {
+                            fog.classList.add('opacity-0');
+                            setTimeout(() => fog.remove(), 300);
+                        }
+                        cell.classList.add('border-neon-green');
+                        cell.style.backgroundColor = 'rgba(31, 38, 64, 0.4)';
+                    }
+                });
+            }
+
+            // Update quadrant planet codes
+            if (gameState.quadrant_planets) {
+                Object.entries(gameState.quadrant_planets).forEach(([coord, code]) => {
+                    const [r, c] = coord.split(',').map(Number);
+                    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    if (cell) {
+                        const label = cell.querySelector('.planet-code-label');
+                        if (label) {
+                            label.textContent = code;
+                            label.classList.remove('hidden');
+                        }
+                    }
+                });
+            }
+
+            // Load World Log
+            updateWorldLog();
+
+            // Set Ship Location UI
+            updateLocationUI(gameState.ship_location_on_planet || 'Mundo');
+
+            // Load Treasury Data
+            await loadTreasuryData(gameId);
+
+        } catch (error) {
+            console.error("Error loading game state:", error);
+        }
+    }
+
+    async function updateWorldLog() {
+        const logContainer = document.getElementById('world-log');
+        if (!gameState.discovered_planets || Object.keys(gameState.discovered_planets).length === 0) {
+            return;
+        }
+
+        logContainer.innerHTML = '';
+
+        // Fetch details for all discovered planets to show names
+        for (const [code, info] of Object.entries(gameState.discovered_planets)) {
+            try {
+                const response = await fetch(`/api/planets/${code}`);
+                const data = await response.json();
+                const planet = data.planet;
+
+                const colLetter = String.fromCharCode(64 + parseInt(info.quadrant.split(',')[1]));
+                const rowNum = info.quadrant.split(',')[0];
+
+                const entry = document.createElement('div');
+                entry.className = 'flex items-center justify-between py-1 border-b border-gray-800 hover:bg-space-800 cursor-pointer px-1 rounded transition-colors';
+                entry.onclick = () => showPlanetDetails(code);
+                entry.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-neon-blue font-bold min-w-[30px]">${code}</span>
+                        <span class="text-white uppercase text-[10px]">${planet.name}</span>
+                    </div>
+                    <div class="text-[10px] text-gray-500 font-tech">
+                        AREA ${info.area} <span class="text-neon-blue ml-1">${colLetter}${rowNum}</span>
+                    </div>
+                `;
+                logContainer.appendChild(entry);
+            } catch (e) {
+                console.error(`Error loading planet log entry ${code}:`, e);
+            }
+        }
+    }
+
+    function onQuadrantClick(cell) {
+        const row = parseInt(cell.getAttribute('data-row'));
+        const col = parseInt(cell.getAttribute('data-col'));
+        selectQuadrant(row, col);
+    }
+
+    async function selectQuadrant(row, col) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+
+        if (!gameId) return;
+
+        // Visual update only for now if move is intended
+        updateGridPosition(row, col);
+
+        try {
+            // Save exploration to API
+            const formData = new FormData();
+            formData.append('row', row);
+            formData.append('col', col);
+
+            await fetch(`/api/games/${gameId}/explore`, {
+                method: 'POST',
+                body: formData
+            });
+        } catch (error) {
+            console.error("Error saving exploration:", error);
+        }
+    }
+
+    function updateGridPosition(row, col) {
+        // Remove old ship icon
+        document.querySelectorAll('.ship-icon').forEach(el => el.remove());
+
+        // Update markers
+        document.querySelectorAll('[id^="marker-"]').forEach(el => el.classList.add('opacity-0'));
+
+        const colMarker = document.getElementById(`marker-col-${col}`);
+        const rowMarker = document.getElementById(`marker-row-${row}`);
+
+        if (colMarker) colMarker.classList.remove('opacity-0');
+        if (rowMarker) rowMarker.classList.remove('opacity-0');
+
+        // Add ship to new cell
+        const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        if (cell) {
+            cell.insertAdjacentHTML('beforeend', SHIP_ICON);
+
+            // Auto-reveal fog for ship position
+            const fog = cell.querySelector('.fog-overlay');
+            if (fog) {
+                fog.classList.add('opacity-0');
+                setTimeout(() => fog.remove(), 300);
+            }
+        }
+    }
+
+    window.onload = initDashboard;
+
+    async function showPlanetDetails(code) {
+        try {
+            const response = await fetch(`/api/planets/${code}`);
+            const data = await response.json();
+            const planet = data.planet;
+
+            document.getElementById('planet-info').classList.remove('hidden');
+            document.getElementById('planet-name').textContent = planet.name.toUpperCase();
+            document.getElementById('planet-code').textContent = 'Código: ' + planet.code;
+
+            // Use new schema fields
+            document.getElementById('planet-life-support').textContent = planet.life_support.type || 'Ninguno';
+            document.getElementById('planet-spaceport').textContent =
+                `${planet.spaceport.quality}-${planet.spaceport.fuel_density}-${planet.spaceport.docking_price}`;
+            document.getElementById('planet-tech').textContent = planet.bootstrap_data.tech_level || 'Desconocido';
+            document.getElementById('planet-population').textContent =
+                planet.bootstrap_data.population_over_1000 ? '> 1000 hab.' : '< 1000 hab.';
+
+            // Handle orbital facilities as booleans
+            const facilitiesEl = document.getElementById('planet-facilities');
+            facilitiesEl.innerHTML = '';
+
+            const facilities = [];
+            if (planet.orbital_facilities.cartography_center) facilities.push('Centro Cartografía');
+            if (planet.orbital_facilities.hackers) facilities.push('Piratas Informáticos');
+            if (planet.orbital_facilities.supply_depot) facilities.push('Depósitos Suministros');
+            if (planet.orbital_facilities.astro_academy) facilities.push('Academia Astronavegación');
+
+            if (facilities.length > 0) {
+                facilities.forEach(name => {
+                    facilitiesEl.insertAdjacentHTML('beforeend',
+                        `<span class="px-2 py-1 bg-neon-blue bg-opacity-20 border border-neon-blue rounded text-xs">${name}</span>`);
+                });
+            } else {
+                facilitiesEl.innerHTML = '<span class="text-gray-500 italic">Ninguna</span>';
+            }
+
+        } catch (error) {
+            console.error("Error fetching planet details:", error);
+        }
+    }
+
+    function showPlanetInfo(planet) {
+        // Legacy or simple view
+        showPlanetDetails(planet.code);
+    }
+
+    function closePlanetInfo() {
+        document.getElementById('planet-info').classList.add('hidden');
+    }
+
+    function updatePrice(select, index) {
+        const basePrices = [500, 1200, 800, 2500];
+        const modifier = parseFloat(select.value);
+        const finalPrice = Math.round(basePrices[index] * modifier);
+        document.getElementById('price-' + index).textContent = finalPrice + ' CR';
+    }
+
+    async function updateShipLocation(location) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+        if (!gameId) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('location', location);
+
+            const response = await fetch(`/api/games/${gameId}/update-location`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                gameState.ship_location_on_planet = location;
+                updateLocationUI(location);
+            }
+        } catch (error) {
+            console.error("Error updating ship location:", error);
+        }
+    }
+
+    function updateLocationUI(location) {
+        // Remove active class from all
+        document.querySelectorAll('.location-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Add active class to current
+        const activeBtn = document.getElementById('loc-' + location);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+    }
+
+    async function loadTreasuryData(gameId) {
+        try {
+            const response = await fetch(`/api/games/${gameId}/treasury`);
+            const data = await response.json();
+
+            // Update treasury value
+            document.getElementById('treasury-value').textContent = data.current_balance || 0;
+
+            // Update monthly expenses
+            const monthlyExpenses = data.monthly_expenses?.total || 0;
+            document.getElementById('monthly-expenses-value').textContent = monthlyExpenses;
+
+            // Store in gameState for reference
+            gameState.treasury = data.current_balance;
+            gameState.monthly_expenses = monthlyExpenses;
+
+        } catch (error) {
+            console.error("Error loading treasury:", error);
+        }
+    }
+
+    // Setup navigation links with game_id
+    function setupNavigation(gameId) {
+        document.getElementById('nav-personnel').href = `/personnel?game_id=${gameId}`;
+        document.getElementById('nav-treasury').href = `/treasury?game_id=${gameId}`;
+        document.getElementById('nav-missions').href = `/missions?game_id=${gameId}`;
+    }
+</script>
+{% endblock %}

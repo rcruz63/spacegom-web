@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}Personal - Spacegom{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-space-900 p-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-orbitron text-neon-blue">GESTIÓN DE PERSONAL</h1>
+            <p class="text-gray-400 text-sm mt-1" id="game-id-display">Game ID: <span id="current-game-id"></span></p>
+            <p class="text-gray-400 text-sm mt-1" id="game-date-display">Fecha: <span id="current-date">1-01-01</span>
+            </p>
+        </div>
+        <a href="/dashboard" id="back-dashboard"
+            class="px-4 py-2 bg-space-800 border border-gray-700 rounded text-gray-300 hover:border-neon-blue">
+            ← Volver al Dashboard
+        </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Total Personal</div>
+            <div class="text-3xl font-orbitron text-neon-blue" id="total-personnel">0</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Salarios Mensuales</div>
+            <div class="text-3xl font-orbitron text-neon-red" id="total-salaries">0</div>
+            <div class="text-xs text-gray-400">SC/mes</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Tareas en Cola</div>
+            <div class="text-3xl font-orbitron text-purple-400" id="pending-tasks">0</div>
+        </div>
+        <div class="glass-panel tech-border p-4 rounded">
+            <div class="text-xs text-gray-500 uppercase mb-2">Próximo Evento</div>
+            <div class="text-lg font-orbitron text-neon-green" id="next-event">-</div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mb-6 flex gap-3">
+        <button onclick="showHireModal()"
+            class="px-6 py-3 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
+            + INICIAR BÚSQUEDA
+        </button>
+        <button onclick="advanceTime()"
+            class="px-6 py-3 bg-purple-500 bg-opacity-20 border-2 border-purple-500 text-purple-400 rounded hover:bg-opacity-30 font-orbitron">
+            ⏩ AVANZAR TIEMPO
+        </button>
+    </div>
+
+    <!-- Director's Task Queue -->
+    <div id="task-queue-section" class="glass-panel tech-border p-6 rounded mb-6 hidden">
+        <h2 class="text-2xl font-orbitron text-neon-blue mb-4">🎯 Cola de Tareas del Director Gerente</h2>
+        <div id="director-queue"></div>
+    </div>
+
+    <!-- Personnel Table -->
+    <div class="glass-panel tech-border rounded overflow-hidden">
+        <div class="bg-space-800 border-b border-gray-700 p-4">
+            <h2 class="text-xl font-orbitron text-white">👥 PERSONAL ACTIVO</h2>
+        </div>
+        <table class="w-full">
+            <thead class="bg-space-800 border-b border-gray-700">
+                <tr>
+                    <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">ID</th>
+                    <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">Nombre</th>
+                    <th class="text-left py-3 px-4 text-xs text-gray-400 font-tech uppercase">Puesto</th>
+                    <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Salario</th>
+                    <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Exp</th>
+                    <th class="text-center py-3 px-4 text-xs text-gray-400 font-tech uppercase">Moral</th>
+                </tr>
+            </thead>
+            <tbody id="personnel-table-body" class="divide-y divide-gray-800">
+                <!-- Rows loaded via JavaScript -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Hire Modal -->
+<div id="hire-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+    <div class="glass-panel tech-border p-8 rounded-lg max-w-3xl w-full max-h-screen overflow-y-auto">
+        <h3 class="text-2xl font-orbitron text-neon-blue mb-6">🔍 Nueva Búsqueda de Personal</h3>
+
+        <div class="mb-6">
+            <label class="block text-sm text-gray-400 mb-3">Selecciona el Puesto</label>
+            <select id="position-select"
+                class="w-full bg-space-800 border border-gray-700 rounded px-4 py-3 text-white font-orbitron">
+                <option value="">-- Cargando puestos disponibles --</option>
+            </select>
+        </div>
+
+        <div id="position-details" class="hidden mb-6 p-4 bg-space-800 rounded border border-gray-700">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div><span class="text-gray-500">Búsqueda:</span> <span id="search-time" class="text-gray-300"></span>
+                </div>
+                <div><span class="text-gray-500">Salario base:</span> <span id="base-salary"
+                        class="text-neon-green"></span></div>
+                <div><span class="text-gray-500">Umbral contratación:</span> <span id="hire-threshold"
+                        class="text-gray-300"></span></div>
+                <div><span class="text-gray-500">Nivel tecnológico:</span> <span id="tech-level"
+                        class="text-gray-300"></span></div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm text-gray-400 mb-3">Nivel de Experiencia</label>
+            <div class="grid grid-cols-3 gap-3">
+                <button type="button" onclick="selectLevel('Novato')" data-level="Novato"
+                    class="level-btn px-4 py-4 border-2 border-green-500 bg-green-500 bg-opacity-20 text-green-400 rounded hover:bg-opacity-30">
+                    <div class="font-orbitron font-bold">Novato</div>
+                    <div class="text-xs mt-1">50 tiempo / 50% salario</div>
+                </button>
+                <button type="button" onclick="selectLevel('Estándar')" data-level="Estándar"
+                    class="level-btn active px-4 py-4 border-2 border-neon-blue bg-neon-blue bg-opacity-30 text-neon-blue rounded hover:bg-opacity-40">
+                    <div class="font-orbitron font-bold">Estándar</div>
+                    <div class="text-xs mt-1">100% tiempo / 100% salario</div>
+                </button>
+                <button type="button" onclick="selectLevel('Veterano')" data-level="Veterano"
+                    class="level-btn px-4 py-4 border-2 border-purple-500 bg-purple-500 bg-opacity-20 text-purple-400 rounded hover:bg-opacity-30">
+                    <div class="font-orbitron font-bold">Veterano</div>
+                    <div class="text-xs mt-1">200% tiempo / mismo salario</div>
+                </button>
+            </div>
+        </div>
+
+        <div id="hire-summary" class="hidden mb-6 p-4 bg-neon-blue bg-opacity-10 border border-neon-blue rounded">
+            <div class="text-sm font-orbitron text-neon-blue mb-2">Resumen de la Búsqueda</div>
+            <div class="grid grid-cols-2 gap-2 text-sm text-gray-300">
+                <div>Tiempo estimado: <span id="estimated-days" class="text-neon-green font-bold"></span></div>
+                <div>Salario final: <span id="final-salary" class="text-neon-green font-bold"></span></div>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+            <button onclick="startHireSearch()"
+                class="flex-1 py-3 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
+                Iniciar Búsqueda
+            </button>
+            <button onclick="hideHireModal()"
+                class="px-6 py-3 bg-gray-700 border border-gray-600 text-gray-300 rounded hover:bg-gray-600">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let gameId = null;
+    let directorId = null;
+    let selectedPosition = null;
+    let selectedLevel = 'Estándar';
+    let availablePositions = [];
+
+    window.onload = async function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        gameId = urlParams.get('game_id');
+
+        if (!gameId) {
+            showToast('No game ID provided', 'error');
+            window.location.href = '/';
+            return;
+        }
+
+        document.getElementById('current-game-id').textContent = gameId;
+        document.getElementById('back-dashboard').href = `/dashboard?game_id=${gameId}`;
+
+        await loadPersonnel();
+        await loadDirectorTasks();
+        await loadGameDate();
+    };
+
+    async function loadGameDate() {
+        try {
+            const response = await fetch(`/api/games/${gameId}`);
+            const data = await response.json();
+            const year = data.state.year || 1;
+            const month = data.state.month || 1;
+            const day = data.state.day || 1;
+            document.getElementById('current-date').textContent = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+            const nextEvent = data.state.event_queue?.[0];
+            if (nextEvent) {
+                document.getElementById('next-event').textContent = nextEvent.date;
+            }
+        } catch (error) {
+            console.error('Error loading game date:', error);
+        }
+    }
+
+    async function loadPersonnel() {
+        try {
+            const response = await fetch(`/api/games/${gameId}/personnel`);
+            const data = await response.json();
+
+            document.getElementById('total-personnel').textContent = data.count;
+            document.getElementById('total-salaries').textContent = data.total_monthly_salaries;
+
+            // Find Director
+            const director = data.personnel.find(p => p.position === 'Director gerente');
+            if (director) {
+                directorId = director.id;
+            }
+
+            const tbody = document.getElementById('personnel-table-body');
+            tbody.innerHTML = '';
+
+            if (data.personnel.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-gray-500">No hay personal registrado</td></tr>';
+                return;
+            }
+
+            data.personnel.forEach(emp => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-space-800';
+                row.innerHTML = `
+                    <td class="py-3 px-4 text-gray-400">${emp.id}</td>
+                    <td class="py-3 px-4 text-white">${emp.name}</td>
+                    <td class="py-3 px-4 text-gray-300">${emp.position}</td>
+                    <td class="py-3 px-4 text-center text-neon-green">${emp.monthly_salary} SC</td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-1 rounded text-xs ${getExpClass(emp.experience)}">${getExpLabel(emp.experience)}</span>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                        <span class="px-2 py-1 rounded text-xs ${getMoraleClass(emp.morale)}">${getMoraleLabel(emp.morale)}</span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+        } catch (error) {
+            console.error('Error loading personnel:', error);
+        }
+    }
+
+    async function loadDirectorTasks() {
+        if (!directorId) return;
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/personnel/${directorId}/tasks`);
+            const data = await response.json();
+
+            const totalPending = (data.current_task ? 1 : 0) + data.pending_tasks.length;
+            document.getElementById('pending-tasks').textContent = totalPending;
+
+            if (totalPending === 0) {
+                document.getElementById('task-queue-section').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('task-queue-section').classList.remove('hidden');
+            const queue = document.getElementById('director-queue');
+            queue.innerHTML = '';
+
+            // Current task
+            if (data.current_task) {
+                queue.appendChild(createTaskCard(data.current_task, true));
+            }
+
+            // Pending tasks
+            data.pending_tasks.forEach(task => {
+                queue.appendChild(createTaskCard(task, false));
+            });
+
+        } catch (error) {
+            console.error('Error loading tasks:', error);
+        }
+    }
+
+    function createTaskCard(task, isActive) {
+        const card = document.createElement('div');
+        card.className = `mb-4 p-4 rounded ${isActive ? 'bg-neon-blue bg-opacity-10 border-2 border-neon-blue' : 'bg-space-800 border border-gray-700'}`;
+
+        const statusBadge = isActive
+            ? '<span class="px-2 py-1 bg-neon-blue bg-opacity-30 text-neon-blue text-xs rounded">⏳ EN PROCESO</span>'
+            : '<span class="px-2 py-1 bg-gray-700 text-gray-400 text-xs rounded">⏸️ PENDIENTE</span>';
+
+        const actions = !isActive
+            ? `<div class="flex gap-2 mt-3">
+                <button onclick="deleteTask(${task.id})" class="px-3 py-1 bg-neon-red bg-opacity-20 border border-neon-red text-neon-red rounded text-xs hover:bg-opacity-30">
+                    🗑️ Eliminar
+                </button>
+            </div>`
+            : '';
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                    <span class="font-orbitron text-gray-500">#${task.queue_position}</span>
+                    <span class="font-orbitron text-white">${task.task_data.position}</span>
+                    <span class="text-sm text-gray-400">(${task.task_data.experience_level})</span>
+                </div>
+                ${statusBadge}
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-sm text-gray-400">
+                <div>Días búsqueda: <span class="text-gray-300">${task.task_data.search_days}</span></div>
+                <div>Salario: <span class="text-neon-green">${task.task_data.final_salary} SC</span></div>
+                ${isActive ? `<div>Finaliza: <span class="text-neon-green">${task.completion_date}</span></div>` : ''}
+            </div>
+            ${actions}
+        `;
+
+        return card;
+    }
+
+    async function showHireModal() {
+        // Load available positions
+        try {
+            const response = await fetch(`/api/games/${gameId}/hire/available-positions`);
+            const data = await response.json();
+
+            if (data.error) {
+                showToast(data.error, 'warning');
+                return;
+            }
+
+            availablePositions = data.positions;
+            const select = document.getElementById('position-select');
+            select.innerHTML = '<option value="">-- Selecciona un puesto --</option>';
+
+            data.positions.forEach(pos => {
+                const option = document.createElement('option');
+                option.value = pos.name;
+                option.textContent = pos.name;
+                select.appendChild(option);
+            });
+
+            document.getElementById('hire-modal').classList.remove('hidden');
+        } catch (error) {
+            console.error('Error loading positions:', error);
+            showToast('Error cargando puestos disponibles', 'error');
+        }
+    }
+
+    function hideHireModal() {
+        document.getElementById('hire-modal').classList.add('hidden');
+        document.getElementById('position-details').classList.add('hidden');
+        document.getElementById('hire-summary').classList.add('hidden');
+        selectedPosition = null;
+    }
+
+    document.getElementById('position-select').addEventListener('change', (e) => {
+        const positionName = e.target.value;
+        if (!positionName) {
+            document.getElementById('position-details').classList.add('hidden');
+            document.getElementById('hire-summary').classList.add('hidden');
+            return;
+        }
+
+        selectedPosition = availablePositions.find(p => p.name === positionName);
+        if (selectedPosition) {
+            document.getElementById('search-time').textContent = selectedPosition.search_time_dice;
+            document.getElementById('base-salary').textContent = `${selectedPosition.base_salary} SC`;
+            document.getElementById('hire-threshold').textContent = selectedPosition.hire_threshold;
+            document.getElementById('tech-level').textContent = selectedPosition.tech_level;
+            document.getElementById('position-details').classList.remove('hidden');
+            updateHireSummary();
+        }
+    });
+
+    function selectLevel(level) {
+        selectedLevel = level;
+        document.querySelectorAll('.level-btn').forEach(btn => {
+            btn.classList.remove('active', 'bg-opacity-30');
+            btn.classList.add('bg-opacity-20');
+        });
+        const btn = document.querySelector(`[data-level="${level}"]`);
+        btn.classList.add('active', 'bg-opacity-30');
+        btn.classList.remove('bg-opacity-20');
+        updateHireSummary();
+    }
+
+    function updateHireSummary() {
+        if (!selectedPosition) return;
+
+        // Simple estimate (would need to calculate properly)
+        const baseSalary = selectedPosition.base_salary;
+        let finalSalary = baseSalary;
+        if (selectedLevel === 'Novato') finalSalary = Math.ceil(baseSalary / 2);
+        else if (selectedLevel === 'Veterano') finalSalary = baseSalary * 2;
+
+        document.getElementById('estimated-days').textContent = '1-12 días (según dados)';
+        document.getElementById('final-salary').textContent = `${finalSalary} SC/mes`;
+        document.getElementById('hire-summary').classList.remove('hidden');
+    }
+
+    async function startHireSearch() {
+        if (!selectedPosition) {
+            showToast('Selecciona un puesto', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('position', selectedPosition.name);
+        formData.append('experience_level', selectedLevel);
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/hire/start`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                showToast(`Búsqueda de ${selectedPosition.name} (${selectedLevel}) iniciada - Cola #${data.queue_position}`, 'success');
+                hideHireModal();
+                await loadDirectorTasks();
+                await loadGameDate();
+            } else {
+                showToast('Error iniciando búsqueda: ' + (data.detail || 'Error desconocido'), 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Error iniciando búsqueda', 'error');
+        }
+    }
+
+    async function advanceTime() {
+        if (!confirm('¿Avanzar tiempo hasta el próximo evento?')) return;
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/time/advance`, {
+                method: 'POST'
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'no_events') {
+                showToast('No hay eventos pendientes', 'info');
+                return;
+            }
+
+            if (response.ok && data.event_result) {
+                const result = data.event_result;
+                let message = `📅 Tiempo avanzado: ${data.old_date} → ${data.new_date}\n\n`;
+
+                if (result.type === 'hire_resolution') {
+                    message += `🎲 Búsqueda de ${result.position} (${result.experience_level})\n`;
+                    message += `Dados: [${result.dice.join(', ')}] = ${result.dice.reduce((a, b) => a + b, 0)}\n`;
+                    message += `Total (con mods): ${result.total} vs Umbral: ${result.threshold}\n\n`;
+                    message += result.success
+                        ? `✅ ¡ÉXITO! Empleado contratado (ID: ${result.new_employee_id})`
+                        : `❌ FRACASO - No se encontró candidato adecuado`;
+
+                    if (result.next_task_started) {
+                        message += `\n\n⏭️  Auto-iniciada siguiente búsqueda: ${result.next_task_started.position}`;
+                        message += `\nFinaliza: ${result.next_task_started.completion_date}`;
+                    }
+                }
+
+                alert(message);
+                await loadPersonnel();
+                await loadDirectorTasks();
+                await loadGameDate();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Error avanzando tiempo', 'error');
+        }
+    }
+
+    async function deleteTask(taskId) {
+        if (!confirm('¿Eliminar esta tarea de la cola?')) return;
+
+        try {
+            const response = await fetch(`/api/games/${gameId}/tasks/${taskId}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                showToast('Tarea eliminada de la cola', 'success');
+                await loadDirectorTasks();
+            } else {
+                showToast('Error eliminando tarea', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Error eliminando tarea', 'error');
+        }
+    }
+
+    function getExpClass(exp) {
+        const classes = {
+            'N': 'bg-green-500 bg-opacity-20 border border-green-500 text-green-400',
+            'E': 'bg-blue-500 bg-opacity-20 border border-blue-500 text-blue-400',
+            'V': 'bg-purple-500 bg-opacity-20 border border-purple-500 text-purple-400'
+        };
+        return classes[exp] || classes['N'];
+    }
+
+    function getExpLabel(exp) {
+        return { 'N': 'Novato', 'E': 'Experto', 'V': 'Veterano' }[exp] || exp;
+    }
+
+    function getMoraleClass(morale) {
+        const classes = {
+            'B': 'bg-neon-red bg-opacity-20 border border-neon-red text-neon-red',
+            'M': 'bg-yellow-500 bg-opacity-20 border border-yellow-500 text-yellow-400',
+            'A': 'bg-neon-green bg-opacity-20 border border-neon-green text-neon-green'
+        };
+        return classes[morale] || classes['M'];
+    }
+
+    function getMoraleLabel(morale) {
+        return { 'B': 'Baja', 'M': 'Media', 'A': 'Alta' }[morale] || morale;
+    }
+</script>
+{% endblock %}

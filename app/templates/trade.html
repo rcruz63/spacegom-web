@@ -1,0 +1,515 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="glass-panel tech-border p-6 rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+            <h2 class="text-2xl font-orbitron text-orange-400 flex items-center gap-3">
+                <span>⚖️</span> TERMINAL DE COMERCIO
+            </h2>
+            <p class="text-gray-400 text-sm mt-1">Mercado Galáctico // Convenio Spacegom</p>
+        </div>
+        <div class="flex gap-4 text-center">
+            <div class="bg-space-800 p-3 rounded border border-gray-700">
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest">Créditos</div>
+                <div id="trade-credits" class="text-xl font-orbitron text-neon-green">-- SC</div>
+            </div>
+            <div class="bg-space-800 p-3 rounded border border-gray-700">
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest">Almacén</div>
+                <div id="trade-storage" class="text-xl font-orbitron text-white">-- UCN</div>
+            </div>
+            <div class="bg-space-800 p-3 rounded border border-gray-700">
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest">Planeta</div>
+                <div id="trade-planet" class="text-xl font-orbitron text-neon-blue">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- BUY SECTION -->
+        <div class="glass-panel tech-border p-6 rounded-lg">
+            <h3 class="text-xl font-orbitron text-neon-green mb-4 border-b border-gray-700 pb-2">
+                OFERTA (COMPRAR)
+            </h3>
+            <div id="buy-list" class="space-y-2">
+                <div class="text-gray-500 italic text-center py-4">Cargando mercado...</div>
+            </div>
+        </div>
+
+        <!-- SELL SECTION -->
+        <div class="glass-panel tech-border p-6 rounded-lg">
+            <h3 class="text-xl font-orbitron text-neon-red mb-4 border-b border-gray-700 pb-2">
+                DEMANDA (VENDER)
+            </h3>
+            <div id="sell-list" class="space-y-2">
+                <div class="text-gray-500 italic text-center py-4">Cargando carga...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TRADE LEDGER -->
+    <div class="glass-panel tech-border p-6 rounded-lg">
+        <h3
+            class="text-sm font-orbitron text-gray-400 mb-3 tracking-widest uppercase flex items-center justify-between">
+            <span>📁 REGISTRO DE PEDIDOS (LEDGER)</span>
+            <button onclick="loadTradeData()" class="text-neon-blue hover:text-white text-xs">↻ Actualizar</button>
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-gray-400">
+                <thead class="bg-space-800 text-gray-300 uppercase font-orbitron">
+                    <tr>
+                        <th class="p-2">ID</th>
+                        <th class="p-2">Producto</th>
+                        <th class="p-2">UCN</th>
+                        <th class="p-2">Compra</th>
+                        <th class="p-2">Venta</th>
+                        <th class="p-2">Beneficio</th>
+                        <th class="p-2">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="trade-ledger-body" class="divide-y divide-gray-800 font-tech">
+                    <tr>
+                        <td colspan="7" class="p-4 text-center italic">Cargando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- NEGOTIATION MODAL -->
+<div id="negotiation-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+    <div class="glass-panel tech-border p-6 rounded-lg max-w-lg w-full relative">
+        <button onclick="closeNegotiationModal()"
+            class="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+
+        <h3 class="text-2xl font-orbitron text-orange-400 mb-2">NEGOCIACIÓN</h3>
+        <p id="neg-subtitle" class="text-neon-blue text-sm mb-6 uppercase tracking-wider">Comprar Induccionadores</p>
+
+        <!-- Step 1: Dice Input -->
+        <div id="neg-step-1">
+            <div class="bg-space-800 p-4 rounded border border-gray-700 mb-6 text-center">
+                <p class="text-gray-400 mb-3">Tirada de Negociación (2d6)</p>
+                <div class="flex justify-center gap-4 mb-3">
+                    <button onclick="startNegotiation('auto')"
+                        class="px-4 py-2 bg-neon-blue bg-opacity-20 border border-neon-blue rounded hover:bg-opacity-30">
+                        🤖 Auto
+                    </button>
+                    <button onclick="showManualInput()"
+                        class="px-4 py-2 bg-neon-green bg-opacity-20 border border-neon-green rounded hover:bg-opacity-30">
+                        🎯 Manual
+                    </button>
+                </div>
+                <!-- Manual Input Area (Hidden initially) -->
+                <div id="neg-manual-input" class="hidden mt-4">
+                    <div class="flex justify-center items-center gap-2">
+                        <input type="number" id="neg-d1"
+                            class="w-16 bg-space-900 border border-gray-600 rounded p-2 text-center text-xl" min="1"
+                            max="6" placeholder="1-6">
+                        <span>+</span>
+                        <input type="number" id="neg-d2"
+                            class="w-16 bg-space-900 border border-gray-600 rounded p-2 text-center text-xl" min="1"
+                            max="6" placeholder="1-6">
+                        <button onclick="startNegotiation('manual')"
+                            class="ml-2 px-3 py-2 bg-neon-green text-black font-bold rounded">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Result & Confirmation -->
+        <div id="neg-step-2" class="hidden space-y-4">
+            <!-- Results Display -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-space-800 p-3 rounded">
+                    <div class="text-[10px] uppercase text-gray-500">Tirada</div>
+                    <div id="neg-roll-res" class="text-xl text-white font-bold">--</div>
+                </div>
+                <div class="bg-space-800 p-3 rounded">
+                    <div class="text-[10px] uppercase text-gray-500">Resultado</div>
+                    <div id="neg-outcome" class="text-xl font-bold">--</div>
+                </div>
+            </div>
+
+            <!-- Modifiers Info -->
+            <div class="text-xs text-gray-400 text-center">
+                Modificadores: Reputación (<span id="neg-mod-rep">0</span>) + Habilidad (<span
+                    id="neg-mod-skill">0</span>)
+            </div>
+
+            <!-- Price Calculation -->
+            <div class="bg-space-900 border border-orange-500 border-opacity-30 p-4 rounded text-center">
+                <div class="text-sm text-gray-400 mb-1">Precio Final por Unidad</div>
+                <div class="flex items-center justify-center gap-2">
+                    <span id="neg-old-price" class="text-red-400 line-through text-lg">--</span>
+                    <span class="text-gray-500">→</span>
+                    <span id="neg-new-price" class="text-neon-green font-orbitron text-2xl font-bold">--</span>
+                    <span class="text-neon-green text-sm">SC</span>
+                </div>
+                <div id="neg-total-cost" class="text-xs text-gray-300 mt-2 border-t border-gray-800 pt-2">
+                    Total: -- SC
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3 mt-4">
+                <button onclick="closeNegotiationModal()"
+                    class="flex-1 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-800">
+                    Rechazar
+                </button>
+                <button onclick="confirmTrade()" id="btn-confirm-trade"
+                    class="flex-1 py-2 bg-neon-green text-black font-bold rounded hover:bg-green-400 shadow-[0_0_10px_rgba(0,255,157,0.3)]">
+                    CONFIRMAR
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentMarketData = null;
+    let currentAction = null; // {type: 'buy'|'sell', item: object}
+    let negotiationResult = null;
+
+    async function loadTradeData() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+        if (!gameId) return;
+
+        // Load Game State for Header
+        try {
+            const gameRes = await fetch(`/api/games/${gameId}`);
+            const gameData = await gameRes.json();
+            document.getElementById('trade-credits').textContent = (gameData.state.treasury || 0) + ' SC';
+            document.getElementById('trade-storage').textContent = `${gameData.state.storage || 0}/${gameData.state.storage_max || 40} UCN`;
+
+            // Fetch planet name
+            if (gameData.state.current_planet_code) {
+                const pRes = await fetch(`/api/planets/${gameData.state.current_planet_code}`);
+                const pData = await pRes.json();
+                document.getElementById('trade-planet').textContent = pData.planet.name + ` (${gameData.state.current_planet_code})`;
+            }
+        } catch (e) { console.error(e); }
+
+        // Load Market Data
+        try {
+            const mRes = await fetch(`/api/games/${gameId}/trade/market`);
+            if (!mRes.ok) throw new Error(await mRes.text());
+            currentMarketData = await mRes.json();
+            renderMarket(currentMarketData);
+        } catch (e) {
+            console.error(e);
+            document.getElementById('buy-list').innerHTML = '<div class="text-red-500 p-4">Error cargando mercado. ¿Estás en un planeta?</div>';
+        }
+
+        // Load Ledger
+        try {
+            const lRes = await fetch(`/api/games/${gameId}/trade/orders`);
+            const lData = await lRes.json();
+            renderLedger(lData.orders);
+        } catch (e) { console.error(e); }
+    }
+
+    function renderMarket(data) {
+        const buyList = document.getElementById('buy-list');
+        const sellList = document.getElementById('sell-list');
+
+        buyList.innerHTML = '';
+        sellList.innerHTML = '';
+
+        // BUY ITEMS
+        if (data.buy && data.buy.length > 0) {
+            data.buy.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'flex justify-between items-center bg-space-800 p-3 rounded border border-gray-700 hover:border-gray-500';
+                el.innerHTML = `
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <div class="text-neon-blue font-bold">${item.name} <span class="text-xs text-gray-500">(${item.code})</span></div>
+                            <div class="text-[10px] text-gray-500 flex gap-2">
+                                <span title="Días para nueva producción">🏭 ${item.prod_days}d</span>
+                                <span title="Ciclo de demanda">📉 ${item.demand_days}d</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-2 mt-1 text-xs">
+                            <div class="text-gray-300">Compra: <span class="text-white font-bold">${item.base_price}</span> SC</div>
+                            <div class="text-gray-400">Venta Est: <span class="text-gray-300">${item.base_sell}</span> SC</div>
+                            <div class="text-gray-400">Max: ${item.max_ucn} UCN</div>
+                            <div class="text-gray-400">Margen: <span class="text-neon-green">+${item.base_profit}</span> SC</div>
+                        </div>
+                    </div>
+                    <div class="ml-3 flex flex-col items-end gap-1">
+                        <button onclick="openNegotiation('buy', '${item.code}')" 
+                                class="px-3 py-1 bg-neon-green bg-opacity-10 text-neon-green border border-neon-green rounded text-xs hover:bg-opacity-20 transition-colors">
+                            NEGOCIAR
+                        </button>
+                    </div>
+                `;
+                buyList.appendChild(el);
+            });
+        } else {
+            buyList.innerHTML = '<div class="text-gray-500 text-sm italic p-2">Nada para comprar aquí.</div>';
+        }
+
+        // SELL ITEMS
+        if (data.sell && data.sell.length > 0) {
+            data.sell.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'flex justify-between items-center bg-space-800 p-3 rounded border border-gray-700 hover:border-gray-500';
+                el.innerHTML = `
+                    <div>
+                        <div class="text-orange-400 font-bold">${item.product_name} (${item.product_code})</div>
+                        <div class="text-xs text-gray-400">Cant: ${item.quantity} UCN | Base: ${item.base_sell_price_unit} SC/u</div>
+                    </div>
+                    <div>
+                        <button onclick="openNegotiation('sell', '${item.order_id}')" 
+                                class="px-3 py-1 bg-orange-500 bg-opacity-10 text-orange-400 border border-orange-500 rounded text-xs hover:bg-opacity-20 transition-colors">
+                            VENDER
+                        </button>
+                    </div>
+                `;
+                sellList.appendChild(el);
+            });
+        } else {
+            sellList.innerHTML = '<div class="text-gray-500 text-sm italic p-2">Nada para vender.</div>';
+        }
+    }
+
+    function renderLedger(orders) {
+        const tbody = document.getElementById('trade-ledger-body');
+        tbody.innerHTML = '';
+
+        if (!orders || orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center italic text-gray-600">Sin registros de comercio</td></tr>';
+            return;
+        }
+
+        // Sort by ID desc
+        orders.sort((a, b) => b.id - a.id).forEach(o => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-space-700 transition-colors';
+
+            const profitClass = (o.profit && o.profit > 0) ? 'text-neon-green' : (o.profit && o.profit < 0) ? 'text-neon-red' : 'text-gray-500';
+            const statusBadge = o.status === 'sold'
+                ? '<span class="px-1 bg-green-900 text-green-300 rounded text-[10px]">VENDIDO</span>'
+                : '<span class="px-1 bg-blue-900 text-blue-300 rounded text-[10px]">EN TRANSITO</span>';
+
+            tr.innerHTML = `
+                <td class="p-2 text-gray-500">#${o.id}</td>
+                <td class="p-2 text-white font-bold">${o.product_code}</td>
+                <td class="p-2">${o.quantity}</td>
+                <td class="p-2 text-xs">
+                    <div>${o.buy_planet_code}</div>
+                    <div class="text-gray-500">${o.buy_date}</div>
+                    <div>${o.total_buy_price} SC</div>
+                </td>
+                <td class="p-2 text-xs">
+                    ${o.status === 'sold' ? `
+                    <div>${o.sell_planet_code}</div>
+                    <div class="text-gray-500">${o.sell_date}</div>
+                    <div>${o.sell_price_total} SC</div>
+                    ` : '-'}
+                </td>
+                <td class="p-2 ${profitClass} font-bold">
+                    ${o.profit !== null ? o.profit + ' SC' : '-'}
+                </td>
+                <td class="p-2">${statusBadge}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- NEGOTIATION LOGIC ---
+    function openNegotiation(actionType, itemId) {
+        // Find item data
+        let item = null;
+        if (actionType === 'buy') {
+            item = currentMarketData.buy.find(i => i.code === itemId);
+        } else {
+            item = currentMarketData.sell.find(i => i.order_id == itemId); // items.sell stores order_id
+        }
+
+        if (!item) return;
+
+        currentAction = { type: actionType, item: item, id: itemId };
+
+        // Reset Modal
+        document.getElementById('negotiation-modal').classList.remove('hidden');
+        document.getElementById('neg-step-1').classList.remove('hidden');
+        document.getElementById('neg-step-2').classList.add('hidden');
+        document.getElementById('neg-manual-input').classList.add('hidden');
+
+        // UI Text
+        document.getElementById('neg-subtitle').textContent =
+            actionType === 'buy' ? `COMPRA: ${item.name} (${item.code})` : `VENTA: ${item.product_name} (${item.product_code})`;
+    }
+
+    function showManualInput() {
+        document.getElementById('neg-manual-input').classList.remove('hidden');
+        document.getElementById('neg-d1').focus();
+    }
+
+    function closeNegotiationModal() {
+        document.getElementById('negotiation-modal').classList.add('hidden');
+        currentAction = null;
+        negotiationResult = null;
+    }
+
+    async function startNegotiation(mode) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+
+        const form = new FormData();
+        form.append('action', currentAction.type);
+
+        if (mode === 'manual') {
+            const d1 = parseInt(document.getElementById('neg-d1').value);
+            const d2 = parseInt(document.getElementById('neg-d2').value);
+            if (!d1 || !d2) { alert("Introduce dados válidos"); return; }
+            form.append('manual_roll', d1 + d2);
+        }
+
+        try {
+            const res = await fetch(`/api/games/${gameId}/trade/negotiate`, { method: 'POST', body: form });
+            const data = await res.json();
+
+            // Show Outcome
+            negotiationResult = data; // Store for confirmation
+
+            document.getElementById('neg-step-1').classList.add('hidden');
+            document.getElementById('neg-step-2').classList.remove('hidden');
+
+            document.getElementById('neg-roll-res').textContent = `${data.roll} (${data.dice.join('+')})`;
+            const outcomeText = data.multiplier === 1.0 ? "NORMAL (x1.0)" : (data.multiplier < 1.0 && currentAction.type === 'buy') || (data.multiplier > 1.0 && currentAction.type === 'sell') ? "ÉXITO" : "FALLO";
+            const outcomeColor = outcomeText === "ÉXITO" ? "text-neon-green" : outcomeText === "FALLO" ? "text-neon-red" : "text-white";
+
+            document.getElementById('neg-outcome').className = "text-xl font-bold " + outcomeColor;
+            document.getElementById('neg-outcome').textContent = `${outcomeText} (x${data.multiplier})`;
+
+            document.getElementById('neg-mod-rep').textContent = data.modifiers.reputation;
+
+            // Calculate Prices
+            let basePrice = 0;
+            let qty = 0;
+
+            if (currentAction.type === 'buy') {
+                basePrice = currentAction.item.base_price;
+                // For buy, we simply show unit price. Quantity selected later? 
+                // Wait, logic flaw. We need Quantity to calculte TOTAL cost.
+                // Current modal doesn't ask for Quantity. 
+                // Let's assume Max Quantity or ask for it?
+                // For MVP, user wants "Comercio de Mercancias".
+                // Usually you buy lots of 1UCN? Or fill hold?
+                // Let's Prompt for Quantity IF Buying.
+
+                // HACK: Prompt for quantity, or default to 1 for calculation display
+                qty = 1;
+            } else {
+                basePrice = currentAction.item.base_sell_price_unit;
+                qty = currentAction.item.quantity;
+            }
+
+            const finalUnitPrice = Math.floor(basePrice * data.multiplier); // Integer arithmetic as per game rules?
+
+            document.getElementById('neg-old-price').textContent = basePrice;
+            document.getElementById('neg-new-price').textContent = finalUnitPrice;
+
+            // For Buy, we need an Input for Quantity in Step 2.
+            if (currentAction.type === 'buy') {
+                // Inject Quantity Input
+                const container = document.getElementById('neg-total-cost');
+                container.innerHTML = `
+                    <div class="flex items-center justify-center gap-2 mt-2">
+                        <span>Cantidad:</span>
+                        <input type="number" id="neg-buy-qty" value="1" min="1" max="${currentMarketData.planet_ucn_limit || 25}" 
+                               class="w-16 bg-space-800 border border-gray-600 rounded text-center text-white"
+                               onchange="updateTotalCost(${finalUnitPrice})">
+                         <span>(Max: ${currentMarketData.planet_ucn_limit || 25})</span>
+                    </div>
+                    <div id="neg-real-total" class="text-neon-green font-bold text-lg mt-2">Total: ${finalUnitPrice} SC</div>
+                 `;
+            } else {
+                document.getElementById('neg-total-cost').innerHTML = `
+                    Total Venta (${qty} UCN): <span class="text-neon-green font-bold text-lg">${finalUnitPrice * qty} SC</span>
+                 `;
+            }
+
+        } catch (e) { console.error(e); }
+    }
+
+    function updateTotalCost(unitPrice) {
+        const qty = parseInt(document.getElementById('neg-buy-qty').value) || 0;
+        document.getElementById('neg-real-total').textContent = `Total: ${qty * unitPrice} SC`;
+    }
+
+    async function confirmTrade() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+
+        const form = new FormData();
+
+        let endpoint = "";
+
+        if (currentAction.type === 'buy') {
+            endpoint = "/api/games/" + gameId + "/trade/buy";
+            const qty = parseInt(document.getElementById('neg-buy-qty').value);
+            const unitPrice = parseInt(document.getElementById('neg-new-price').textContent);
+
+            form.append('planet_code', currentAction.item.code || 0); // Need planet_code from somewhere if item.code is PRODUCT code.
+            // Wait, item.code is PRODUCT code (e.g. INDU). We need planet code from context.
+            // currentMarketData doesn't store planet code directly, but we fetched it in loadTradeData.
+            // We can get it from header or reload.
+            // Better: use game state current planet code.
+            // We'll rely on server knowing current planet, BUT the API requires planet_code form field.
+            // Let's fetch it from the header element text logic (hacky) or store it globally.
+            // Helper: extract from text "Name (111)"
+            const txt = document.getElementById('trade-planet').textContent;
+            const match = txt.match(/\((\d+)\)/);
+            if (!match) { alert("Error: No planet identified"); return; }
+
+            form.append('planet_code', match[1]);
+            form.append('product_code', currentAction.item.code);
+            form.append('quantity', qty);
+            form.append('unit_price', unitPrice); // Trust client? For this app yes.
+
+        } else {
+            endpoint = "/api/games/" + gameId + "/trade/sell";
+            const unitPrice = parseInt(document.getElementById('neg-new-price').textContent);
+            const total = unitPrice * currentAction.item.quantity;
+
+            form.append('order_id', currentAction.id);
+            // Get planet code again
+            const txt = document.getElementById('trade-planet').textContent;
+            const match = txt.match(/\((\d+)\)/);
+            form.append('planet_code', match[1]);
+            form.append('sell_price_total', total);
+        }
+
+        try {
+            const res = await fetch(endpoint, { method: 'POST', body: form });
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert("Error: " + data.detail);
+                return;
+            }
+
+            // Success
+            closeNegotiationModal();
+            loadTradeData(); // Refresh UI
+            showToast("Transacción completada con éxito", "success");
+
+        } catch (e) {
+            console.error(e);
+            alert("Error de conexión");
+        }
+    }
+
+    // Init
+    window.onload = loadTradeData;
+</script>
+{% endblock %}
