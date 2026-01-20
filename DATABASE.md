@@ -1,5 +1,13 @@
 # Documentación de la Base de Datos
 
+## 📚 Documentación Técnica Relacionada
+
+Para información detallada sobre la implementación de la base de datos y modelos SQLAlchemy, consulta:
+
+- **[docs/database.md](docs/database.md)**: Configuración completa de base de datos y modelos
+- **[docs/models.md](docs/models.md)**: Modelos de datos adicionales y esquemas
+- **[docs/main.md](docs/main.md)**: Endpoints de API relacionados con la base de datos
+
 ## Tabla: `planets`
 
 La tabla `planets` contiene toda la información de los 216 planetas del universo Spacegom, basados en el sistema de coordenadas 3d6 (códigos 111-666).

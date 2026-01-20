@@ -9,7 +9,9 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
 
 ## 🌌 Características
 
-### 🚀 Setup de Partida
+### ✅ Sistema Completamente Funcional
+
+#### 🚀 Setup de Partida Completo
 - **Identificación de Compañía y Nave**: Nombres personalizables con sugerencias aleatorias
 - **Determinación de Área**: Tirada de 2d6 para determinar el área espacial (2-12)
 - **Densidad de Mundos**: Tirada de 2d6 con clasificación automática (Baja/Media/Alta)
@@ -19,74 +21,69 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
   - **Validación Automática**: Verifica requisitos de inicio (tecnología, población, convenio, soporte vital, productos)
   - **Búsqueda Consecutiva**: Si el planeta no es apto, busca el siguiente código secuencial automáticamente (111 → 112 → 113...)
   - Actualización de datos faltantes desde el mismo setup
-- **Nave Inicial Bloqueada**: Para nuevas aventuras (herencia), la nave es siempre **Basic Starfall**
+- **Dificultad**: Tres niveles (Fácil: 600 SC, Normal: 500 SC, Difícil: 400 SC)
+- **Personal Inicial**: 11 empleados creados automáticamente (76 SC/mes)
 
-### 🎯 HUD Superior - Estado Crítico
+#### 🎯 HUD Superior - Estado Crítico
 - **Reserva de Combustible**: Indicador visual animado (0-30 unidades)
-- **Capacidad de Carga de la Nave**: Monitor de bodega (40 UCN para Basic Starfall)
-- **Almacén de la Compañía**: Depósito de mercancías en el planeta base (capacidad por definir)
-- **Sistema de Daños**: Tres niveles (Leves, Moderados, Graves)
-  - Alerta crítica "HIPERSALTO DESTRUIDO" en daños graves
-  - Progresión: Leve (3) → Moderado (2) → Grave (2)
+- **Capacidad de Almacén**: Monitor de bodega de la nave (40 UCN para Basic Starfall)
+- **Sistema de Daños**: Tres niveles (Leves, Moderados, Graves) con alerta crítica
 - **Calendario de Campaña**: Seguimiento de meses con **35 días por mes**
 - **Reputación**: Rango dinámico de **-5 a +5** con codificación por colores
+- **Tesorería**: Saldo actual y gastos mensuales
 
-### 🗺️ Vista de Cuadrante - Navegación
-- **Grid Interactivo 6x6**: Representa el área de exploración
+#### 🗺️ Vista de Cuadrante - Navegación Espacial
+- **Grid Interactivo 6x6**: Representa el área de exploración actual
 - **Niebla de Guerra**: Cuadrantes sombreados hasta ser explorados
 - **Marcador de Posición**: Indicador visual de la ubicación actual de la nave
-- **Información Planetaria**: Panel lateral con detalles al seleccionar planetas
-  - Soporte Vital (ej. RF - Respirador con filtraje)
-  - Calidad del Espaciopuerto
-  - Instalaciones Orbitales (Centro de cartografía, Academia, etc.)
-  - Productos disponibles
+- **Información Planetaria Expandida**: Panel lateral con detalles completos:
+  - Soporte Vital, Nivel Tecnológico, Riesgo de Contagio
+  - Espaciopuerto (Calidad, Combustible, Precio de Amarre)
+  - Instalaciones Orbitales (Centro de Cartografía, Academia, etc.)
+  - Productos disponibles y restricciones comerciales
+  - Convenio Spacegom y autosuficiencia
 
-### 👥 Gestión de Tripulación - Bio-Métricas
-- **Tarjetas de Tripulantes**:
-  - Puesto y Nombre
-  - Salario (SC)
-  - Experiencia: Novato / Estándar / Veterano
-  - Indicador de Moral: Baja / Media / Alta
-- **Monitor de Salubridad**: Indicador de riesgos para la tripulación
+#### ⚖️ Terminal de Comercio de Mercancías ⭐ NUEVO
+- **Vista de OFERTA (Comprar)**: Productos disponibles filtrados por capacidad productiva planetaria
+- **Vista de DEMANDA (Vender)**: Carga actual disponible para venta
+- **Negociación con Dados**: Sistema 2d6 con modificadores de reputación y habilidad
+- **Registro de Pedidos (Ledger)**: Historial completo de transacciones con trazabilidad
+- **Lógica de Mercado**: Restricciones de venta local, cooldowns de producción
+- **Precios Dinámicos**: Multiplicadores (0.8x, 1.0x, 1.2x) basados en negociación
 
-### 💰 Terminal Comercial y Tesorería
-- **Sistema de Tesorería Completo** (/treasury):
-  - Saldo actual en Créditos Spacegom (SC)
-  - Registro de ingresos y gastos
-  - Historial detallado de transacciones
-  - Categorías: Comercio, Misión, Suministros, Reparaciones, Combustible, etc.
-  - Resumen de gastos mensuales (salarios + préstamos)
-- **Tabla de Compraventa de Mercancías** (próximamente):
-  - Modificadores de precio dinámicos (x0.8, x1.0, x1.2)
-  - Basado en habilidades del Negociador
+#### ✈️ Transporte de Pasajeros ⭐ NUEVO
+- **Widget en Dashboard**: Visible solo en superficie planetaria
+- **Cálculo Automático**: Capacidad vs demanda con modificadores de auxiliares
+- **Tiradas de Dados**: Determinación de afluencia con impacto en moral/experiencia
+- **Ingresos Dinámicos**: Basados en pasajeros transportados y bonos de experiencia
 
-### 👥 Gestión de Personal
-- **Sistema de Empleados** (/personnel):
-  - 11 empleados iniciales (creados automáticamente en setup)
-  - Contratar nuevo personal con datos completos
-  - Despedir empleados (marca como inactivos)
-  - Experiencia: Novato (N), Experto (E), Veterano (V)
-  - Moral: Baja (B), Media (M), Alta (A)
-  - Salarios mensuales: 76 SC/mes iniciales
-  - Notas personalizadas por empleado
-  - **Cola de Tareas del Director**: Gestión automática de búsquedas de personal en el tiempo
-  - **Resultados con Dados Visuales**: Panel lateral con detalles de la tirada
+#### 👥 Gestión de Personal Avanzada
+- **Sistema de Empleados**: 11 empleados iniciales con datos completos
+- **Contratación Automatizada**: Modal con 29 puestos filtrados por nivel tecnológico
+- **Cola de Tareas del Director**: Gestión ordenada de búsquedas de personal
+- **Avance Temporal**: Resolución automática de eventos con tiradas y modificadores
+- **Moral y Experiencia**: Evolución automática basada en reglas del juego
+- **Salarios Dinámicos**: Ajustes por nivel de experiencia
 
-### 🎯 Gestión de Misiones
-- **Sistema de Misiones** (/missions):
-  - **Objetivos de Campaña**: Tracking de objetivos principales
-  - **Misiones Especiales**: Gestión de misiones del libro (código y página)
-  - **Fechas Límite**: Eventos automáticos en el calendario
-  - **Resolución**: Éxito/Fracaso con impacto en reputación
+#### 💰 Sistema de Tesorería Completo
+- **Saldo Actual**: Créditos Spacegom (SC) con seguimiento en tiempo real
+- **Registro de Transacciones**: Manual con categorías (Comercio, Misión, Suministros, etc.)
+- **Historial Detallado**: Fechas, descripciones, montos con codificación visual
+- **Gastos Mensuales**: Salarios automáticos + préstamos
 
-### 🎯 Sistema de Dificultad
-- **Tres niveles al iniciar partida**:
-  - Fácil: 600 SC iniciales
-  - Normal: 500 SC iniciales
-  - Difícil: 400 SC iniciales
-- Afecta el capital inicial disponible
+#### 🎯 Gestión de Misiones y Eventos
+- **Objetivos de Campaña**: Seguimiento de objetivos principales
+- **Misiones Especiales**: Gestión de misiones del libro (código y página)
+- **Sistema Temporal**: Cola de eventos con resolución automática
+- **Fechas Límite**: Eventos automáticos en el calendario
 
-## 🎨 Estética Visual
+#### 📜 Sistema de Logging
+- **Eventos del Juego**: Registro automático de todas las acciones
+- **Fechas Duales**: Timestamp del juego + timestamp real
+- **Categorización**: Info, Success, Warning, Error
+- **Historial Persistente**: Almacenado en estado del juego
+
+### 🎨 Estética Visual Cyberpunk
 
 - **Paleta de Colores**: Dark mode con slate-950 como base
 - **Bordes Neón**: Cyan (#00f3ff) y verde neón (#00ff9d)
@@ -98,16 +95,19 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
   - Gradientes dinámicos
   - Animaciones suaves en interacciones
   - Background grid de estilo terminal espacial
+  - Efectos de niebla de guerra
+  - Indicadores visuales de daño y estado
 
 ## 🚀 Tecnologías
 
-- **Backend**: FastAPI (Python 3.12+)
-- **Frontend**: HTML + TailwindCSS + HTMX
-- **Base de Datos**: SQLite (216 planetas importados)
-- **Persistencia**: JSON para estado del juego
+- **Backend**: FastAPI (Python 3.12+) con SQLAlchemy ORM
+- **Frontend**: HTML + TailwindCSS + HTMX + JavaScript vanilla
+- **Base de Datos**: SQLite con 216 planetas importados + tablas dinámicas
+- **Persistencia**: JSON para estado del juego + SQLite para datos relacionales
 - **Fonts**: Orbitron, Share Tech Mono (Google Fonts)
-- **Interactividad**: JavaScript vanilla para lógica de juego
-- **Package Manager**: uv
+- **Interactividad**: JavaScript vanilla + HTMX para actualizaciones dinámicas
+- **Package Manager**: uv para gestión de dependencias
+- **Arquitectura**: Modular con separación clara backend/frontend
 
 ## 📦 Instalación y Uso
 
@@ -118,7 +118,7 @@ Aplicación web companion para el juego de mesa/rol **Spacegom**. Sustituye el s
 ### Instalación
 
 ```bash
-# Clonar el repositorio (si aplica)
+# Clonar el repositorio
 git clone <tu-repositorio>
 cd spacegom-web
 
@@ -143,7 +143,11 @@ La aplicación estará disponible en: `http://localhost:8000`
 
 1. **Página principal**: `http://localhost:8000/`
 2. **Nueva Partida**: `http://localhost:8000/setup`
-3. **Panel de Control**: `http://localhost:8000/dashboard`
+3. **Panel de Control**: `http://localhost:8000/dashboard?game_id=X`
+4. **Personal**: `http://localhost:8000/personnel?game_id=X`
+5. **Comercio**: `http://localhost:8000/trade?game_id=X`
+6. **Tesorería**: `http://localhost:8000/treasury?game_id=X`
+7. **Misiones**: `http://localhost:8000/missions?game_id=X`
 
 ## 🎮 Uso del Panel de Control
 
@@ -186,73 +190,138 @@ La aplicación estará disponible en: `http://localhost:8000`
 
 ```
 spacegom-web/
-├── app/
-│   ├── __init__.py
-│   ├── database.py          # Modelos SQLAlchemy y conexión a BD
-│   ├── dice.py              # Utilidades de dados y tiradas
-│   ├── event_handlers.py    # Manejo de eventos del juego
-│   ├── event_logger.py      # Logging de eventos
-│   ├── game_state.py        # Lógica de persistencia del estado del juego
-│   ├── import_planets.py    # Script de importación de datos de planetas
-│   ├── main.py              # FastAPI app y API endpoints
-│   ├── models.py            # Modelos de datos adicionales
-│   ├── name_suggestions.py  # Sugerencias de nombres para compañías y naves
-│   ├── personnel_manager.py # Gestión de personal y empleados
-│   ├── run.py               # Script de ejecución principal
-│   ├── ship_data.py         # Modelos de naves y estadísticas
-│   ├── time_manager.py      # Gestión del tiempo y calendario
-│   ├── trade_manager.py     # Lógica de comercio y transacciones
-│   ├── update_planets_from_excel.py # Actualización de planetas desde Excel
-│   ├── utils.py             # Utilidades generales
-│   ├── static/
-│   │   ├── js/
-│   │       ├── dice-roller.js      # Lógica JavaScript para tiradas de dados
-│   │       └── passenger_transport.js # Gestión de transporte de pasajeros
-│   │   └── templates/
-│   │       ├── base.html           # Template base con estilos
-│   │       ├── dashboard.html      # Panel de control principal
-│   │       ├── dashboard.html.bak
-│   │       ├── dashboard.html.bak2
-│   │       ├── index.html          # Página de inicio
-│   │       ├── logs.html           # Página de logs
-│   │       ├── missions.html       # Gestión de misiones
-│   │       ├── personnel.html      # Gestión de personal
-│   │       ├── personnel.html.bak3
-│   │       ├── setup.html          # Setup de nueva partida
-│   │       ├── trade.html          # Terminal comercial
-│   │       ├── treasury.html       # Tesorería y finanzas
-│   │       └── components/
-│   │           ├── dice_result.html # Componente de resultados de dados
-│   │           └── dice_widget.html # Widget de dados
-├── files/                   # Archivos de datos y materiales de referencia
-│   ├── nombres_megacorp.csv    # 470 nombres de compañías
-│   ├── nombres_naves.csv       # 500 nombres de naves
-│   └── nombres_personal.csv    # 1000 nombres de personal
-├── old_docs/                # Documentación antigua y backups
-│   ├── CONTEXT.md
-│   ├── HiringEndpointsNotes.md
-│   ├── IMPLEMENTACION_CONTRATACION.md
-│   ├── migrate_preserve_planets.py
-│   ├── OLD_CONTEXT_ACTUALIZADO.md
-│   ├── OLD_Implementation.md
-│   └── planets_backup.json
-├── accion_comercio_de_mercancias.md
-├── API.md                   # Documentación de la API
-├── campaña.md
-├── CONTEXT_ACTUALIZADO.md
-├── DATABASE.md              # Documentación de la base de datos
-├── DICE_SYSTEM.md
-├── fix_db.py                # Script para reparar la base de datos
-├── implementacion_transporte_pasajeros.md
-├── primer_objetivo.md
-├── pyproject.toml
-├── README.md
-├── REGLAS_MORAL_EXPERIENCIA.md
-├── review.md
-└── spacegom.sh              # Script de shell para el proyecto
+├── 📄 pyproject.toml          # Configuración de proyecto y dependencias
+├── 📄 spacegom.sh             # Script de automatización
+├── 📄 README.md               # Este archivo
+├── 📄 API.md                  # Documentación de endpoints API
+├── 📄 DATABASE.md             # Documentación de base de datos
+├── 📄 DICE_SYSTEM.md          # Sistema de dados y probabilidades
+├── 📄 CONTEXT_ACTUALIZADO.md  # Contexto actual del proyecto
+├── 📄 REGLAS_MORAL_EXPERIENCIA.md # Reglas de experiencia y moral
+├── 📄 primer_objetivo.md      # Objetivos iniciales del proyecto
+├── 📄 campaña.md              # Sistema de campaña
+├── 📄 review.md               # Revisión del proyecto
+├── 📄 implementacion_transporte_pasajeros.md # Transporte de pasajeros
+├── 📄 accion_comercio_de_mercancias.md # Comercio de mercancías
+├── 📄 fix_db.py               # Script de corrección de base de datos
+├── 📁 app/                    # Código fuente principal
+│   ├── 📄 __init__.py         # Inicialización del paquete
+│   ├── 📄 main.py             # API FastAPI principal
+│   ├── 📄 database.py         # Configuración de base de datos
+│   ├── 📄 models.py           # Modelos SQLAlchemy
+│   ├── 📄 game_state.py       # Gestión del estado del juego
+│   ├── 📄 dice.py             # Sistema de dados
+│   ├── 📄 event_handlers.py   # Manejadores de eventos
+│   ├── 📄 event_logger.py     # Logger de eventos
+│   ├── 📄 personnel_manager.py # Gestión de personal
+│   ├── 📄 trade_manager.py    # Gestión de comercio
+│   ├── 📄 time_manager.py     # Gestión del tiempo
+│   ├── 📄 ship_data.py        # Datos de naves
+│   ├── 📄 name_suggestions.py # Sugerencias de nombres
+│   ├── 📄 import_planets.py   # Importación de planetas
+│   ├── 📄 update_planets_from_excel.py # Actualización de planetas
+│   ├── 📄 utils.py            # Utilidades generales
+│   ├── 📄 run.py              # Script de ejecución
+│   ├── 📁 static/             # Archivos estáticos
+│   │   └── 📁 js/             # JavaScript del frontend
+│   │       ├── 📄 dice-roller.js      # Componente de dados
+│   │       └── 📄 passenger_transport.js # Transporte de pasajeros
+│   └── 📁 templates/          # Plantillas HTML
+│       ├── 📄 base.html       # Plantilla base
+│       ├── 📄 index.html      # Página principal
+│       ├── 📄 setup.html      # Configuración de partida
+│       ├── 📄 dashboard.html  # Panel de control principal
+│       ├── 📄 personnel.html  # Gestión de personal
+│       ├── 📄 trade.html      # Comercio
+│       ├── 📄 treasury.html   # Tesorería
+│       ├── 📄 missions.html   # Misiones
+│       ├── 📄 logs.html       # Logs de eventos
+│       └── 📁 components/     # Componentes reutilizables
+│           ├── 📄 dice_result.html    # Resultado de dados
+│           └── 📄 dice_widget.html    # Widget de dados
+├── 📁 files/                  # Archivos de datos
+│   ├── 📄 nombres_megacorp.csv    # Nombres de megacorps
+│   ├── 📄 nombres_naves.csv       # Nombres de naves
+│   └── 📄 nombres_personal.csv     # Nombres de personal
+├── 📁 docs/                   # Documentación generada
+│   ├── 📄 main.md             # API principal
+│   ├── 📄 database.md         # Base de datos
+│   ├── 📄 models.md           # Modelos de datos
+│   ├── 📄 game_state.md       # Estado del juego
+│   ├── 📄 dice.md             # Sistema de dados
+│   ├── 📄 event_handlers.md   # Manejadores de eventos
+│   ├── 📄 personnel_manager.md # Gestión de personal
+│   ├── 📄 trade_manager.md    # Comercio
+│   ├── 📄 time_manager.md     # Tiempo
+│   ├── 📄 ship_data.md        # Datos de naves
+│   ├── 📄 name_suggestions.md # Sugerencias de nombres
+│   ├── 📄 import_planets.md   # Importación de planetas
+│   ├── 📄 utils.md            # Utilidades
+│   ├── 📄 dice-roller.md      # Dados frontend
+│   ├── 📄 passenger_transport.md # Transporte frontend
+│   ├── 📄 base.html.md        # Plantilla base
+│   ├── 📄 index.html.md       # Página principal
+│   ├── 📄 setup.html.md       # Setup
+│   ├── 📄 dashboard.html.md   # Dashboard
+│   ├── 📄 personnel.html.md   # Personal
+│   ├── 📄 trade.html.md       # Comercio
+│   ├── 📄 treasury.html.md    # Tesorería
+│   ├── 📄 missions.html.md    # Misiones
+│   ├── 📄 logs.html.md        # Logs
+│   ├── 📄 dice_result.html.md # Resultado dados
+│   └── 📄 dice_widget.html.md # Widget dados
+└── 📁 old_docs/               # Documentación antigua
+    ├── 📄 CONTEXT.md
+    ├── 📄 HiringEndpointsNotes.md
+    ├── 📄 IMPLEMENTACION_CONTRATACION.md
+    ├── 📄 migrate_preserve_planets.py
+    ├── 📄 OLD_CONTEXT_ACTUALIZADO.md
+    ├── 📄 OLD_Implementation.md
+    └── 📄 planets_backup.json
 ```
 
-## 📚 Documentación de Referencia
+## 📚 Documentación Técnica Detallada
+
+Se ha generado documentación completa para todos los archivos fuente del proyecto en la carpeta `docs/`:
+
+### Backend (Python)
+- **[main.md](docs/main.md)**: API FastAPI completa con todos los endpoints
+- **[database.md](docs/database.md)**: Configuración de base de datos y modelos SQLAlchemy
+- **[models.md](docs/models.md)**: Modelos de datos adicionales y esquemas
+- **[game_state.md](docs/game_state.md)**: Sistema de persistencia JSON del estado del juego
+- **[dice.md](docs/dice.md)**: Utilidades de dados y generación de códigos planetarios
+- **[event_handlers.md](docs/event_handlers.md)**: Sistema modular de manejo de eventos
+- **[personnel_manager.md](docs/personnel_manager.md)**: Gestión avanzada de empleados y contratación
+- **[trade_manager.md](docs/trade_manager.md)**: Lógica de comercio y negociación
+- **[time_manager.md](docs/time_manager.md)**: Gestión del calendario y tiempo de campaña
+- **[ship_data.md](docs/ship_data.md)**: Modelos de naves y estadísticas
+- **[name_suggestions.md](docs/name_suggestions.md)**: Generación de nombres aleatorios
+- **[import_planets.md](docs/import_planets.md)**: Importación de datos planetarios
+- **[utils.md](docs/utils.md)**: Utilidades generales del proyecto
+
+### Frontend (JavaScript)
+- **[dice-roller.md](docs/dice-roller.md)**: Componente universal de tiradas de dados
+- **[passenger_transport.md](docs/passenger_transport.md)**: Gestión de transporte de pasajeros
+
+### Templates (HTML)
+- **[base.html.md](docs/base.html.md)**: Plantilla base con estilos y navegación
+- **[index.html.md](docs/index.html.md)**: Página principal de bienvenida
+- **[setup.html.md](docs/setup.html.md)**: Asistente completo de configuración de partida
+- **[dashboard.html.md](docs/dashboard.html.md)**: Panel de control principal con HUD
+- **[personnel.html.md](docs/personnel.html.md)**: Gestión de personal y empleados
+- **[trade.html.md](docs/trade.html.md)**: Terminal comercial de mercancías
+- **[treasury.html.md](docs/treasury.html.md)**: Sistema de finanzas y transacciones
+- **[missions.html.md](docs/missions.html.md)**: Gestión de misiones y objetivos
+- **[logs.html.md](docs/logs.html.md)**: Historial de eventos del juego
+- **[dice_result.html.md](docs/dice_result.html.md)**: Componente de resultados de dados
+- **[dice_widget.html.md](docs/dice_widget.html.md)**: Widget interactivo de dados
+
+Cada archivo de documentación incluye:
+- **Descripción completa**: Propósito y funcionalidad del módulo
+- **Dependencias**: Librerías y módulos importados
+- **Funciones/Clases**: Lista detallada con parámetros y retornos
+- **Uso típico**: Ejemplos de implementación
+- **Notas de implementación**: Decisiones técnicas y consideraciones
 
 El proyecto incluye materiales originales del juego de mesa en la carpeta `files/`:
 
@@ -316,7 +385,10 @@ Para más información sobre el proyecto:
 
 - **[API.md](API.md)**: Documentación completa de todos los endpoints de la API REST
 - **[DATABASE.md](DATABASE.md)**: Esquema detallado de la base de datos, campos de la tabla `planets`, ejemplos y consultas útiles
-- **[CONTEXT.md](CONTEXT.md)**: Contexto del proyecto, decisiones de diseño y próximos pasos
+- **[CONTEXT_ACTUALIZADO.md](CONTEXT_ACTUALIZADO.md)**: Contexto del proyecto, decisiones de diseño y próximos pasos
+- **[docs/](docs/)**: Documentación técnica detallada de todos los archivos fuente (28 archivos)
+- **[DICE_SYSTEM.md](DICE_SYSTEM.md)**: Sistema completo de dados y probabilidades
+- **[REGLAS_MORAL_EXPERIENCIA.md](REGLAS_MORAL_EXPERIENCIA.md)**: Reglas de moral y experiencia del personal
 
 ## 📝 Licencia
 

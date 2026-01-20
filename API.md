@@ -2,6 +2,17 @@
 
 Este documento detalla todos los endpoints de la API REST de Spacegom Companion.
 
+## 📚 Documentación Técnica Completa
+
+Para información detallada sobre la implementación de cada módulo, consulta la documentación técnica generada en la carpeta `docs/`:
+
+- **[docs/main.md](docs/main.md)**: Documentación completa de la API FastAPI con todos los endpoints
+- **[docs/database.md](docs/database.md)**: Configuración de base de datos y modelos SQLAlchemy
+- **[docs/models.md](docs/models.md)**: Modelos de datos adicionales y esquemas
+- **[docs/game_state.md](docs/game_state.md)**: Sistema de persistencia del estado del juego
+- **[docs/personnel_manager.md](docs/personnel_manager.md)**: Gestión de personal y contratación
+- **[docs/trade_manager.md](docs/trade_manager.md)**: Lógica de comercio y negociación
+
 ## 🎮 Game Management
 
 ### List All Games
