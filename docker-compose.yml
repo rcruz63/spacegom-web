@@ -4,13 +4,25 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Montamos tu código local para que si cambias algo, se refleje (Hot Reload)
+      # 1. CÓDIGO Y STATIC: Montamos 'app' completo.
+      # Esto incluye 'main.py', rutas, Y TAMBIÉN 'static/js' y templates.
+      # Si modificas un JS o un HTML, se actualiza al instante.
       - ./app:/app/app
+
+      # 2. DATOS DE REFERENCIA (CRÍTICO):
+      # Necesario para que 'name_suggestions.py' encuentre los CSVs.
+      # También permite que la app sirva los PDFs si tienes enlaces a ellos.
       - ./files:/app/files
-      - ./templates:/app/templates
-      # PERSISTENCIA: Esto asegura que tu SQLite y JSON no se borren al apagar el docker
+
+      # 3. PERSISTENCIA:
+      # Asegura que 'spacegom.db' y los JSON de partidas guardadas
+      # sobrevivan si apagas el contenedor.
       - ./data:/app/data
+
     environment:
-      - WATCHFILES_FORCE_POLLING=true # Ayuda al hot-reload en algunos sistemas
-    # Comando modificado para activar el --reload durante el desarrollo
+      # Fuerza a 'watchfiles' a usar polling, vital para que el
+      # hot-reload funcione bien en Docker sobre Windows/Mac
+      - WATCHFILES_FORCE_POLLING=true
+      
+    # Sobrescribimos el comando para activar --reload
     command: /app/.venv/bin/uvicorn main:app --app-dir app --host 0.0.0.0 --port 8000 --reload

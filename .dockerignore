@@ -3,7 +3,10 @@
 __pycache__
 *.pyc
 .DS_Store
+# Ignoramos la DB local para no sobrescribir la del contenedor al construir,
+# pero la persistiremos con volúmenes en el docker-compose.
 data/spacegom.db
 data/*.json
-files/*
-old_docs/*
+# Ignoramos documentación generada para aligerar la imagen
+docs/
+old_docs/

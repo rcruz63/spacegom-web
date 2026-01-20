@@ -2,7 +2,7 @@
 
 ## 📝 Resumen Ejecutivo
 
-Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema Completo + Documentación Técnica Exhaustiva (28 archivos) - Totalmente Funcional y Preparado para Continuación por Otros Desarrolladores**.
+Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema Completo + Documentación Técnica Exhaustiva (29 archivos) - Totalmente Funcional y Preparado para Continuación por Otros Desarrolladores**.
 
 ---
 
@@ -56,7 +56,7 @@ Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrol
    - Gestión de tesorería y misiones de campaña operativa.
 
 9. **Documentación Técnica Completa** 📚 ⭐ NUEVO
-   - **28 archivos de documentación** generados automáticamente en `docs/`
+   - **29 archivos de documentación** generados automáticamente en `docs/`
    - **Cobertura completa**: Todos los módulos Python, JS y HTML templates
    - **Detalles técnicos**: Funciones, clases, dependencias, ejemplos de uso
    - **README actualizado**: Estructura completa del proyecto y guías de instalación
@@ -162,7 +162,7 @@ spacegom-web/
 **Endpoints Nuevos**: ~20 total
 **Tablas Nuevas**: 3 (`employee_tasks`, `missions`, `trade_orders`)
 **Funcionalidades Completas**: 5 (Personal, Tiempo, Notificaciones, Misiones, Comercio)
-**Archivos de Documentación**: 28 archivos técnicos completos en `docs/`
+**Archivos de Documentación**: 29 archivos técnicos completos en `docs/`
 **Cobertura de Documentación**: 100% (todos los módulos Python, JS y HTML)
 
 ---

@@ -372,6 +372,166 @@ La tabla `missions` gestiona tanto los objetivos de campaña como las misiones e
 
 ---
 
+## Tabla: `trade_orders`
+
+La tabla `trade_orders` gestiona el sistema de comercio de mercancías entre planetas. Cada fila representa un pedido de compra/venta en la terminal comercial.
+
+### Esquema de la Tabla
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | INTEGER | Clave primaria (autoincremental) |
+| `game_id` | VARCHAR | ID del juego al que pertenece el pedido |
+| `area` | INTEGER | Área espacial donde se realiza el comercio (1-12) |
+
+#### Información de Compra
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `buy_planet_code` | INTEGER | Código del planeta donde se compra (111-666) |
+| `buy_planet_name` | VARCHAR | Nombre del planeta de compra (cache) |
+| `product_code` | VARCHAR | Código del producto (INDU, BASI, ALIM, etc.) |
+| `quantity` | INTEGER | Cantidad en Unidades de Crédito Normalizado (UCN) |
+| `buy_price_per_unit` | INTEGER | Precio de compra por unidad (SC) |
+| `total_buy_price` | INTEGER | Precio total de compra (SC) |
+| `buy_date` | VARCHAR | Fecha de compra (formato YYYY-MM-DD) |
+
+#### Información de Venta
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `sell_planet_code` | INTEGER | Código del planeta donde se vende (opcional) |
+| `sell_planet_name` | VARCHAR | Nombre del planeta de venta (opcional, cache) |
+| `sell_price_total` | INTEGER | Precio total de venta (SC, opcional) |
+| `sell_date` | VARCHAR | Fecha de venta (formato YYYY-MM-DD, opcional) |
+| `profit` | INTEGER | Ganancia/pérdida calculada (SC, opcional) |
+
+#### Estado y Control
+| Campo | Tipo | Valores Posibles | Descripción |
+|-------|------|------------------|-------------|
+| `status` | VARCHAR | "in_transit", "sold" | Estado del pedido |
+| `traceability` | BOOLEAN | true, false | Cumple Convenio Spacegom (afecta ventas) |
+
+#### Metadata
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `created_at` | VARCHAR | Timestamp de creación del registro |
+| `updated_at` | VARCHAR | Timestamp de última actualización |
+
+### Reglas de Negocio
+
+#### Límite por Área
+- **Máximo 25 pedidos** por área espacial
+- Controlado por lógica de aplicación (no constraint de BD)
+
+#### Trazabilidad del Convenio
+- **True**: Pedido cumple Convenio Spacegom
+- **False**: Perdida de trazabilidad (venta en planetas no adscritos)
+- Afecta restricciones de venta en mercados locales
+
+#### Estados del Pedido
+- **"in_transit"**: Comprado y almacenado (o en proceso de carga)
+- **"sold"**: Vendido y completado
+
+### Ejemplo de Registro
+
+**Pedido de compra de productos industriales:**
+
+```sql
+SELECT * FROM trade_orders WHERE id = 1;
+```
+
+```
+id: 1
+game_id: game_123
+area: 7
+buy_planet_code: 245
+buy_planet_name: "Aldoria Prime"
+product_code: "INDU"
+quantity: 50
+buy_price_per_unit: 8
+total_buy_price: 400
+buy_date: "2026-01-15"
+sell_planet_code: NULL
+sell_planet_name: NULL
+sell_price_total: NULL
+sell_date: NULL
+profit: NULL
+status: "in_transit"
+traceability: true
+created_at: "2026-01-15T10:30:00Z"
+updated_at: "2026-01-15T10:30:00Z"
+```
+
+### Consultas Útiles
+
+#### Pedidos activos por área
+```sql
+SELECT product_code, quantity, total_buy_price, buy_date
+FROM trade_orders
+WHERE game_id = 'game_123'
+  AND area = 7
+  AND status = 'in_transit'
+ORDER BY buy_date DESC;
+```
+
+#### Historial de ganancias/pérdidas
+```sql
+SELECT 
+    product_code,
+    quantity,
+    total_buy_price,
+    sell_price_total,
+    profit,
+    (profit * 100.0 / total_buy_price) as profit_percentage
+FROM trade_orders
+WHERE game_id = 'game_123'
+  AND status = 'sold'
+  AND profit IS NOT NULL
+ORDER BY profit DESC;
+```
+
+#### Pedidos sin trazabilidad
+```sql
+SELECT buy_planet_name, product_code, quantity
+FROM trade_orders
+WHERE game_id = 'game_123'
+  AND traceability = false
+  AND status = 'in_transit';
+```
+
+#### Resumen por área
+```sql
+SELECT 
+    area,
+    COUNT(*) as total_orders,
+    SUM(CASE WHEN status = 'in_transit' THEN 1 ELSE 0 END) as in_transit,
+    SUM(CASE WHEN status = 'sold' THEN profit ELSE 0 END) as total_profit
+FROM trade_orders
+WHERE game_id = 'game_123'
+GROUP BY area
+ORDER BY area;
+```
+
+### Integración con Frontend
+
+#### API Endpoints Relacionados
+- `GET /api/games/{game_id}/trade/orders` - Lista pedidos por área
+- `POST /api/games/{game_id}/trade/buy` - Crear pedido de compra
+- `POST /api/games/{game_id}/trade/sell` - Ejecutar venta
+
+#### Flujo Típico
+1. **Compra**: Usuario selecciona producto → Se crea registro con `status = "in_transit"`
+2. **Viaje**: Nave transporta mercancía entre planetas
+3. **Venta**: Usuario vende → Se actualizan campos de venta y `profit`
+
+### Notas de Implementación
+
+- Los precios se negocian con tiradas de dados (2d6 + modificadores)
+- La trazabilidad se pierde automáticamente al vender en planetas no adscritos al Convenio
+- Los pedidos "in_transit" consumen espacio de almacén de la nave
+- El límite de 25 pedidos por área previene spam y mantiene jugabilidad
+
+---
+
 ## Tabla: `employee_tasks`
 
 La tabla `employee_tasks` gestiona la cola de trabajo del Director Gerente y otros empleados, principalmente para búsquedas de personal.
@@ -395,5 +555,5 @@ La tabla `employee_tasks` gestiona la cola de trabajo del Director Gerente y otr
 
 ---
 
-**Última actualización**: 2026-01-18
-**Versión del esquema**: v3.0 (Misiones + Tareas de Empleado)
+**Última actualización**: 2026-01-20
+**Versión del esquema**: v3.1 (Misiones + Comercio + Tareas de Empleado)

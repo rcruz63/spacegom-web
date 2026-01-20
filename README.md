@@ -289,6 +289,7 @@ Se ha generado documentación completa para todos los archivos fuente del proyec
 - **[database.md](docs/database.md)**: Configuración de base de datos y modelos SQLAlchemy
 - **[models.md](docs/models.md)**: Modelos de datos adicionales y esquemas
 - **[game_state.md](docs/game_state.md)**: Sistema de persistencia JSON del estado del juego
+- **[state_file.md](docs/state_file.md)**: Estructura completa del archivo state.json y campos del estado del juego
 - **[dice.md](docs/dice.md)**: Utilidades de dados y generación de códigos planetarios
 - **[event_handlers.md](docs/event_handlers.md)**: Sistema modular de manejo de eventos
 - **[personnel_manager.md](docs/personnel_manager.md)**: Gestión avanzada de empleados y contratación
