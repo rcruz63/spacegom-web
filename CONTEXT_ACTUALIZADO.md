@@ -2,7 +2,7 @@
 
 ## 📝 Resumen Ejecutivo
 
-Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema Completo + Documentación Técnica Exhaustiva (29 archivos) - Totalmente Funcional y Preparado para Continuación por Otros Desarrolladores**.
+Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrollada con FastAPI. Estado actual: **Sistema Completo + Documentación Técnica Exhaustiva (31 archivos) - Totalmente Funcional y Preparado para Continuación por Otros Desarrolladores**.
 
 ---
 
@@ -56,10 +56,25 @@ Aplicación web para gestionar partidas del juego de mesa **Spacegom**, desarrol
    - Gestión de tesorería y misiones de campaña operativa.
 
 9. **Documentación Técnica Completa** 📚 ⭐ NUEVO
-   - **29 archivos de documentación** generados automáticamente en `docs/`
+   - **31 archivos de documentación** generados automáticamente en `docs/`
    - **Cobertura completa**: Todos los módulos Python, JS y HTML templates
    - **Detalles técnicos**: Funciones, clases, dependencias, ejemplos de uso
    - **README actualizado**: Estructura completa del proyecto y guías de instalación
+
+10. **Integración AWS DynamoDB** 🚀 ⭐ NUEVO
+   - **Módulo `aws_setup.py`**: Configuración de infraestructura en AWS
+   - **Tabla SpacegomPlanets**: Simple PK para almacenar datos de planetas
+   - **Tabla SpacegomGames**: Single Table Design (PK + SK) para datos de juegos
+   - **Manejo de errores graceful**: Detecta si tablas ya existen
+   - **Documentación completa**: Guía de desarrollo local y AWS real
+
+11. **Script de Migración DynamoDB** 🔄 ⭐ NUEVO
+   - **Módulo `migrate_to_dynamodb.py`**: Migración completa de datos
+   - **Planetas**: SQLite → DynamoDB (216 planetas)
+   - **Partidas**: JSON state.json → DynamoDB con Single Table Design
+   - **Estrategia Split**: Manejo inteligente de items > 400KB
+   - **Batch Operations**: Migraciones eficientes y rápidas
+   - **Manejo de errores**: Graceful degradation y continuidad
 
 ---
 

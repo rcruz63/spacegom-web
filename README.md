@@ -290,6 +290,8 @@ Se ha generado documentación completa para todos los archivos fuente del proyec
 - **[models.md](docs/models.md)**: Modelos de datos adicionales y esquemas
 - **[game_state.md](docs/game_state.md)**: Sistema de persistencia JSON del estado del juego
 - **[state_file.md](docs/state_file.md)**: Estructura completa del archivo state.json y campos del estado del juego
+- **[aws_setup.md](docs/aws_setup.md)**: Configuración de infraestructura DynamoDB en AWS ⭐ NUEVO
+- **[migrate_to_dynamodb.md](docs/migrate_to_dynamodb.md)**: Script de migración de datos SQLite/JSON a DynamoDB ⭐ NUEVO
 - **[dice.md](docs/dice.md)**: Utilidades de dados y generación de códigos planetarios
 - **[event_handlers.md](docs/event_handlers.md)**: Sistema modular de manejo de eventos
 - **[personnel_manager.md](docs/personnel_manager.md)**: Gestión avanzada de empleados y contratación

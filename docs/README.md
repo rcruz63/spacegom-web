@@ -8,6 +8,8 @@ Esta documentación cubre todos los archivos fuente del proyecto Spacegom-web, u
 - [main.py](main.md) - API principal de FastAPI con todos los endpoints
 - [game_state.py](game_state.md) - Gestión del estado persistente del juego
 - [database.py](database.md) - Modelos SQLAlchemy y conexión a BD
+- [aws_setup.py](aws_setup.md) - Configuración de infraestructura DynamoDB en AWS ⭐ NUEVO
+- [migrate_to_dynamodb.py](migrate_to_dynamodb.md) - Script de migración de datos SQLite/JSON a DynamoDB ⭐ NUEVO
 - [dice.py](dice.md) - Utilidades de tiradas de dados
 - [ship_data.py](ship_data.md) - Modelos de naves y estadísticas
 - [import_planets.py](import_planets.md) - Script de importación de datos de planetas
@@ -57,6 +59,7 @@ El proyecto sigue una arquitectura web típica con FastAPI como backend, SQLite 
 - Jinja2 para templates
 - HTMX para interacciones dinámicas
 - TailwindCSS para estilos
+- **Boto3 para integración con AWS DynamoDB** ⭐ NUEVO
 
 ## Cómo Usar Esta Documentación
 
