@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import Planet, TradeOrder
 from app.game_state import GameState
 from app.dice import DiceRoller
+from app.time_manager import GameCalendar
 
 # Trading Constants from Manual (Page 1)
 # Code: {buy_price, sell_price, production_days, demand_days}
@@ -240,12 +241,26 @@ class TradeManager:
         self.db.commit()
         
         # Log Transaction
+        game_date_str = GameCalendar.date_to_string(
+            self.game_state.state.get("year", 1),
+            self.game_state.state.get("month", 1),
+            self.game_state.state.get("day", 1)
+        )
+
         self.game_state.state["transactions"].append({
-            "date": datetime.now().isoformat(),
+            "date": game_date_str,
             "amount": -total_cost,
             "description": f"Compra {quantity} UCN de {product_code}",
             "category": "Comercio"
         })
+        
+        # Update Cargo State (for UI/JSON simplicity)
+        if "cargo" not in self.game_state.state:
+            self.game_state.state["cargo"] = {}
+            
+        current_qty = self.game_state.state["cargo"].get(product_code, 0)
+        self.game_state.state["cargo"][product_code] = current_qty + quantity
+        
         self.game_state.save()
         
         return {"success": True, "order_id": new_order.id, "balance": self.game_state.state["treasury"]}
@@ -279,12 +294,28 @@ class TradeManager:
         self.game_state.update(treasury=self.game_state.state["treasury"])
         
         # Log Transaction
+        game_date_str = GameCalendar.date_to_string(
+            self.game_state.state.get("year", 1),
+            self.game_state.state.get("month", 1),
+            self.game_state.state.get("day", 1)
+        )
+
         self.game_state.state["transactions"].append({
-            "date": datetime.now().isoformat(),
+            "date": game_date_str,
             "amount": sell_price_total,
             "description": f"Venta {order.quantity} UCN de {order.product_code}",
             "category": "Comercio"
         })
+        
+        # Update Cargo State
+        if "cargo" in self.game_state.state and order.product_code in self.game_state.state["cargo"]:
+            current_qty = self.game_state.state["cargo"][order.product_code]
+            new_qty = max(0, current_qty - order.quantity)
+            if new_qty == 0:
+                del self.game_state.state["cargo"][order.product_code]
+            else:
+                self.game_state.state["cargo"][order.product_code] = new_qty
+        
         self.game_state.save()
         
         return {"success": True, "profit": order.profit, "balance": self.game_state.state["treasury"]}

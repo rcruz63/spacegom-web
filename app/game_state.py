@@ -170,8 +170,15 @@ class GameState:
     
     def add_event(self, event_type: str, description: str, data: Optional[Dict] = None):
         """Add event to history"""
+        # Calculate current game date
+        year = self.state.get('year', 1)
+        month = self.state.get('month', 1)
+        day = self.state.get('day', 1)
+        game_date = f"{day:02d}-{month:02d}-{year}"
+
         event = {
             "timestamp": datetime.now().isoformat(),
+            "game_date": game_date,
             "type": event_type,
             "description": description,
             "data": data or {}
