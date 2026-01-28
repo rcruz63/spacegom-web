@@ -51,9 +51,9 @@ Me gustan los adornos, te introducen en el juego, pero además necesitaría que 
 
 ## review 5
 
-- Despues de Inicar Embarque el botón sigue activo
+- Despues de Inicar Embarque el botón sigue activo, solo se permite un embarque por mundo hasta que se salga del cuadrante y se vuelva.
 - No se muestra la imagen de los dados en la tirada de negociar compra de mercancia
-- Se compra el maximo de una mercancia y sigue activo el boton, debería desactivarse hasta que se salga del cuadrante y se vuelva
+- Las negociaciones consumen un dia por producto.
 - Teniendo una capacidad de 40, no veo donde se descuenta, podría comprar por encima de la capacidad
 - las compras de mercadería no aparecen en el log
-- despues de comprar esta la tarea de cargar que se tarda un tiempo, deberían ser tareas disparadas por eventos
+- despues de comprar esta la tarea de cargar que se tarda un tiempo que no se ha implementado

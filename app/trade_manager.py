@@ -9,6 +9,7 @@ from app.database import Planet, TradeOrder
 from app.game_state import GameState
 from app.dice import DiceRoller
 from app.time_manager import GameCalendar
+import math
 
 # Trading Constants from Manual (Page 1)
 # Code: {buy_price, sell_price, production_days, demand_days}
@@ -93,11 +94,16 @@ class TradeManager:
             
             if last_order:
                 # Calculate days passed since buy_date
-                # Assuming buy_date is saved as "YYYY-MM-DD" or similar, need parsing or storing simpler
-                # For now assuming simple string comparison isn't enough, we need game logic
-                # Let's rely on a helper to parse date if needed, or assume last_order is old enough for MVP
-                # TODO: Implement precise date diff
-                pass 
+                current_date_str = GameCalendar.date_to_string(
+                    self.game_state.state.get("year", 1),
+                    self.game_state.state.get("month", 1),
+                    self.game_state.state.get("day", 1)
+                )
+                
+                days_passed = GameCalendar.days_between(last_order.buy_date, current_date_str)
+                prod_days = product_info["prod_days"]
+                if days_passed < prod_days:
+                    on_cooldown = True
             
             buy_options.append({
                 "code": code,
@@ -108,7 +114,8 @@ class TradeManager:
                 "prod_days": product_info["prod_days"],
                 "demand_days": product_info["demand_days"],
                 "max_ucn": planet.ucn_per_order, # From Planet stats
-                "cooldown": on_cooldown
+                "cooldown": on_cooldown,
+                "days_remaining": max(0, product_info["prod_days"] - days_passed) if last_order else 0
             })
 
         # --- SELL OPTIONS (What I have in cargo that I can sell) ---
@@ -118,20 +125,43 @@ class TradeManager:
             TradeOrder.status == "in_transit"
         ).all()
         
+        # Calculate current date once
+        current_date_str = GameCalendar.date_to_string(
+            self.game_state.state.get("year", 1),
+            self.game_state.state.get("month", 1),
+            self.game_state.state.get("day", 1)
+        )
+        
         for order in active_orders:
             # Check if this planet buys this product (Demand)
             # Rule: Planets demand products they DON'T produce.
-            # Manual: "Estos códigos son los que no hayas marcado con 'X'..." (Available to SELL = NOT Produced)
-            
             is_produced_here = capabilities.get(order.product_code, False)
             if is_produced_here:
                 continue
 
             # Check demand cooldown
             # Find most recent sell of this product at this planet
-            # last_sell = ...
+            last_sell = self.db.query(TradeOrder).filter(
+                TradeOrder.game_id == self.game_id,
+                TradeOrder.sell_planet_code == planet_code,
+                TradeOrder.product_code == order.product_code,
+                TradeOrder.status == "sold"
+            ).order_by(TradeOrder.sell_date.desc()).first()
+            
+            can_sell = True
+            days_remaining = 0
             
             product_info = TRADE_PRODUCTS.get(order.product_code, {})
+            demand_days = product_info.get("demand_days", 30)
+            
+            if last_sell:
+                # We need sell_date. If stored as string "DD-MM-YYYY", we parse it.
+                # Assuming sell_date format matches GameCalendar
+                if last_sell.sell_date:
+                     days_passed = GameCalendar.days_between(last_sell.sell_date, current_date_str)
+                     if days_passed < demand_days:
+                         can_sell = False
+                         days_remaining = demand_days - days_passed
             
             sell_options.append({
                 "order_id": order.id,
@@ -140,13 +170,149 @@ class TradeManager:
                 "quantity": order.quantity,
                 "buy_price": order.total_buy_price,
                 "base_sell_price_unit": product_info.get("sell", 0),
-                "can_sell": True # Logic for cooldown here
+                "can_sell": can_sell,
+                "days_remaining": days_remaining
             })
             
         return {
             "buy": buy_options,
             "sell": sell_options,
             "planet_ucn_limit": planet.ucn_per_order
+        }
+
+    def calculate_loading_time(self, total_ucn: int) -> int:
+        """
+        Calculate loading days based on Logistics Operators
+        Rule: 
+        - Roll 2d6 for each 'Operario de logística y almacén'
+        - >= 7: 10 UCN/day
+        - < 7: 5 UCN/day
+        - If no operators: 5 UCN/day (Base rate)
+        """
+        from app.database import Personnel
+        
+        logistics_ops = self.db.query(Personnel).filter(
+            Personnel.game_id == self.game_id,
+            Personnel.position == "Operario de logística y almacén",
+            Personnel.is_active == True
+        ).all()
+        
+        daily_rate = 0
+        dice_details = []
+        
+        if not logistics_ops:
+            daily_rate = 5 # Base valid for non-specialists? A bit generous but enables play.
+        else:
+            for op in logistics_ops:
+                # Roll 2d6
+                roll = sum(DiceRoller.roll_dice(2))
+                
+                # Apply modifiers
+                exp_mod = {"N": -1, "E": 0, "V": 1}.get(op.experience, 0)
+                morale_mod = {"B": -1, "M": 0, "A": 1}.get(op.morale, 0)
+                
+                total = roll + exp_mod + morale_mod
+                
+                rate = 10 if total >= 7 else 5
+                daily_rate += rate
+                dice_details.append({"name": op.name, "roll": total, "rate": rate})
+                
+        days_needed = math.ceil(total_ucn / daily_rate)
+        return days_needed
+
+    def execute_batch_buy(self, items: List[Dict], planet_code: int) -> Dict:
+        """
+        Execute a batch of buy orders (Shopping Basket).
+        Returns success, total cost, and loading time details.
+        items: List of {"product_code": str, "quantity": int, "unit_price": int}
+        """
+        total_cost_all = 0
+        total_ucn_all = 0
+        
+        # 1. Validate ALL items first
+        current_storage = self.game_state.state.get("storage", 0)
+        max_storage = self.game_state.state.get("storage_max", 40)
+        treasury = self.game_state.state.get("treasury", 0)
+        
+        for item in items:
+            qty = item["quantity"]
+            price = item["unit_price"]
+            total_ucn_all += qty
+            total_cost_all += (qty * price)
+            
+        if current_storage + total_ucn_all > max_storage:
+             return {"success": False, "error": f"Capacidad insuficiente para el lote completo. Espacio: {max_storage - current_storage} UCN"}
+             
+        if treasury < total_cost_all:
+             return {"success": False, "error": f"Fondos insuficientes. Coste total: {total_cost_all} SC"}
+             
+        # 2. Execute Each Order
+        created_orders = []
+        current_date_str = GameCalendar.date_to_string(
+            self.game_state.state.get("year", 1),
+            self.game_state.state.get("month", 1),
+            self.game_state.state.get("day", 1)
+        )
+        
+        from app.event_logger import EventLogger
+        
+        for item in items:
+            # Deduct funds
+            curr_cost = item["quantity"] * item["unit_price"]
+            self.game_state.state["treasury"] -= curr_cost
+            
+            # Create Order
+            new_order = TradeOrder(
+                game_id=self.game_id,
+                area=self.game_state.state.get("area", 0),
+                buy_planet_code=planet_code,
+                buy_planet_name="", 
+                product_code=item["product_code"],
+                quantity=item["quantity"],
+                buy_price_per_unit=item["unit_price"],
+                total_buy_price=curr_cost,
+                buy_date=current_date_str,
+                traceability=True, # Default True
+                status="in_transit"
+            )
+            self.db.add(new_order)
+            self.db.commit() # Commit to get ID
+            created_orders.append(new_order.id)
+            
+            # Log Transaction
+            self.game_state.state["transactions"].append({
+                "date": current_date_str,
+                "amount": -curr_cost,
+                "description": f"Compra {item['quantity']} UCN de {item['product_code']}",
+                "category": "Comercio"
+            })
+            
+            # Update Cargo Cache
+            if "cargo" not in self.game_state.state:
+                self.game_state.state["cargo"] = {}
+            curr_c = self.game_state.state["cargo"].get(item["product_code"], 0)
+            self.game_state.state["cargo"][item["product_code"]] = curr_c + item["quantity"]
+
+        # Update Storage Global
+        self.game_state.state["storage"] += total_ucn_all
+        
+        # 3. Calculate Loading Time
+        loading_days = self.calculate_loading_time(total_ucn_all)
+        
+        # Log Event
+        EventLogger._log_to_game(
+            self.game_state,
+            f"🛒 Compra Lote: {len(items)} productos, {total_ucn_all} UCN total. Coste: {total_cost_all} SC. Tiempo de carga: {loading_days} días.",
+            "info"
+        )
+        
+        self.game_state.save()
+        
+        return {
+            "success": True, 
+            "total_cost": total_cost_all,
+            "loading_days": loading_days,
+            "orders": created_orders
         }
 
     def negotiate_price(self, negotiator_skill: int, reputation: int, is_buy: bool, manual_roll: Optional[int] = None) -> Dict:
@@ -189,6 +355,12 @@ class TradeManager:
             multiplier = 0.8 if is_buy else 1.2
             moral_effect = "Gain"
             
+        if is_buy:
+            days_consumed = 1
+        else:
+            # 1D6 for selling
+            days_consumed = DiceRoller.roll_dice(1)[0]
+            
         return {
             "roll": roll,
             "dice": dice,
@@ -196,7 +368,8 @@ class TradeManager:
             "total": total,
             "multiplier": multiplier,
             "moral_effect": moral_effect,
-            "is_manual": is_manual
+            "is_manual": is_manual,
+            "days_consumed": days_consumed
         }
 
     def _get_game_date_value(self):
@@ -211,17 +384,26 @@ class TradeManager:
         1. Check treasury
         2. Deduct cost
         3. Create TradeOrder
-        4. Create Cargo Loading Event (not implemented fully here, but placeholder)
         """
         total_cost = quantity * unit_price
         
+        # Check Storage Capacity
+        current_storage = self.game_state.state.get("storage", 0)
+        max_storage = self.game_state.state.get("storage_max", 40)
+        
+        if current_storage + quantity > max_storage:
+            return {"success": False, "error": f"Capacidad insuficiente. Espacio: {max_storage - current_storage} UCN"}
+
         # Check Treasury
         if self.game_state.state.get("treasury", 0) < total_cost:
-            return {"success": False, "error": "Insufficient funds"}
+            return {"success": False, "error": "Fondos insuficientes"}
             
         # Deduct Cost
         self.game_state.state["treasury"] -= total_cost
         self.game_state.update(treasury=self.game_state.state["treasury"])
+        
+        # Update Storage
+        self.game_state.state["storage"] = current_storage + quantity
         
         # Create Trade Order
         new_order = TradeOrder(
@@ -253,6 +435,14 @@ class TradeManager:
             "description": f"Compra {quantity} UCN de {product_code}",
             "category": "Comercio"
         })
+        
+        # Log Event
+        from app.event_logger import EventLogger
+        EventLogger._log_to_game(
+            self.game_state,
+            f"🛒 Compra realizada: {quantity} UCN de {product_code} por {total_cost} SC",
+            "info"
+        )
         
         # Update Cargo State (for UI/JSON simplicity)
         if "cargo" not in self.game_state.state:
@@ -293,6 +483,10 @@ class TradeManager:
         self.game_state.state["treasury"] += sell_price_total
         self.game_state.update(treasury=self.game_state.state["treasury"])
         
+        # Update Storage
+        current_storage = self.game_state.state.get("storage", 0)
+        self.game_state.state["storage"] = max(0, current_storage - order.quantity)
+        
         # Log Transaction
         game_date_str = GameCalendar.date_to_string(
             self.game_state.state.get("year", 1),
@@ -306,6 +500,14 @@ class TradeManager:
             "description": f"Venta {order.quantity} UCN de {order.product_code}",
             "category": "Comercio"
         })
+        
+        # Log Event
+        from app.event_logger import EventLogger
+        EventLogger._log_to_game(
+            self.game_state,
+            f"💰 Venta realizada: {order.quantity} UCN de {order.product_code} por {sell_price_total} SC (Beneficio: {order.profit} SC)",
+            "success"
+        )
         
         # Update Cargo State
         if "cargo" in self.game_state.state and order.product_code in self.game_state.state["cargo"]:

@@ -37,6 +37,32 @@
             <div id="buy-list" class="space-y-2">
                 <div class="text-gray-500 italic text-center py-4">Cargando mercado...</div>
             </div>
+
+            <!-- SHOPPING CART -->
+            <div id="shopping-cart-section" class="mt-6 border-t border-gray-700 pt-4 hidden">
+                <h4 class="text-lg font-orbitron text-orange-400 mb-2">CESTA DE COMPRA</h4>
+                <div id="cart-items" class="space-y-2 mb-4"></div>
+
+                <div class="bg-space-900 p-3 rounded border border-gray-700 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Total UCN:</span>
+                        <span id="cart-total-ucn" class="text-white font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Coste Total:</span>
+                        <span id="cart-total-cost" class="text-neon-green font-bold">0 SC</span>
+                    </div>
+                    <div class="flex justify-between mt-1 pt-1 border-t border-gray-700">
+                        <span class="text-gray-500 text-xs">Tiempo Carga Est.:</span>
+                        <span id="cart-est-time" class="text-neon-blue text-xs">--</span>
+                    </div>
+                </div>
+
+                <button onclick="checkout()"
+                    class="w-full mt-3 py-2 bg-neon-green text-black font-bold rounded hover:bg-green-400 font-orbitron">
+                    FINALIZAR COMPRA
+                </button>
+            </div>
         </div>
 
         <!-- SELL SECTION -->
@@ -124,14 +150,17 @@
         <!-- Step 2: Result & Confirmation -->
         <div id="neg-step-2" class="hidden space-y-4">
             <!-- Results Display -->
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-space-800 p-3 rounded">
-                    <div class="text-[10px] uppercase text-gray-500">Tirada</div>
-                    <div id="neg-roll-res" class="text-xl text-white font-bold">--</div>
+            <!-- Results Display -->
+            <div class="space-y-3">
+                <div class="bg-space-800 p-3 rounded text-center border border-gray-700">
+                    <div class="text-[10px] uppercase text-gray-500 mb-2">Tirada (2d6)</div>
+                    <div id="neg-dice-container" class="flex justify-center gap-3 mb-2 min-h-[40px]"></div>
+                    <div id="neg-roll-res" class="text-sm text-gray-400 font-bold">--</div>
                 </div>
-                <div class="bg-space-800 p-3 rounded">
-                    <div class="text-[10px] uppercase text-gray-500">Resultado</div>
-                    <div id="neg-outcome" class="text-xl font-bold">--</div>
+
+                <div class="bg-space-800 p-3 rounded text-center border border-gray-700">
+                    <div class="text-[10px] uppercase text-gray-500">Resultado Negociación</div>
+                    <div id="neg-outcome" class="text-xl font-bold mt-1">--</div>
                 </div>
             </div>
 
@@ -161,7 +190,7 @@
                     class="flex-1 py-2 border border-gray-600 rounded text-gray-300 hover:bg-gray-800">
                     Rechazar
                 </button>
-                <button onclick="confirmTrade()" id="btn-confirm-trade"
+                <button onclick="handleTradeAction()" id="btn-confirm-trade"
                     class="flex-1 py-2 bg-neon-green text-black font-bold rounded hover:bg-green-400 shadow-[0_0_10px_rgba(0,255,157,0.3)]">
                     CONFIRMAR
                 </button>
@@ -174,6 +203,7 @@
     let currentMarketData = null;
     let currentAction = null; // {type: 'buy'|'sell', item: object}
     let negotiationResult = null;
+    let cart = [];
 
     async function loadTradeData() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -226,6 +256,23 @@
             data.buy.forEach(item => {
                 const el = document.createElement('div');
                 el.className = 'flex justify-between items-center bg-space-800 p-3 rounded border border-gray-700 hover:border-gray-500';
+
+                // Check if already in cart
+                const inCart = cart.find(c => c.product_code === item.code);
+
+                let btnHtml = '';
+                if (item.cooldown) {
+                    btnHtml = `<span class="text-xs text-red-400">En espera (${item.days_remaining}d)</span>`;
+                } else if (inCart) {
+                    btnHtml = `<span class="text-xs text-neon-blue">En Cesta</span>`;
+                } else {
+                    btnHtml = `
+                    <button onclick="openNegotiation('buy', '${item.code}')" 
+                                class="px-3 py-1 bg-neon-green bg-opacity-10 text-neon-green border border-neon-green rounded text-xs hover:bg-opacity-20 transition-colors">
+                            NEGOCIAR
+                    </button>`;
+                }
+
                 el.innerHTML = `
                     <div class="flex-1">
                         <div class="flex justify-between items-start">
@@ -243,10 +290,7 @@
                         </div>
                     </div>
                     <div class="ml-3 flex flex-col items-end gap-1">
-                        <button onclick="openNegotiation('buy', '${item.code}')" 
-                                class="px-3 py-1 bg-neon-green bg-opacity-10 text-neon-green border border-neon-green rounded text-xs hover:bg-opacity-20 transition-colors">
-                            NEGOCIAR
-                        </button>
+                        ${btnHtml}
                     </div>
                 `;
                 buyList.appendChild(el);
@@ -343,6 +387,14 @@
         document.getElementById('neg-step-2').classList.add('hidden');
         document.getElementById('neg-manual-input').classList.add('hidden');
 
+        // Update Button Text
+        const btn = document.getElementById('btn-confirm-trade');
+        if (actionType === 'buy') {
+            btn.textContent = "AÑADIR A CESTA";
+        } else {
+            btn.textContent = "CONFIRMAR VENTA";
+        }
+
         // UI Text
         document.getElementById('neg-subtitle').textContent =
             actionType === 'buy' ? `COMPRA: ${item.name} (${item.code})` : `VENTA: ${item.product_name} (${item.product_code})`;
@@ -383,7 +435,17 @@
             document.getElementById('neg-step-1').classList.add('hidden');
             document.getElementById('neg-step-2').classList.remove('hidden');
 
-            document.getElementById('neg-roll-res').textContent = `${data.roll} (${data.dice.join('+')})`;
+            // Render Visual Dice
+            const diceContainer = document.getElementById('neg-dice-container');
+            if (diceContainer) {
+                diceContainer.innerHTML = data.dice.map(d =>
+                    `<span class="inline-block w-10 h-10 leading-10 text-center bg-white text-space-900 font-bold rounded-lg text-lg shadow-lg flex items-center justify-center">${d}</span>`
+                ).join('');
+            }
+
+            // Render Text Result
+            const resEl = document.getElementById('neg-roll-res');
+            if (resEl) resEl.textContent = `Total: ${data.roll}`;
             const outcomeText = data.multiplier === 1.0 ? "NORMAL (x1.0)" : (data.multiplier < 1.0 && currentAction.type === 'buy') || (data.multiplier > 1.0 && currentAction.type === 'sell') ? "ÉXITO" : "FALLO";
             const outcomeColor = outcomeText === "ÉXITO" ? "text-neon-green" : outcomeText === "FALLO" ? "text-neon-red" : "text-white";
 
@@ -398,14 +460,6 @@
 
             if (currentAction.type === 'buy') {
                 basePrice = currentAction.item.base_price;
-                // For buy, we simply show unit price. Quantity selected later? 
-                // Wait, logic flaw. We need Quantity to calculte TOTAL cost.
-                // Current modal doesn't ask for Quantity. 
-                // Let's assume Max Quantity or ask for it?
-                // For MVP, user wants "Comercio de Mercancias".
-                // Usually you buy lots of 1UCN? Or fill hold?
-                // Let's Prompt for Quantity IF Buying.
-
                 // HACK: Prompt for quantity, or default to 1 for calculation display
                 qty = 1;
             } else {
@@ -446,67 +500,156 @@
         document.getElementById('neg-real-total').textContent = `Total: ${qty * unitPrice} SC`;
     }
 
-    async function confirmTrade() {
+    function addToCart() {
+        const qty = parseInt(document.getElementById('neg-buy-qty').value);
+        const unitPrice = parseInt(document.getElementById('neg-new-price').textContent);
+
+        if (!qty || qty <= 0) { alert("Cantidad inválida"); return; }
+
+        cart.push({
+            product_code: currentAction.item.code,
+            name: currentAction.item.name,
+            quantity: qty,
+            unit_price: unitPrice,
+            total_cost: qty * unitPrice
+        });
+
+        closeNegotiationModal();
+        renderCart();
+        renderMarket(currentMarketData); // Refresh buttons state
+    }
+
+    function removeFromCart(index) {
+        cart.splice(index, 1);
+        renderCart();
+        renderMarket(currentMarketData);
+    }
+
+    function renderCart() {
+        const cartSection = document.getElementById('shopping-cart-section');
+        const cartList = document.getElementById('cart-items');
+
+        if (cart.length === 0) {
+            cartSection.classList.add('hidden');
+            return;
+        }
+
+        cartSection.classList.remove('hidden');
+        cartList.innerHTML = '';
+
+        let totalUcn = 0;
+        let totalCost = 0;
+
+        cart.forEach((item, idx) => {
+            totalUcn += item.quantity;
+            totalCost += item.total_cost;
+
+            const div = document.createElement('div');
+            div.className = "flex justify-between items-center bg-space-800 p-2 rounded border border-gray-600";
+            div.innerHTML = `
+                <div class="text-sm">
+                    <span class="text-neon-blue font-bold">${item.name}</span>
+                    <span class="text-gray-400 text-xs">x${item.quantity} (${item.unit_price} SC/u)</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-neon-green font-bold text-sm">${item.total_cost} SC</span>
+                    <button onclick="removeFromCart(${idx})" class="text-red-400 hover:text-red-200 text-xs font-bold">✕</button>
+                </div>
+            `;
+            cartList.appendChild(div);
+        });
+
+        document.getElementById('cart-total-ucn').textContent = totalUcn;
+        document.getElementById('cart-total-cost').textContent = totalCost + " SC";
+
+        // Initial estimate logic (simple fallback since we use backend for real calculation)
+        // Rule: 10 UCN/day per op (>=7) or 5 (<7). Base 5.
+        // Let's just assume avg 10 per day total for UI estimate to be responsive
+        // const estDays = Math.ceil(totalUcn / 10);
+        // document.getElementById('cart-est-time').textContent = `~${estDays} días`;
+        document.getElementById('cart-est-time').textContent = "Se calculará al pagar";
+    }
+
+    async function checkout() {
+        if (!confirm("¿Confirmar compra de todos los artículos en la cesta?")) return;
+
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('game_id');
 
-        const form = new FormData();
+        // We need planet_code. From header text hack again.
+        const txt = document.getElementById('trade-planet').textContent;
+        const match = txt.match(/\((\d+)\)/);
+        if (!match) { alert("Error planet code"); return; }
+        const planetCode = parseInt(match[1]);
 
-        let endpoint = "";
-
-        if (currentAction.type === 'buy') {
-            endpoint = "/api/games/" + gameId + "/trade/buy";
-            const qty = parseInt(document.getElementById('neg-buy-qty').value);
-            const unitPrice = parseInt(document.getElementById('neg-new-price').textContent);
-
-            form.append('planet_code', currentAction.item.code || 0); // Need planet_code from somewhere if item.code is PRODUCT code.
-            // Wait, item.code is PRODUCT code (e.g. INDU). We need planet code from context.
-            // currentMarketData doesn't store planet code directly, but we fetched it in loadTradeData.
-            // We can get it from header or reload.
-            // Better: use game state current planet code.
-            // We'll rely on server knowing current planet, BUT the API requires planet_code form field.
-            // Let's fetch it from the header element text logic (hacky) or store it globally.
-            // Helper: extract from text "Name (111)"
-            const txt = document.getElementById('trade-planet').textContent;
-            const match = txt.match(/\((\d+)\)/);
-            if (!match) { alert("Error: No planet identified"); return; }
-
-            form.append('planet_code', match[1]);
-            form.append('product_code', currentAction.item.code);
-            form.append('quantity', qty);
-            form.append('unit_price', unitPrice); // Trust client? For this app yes.
-
-        } else {
-            endpoint = "/api/games/" + gameId + "/trade/sell";
-            const unitPrice = parseInt(document.getElementById('neg-new-price').textContent);
-            const total = unitPrice * currentAction.item.quantity;
-
-            form.append('order_id', currentAction.id);
-            // Get planet code again
-            const txt = document.getElementById('trade-planet').textContent;
-            const match = txt.match(/\((\d+)\)/);
-            form.append('planet_code', match[1]);
-            form.append('sell_price_total', total);
-        }
+        const payload = {
+            planet_code: planetCode,
+            items: cart
+        };
 
         try {
-            const res = await fetch(endpoint, { method: 'POST', body: form });
-            const data = await res.json();
+            const res = await fetch(`/api/games/${gameId}/trade/buy-batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await res.json();
 
-            if (!res.ok) {
-                alert("Error: " + data.detail);
+            if (!result.success) {
+                alert("Error: " + result.error || result.detail);
                 return;
             }
 
             // Success
-            closeNegotiationModal();
-            loadTradeData(); // Refresh UI
-            showToast("Transacción completada con éxito", "success");
+            cart = []; // Clear cart
+            renderCart();
+            // Show result modal or toast with loading time
+            let msg = `Compra realizada con éxito.\nCoste Total: ${result.total_cost} SC`;
+            if (result.loading_days > 0) {
+                msg += `\nTiempo de Carga: ${result.loading_days} días.\nNueva Fecha: ${result.new_date}`;
+            }
+            alert(msg);
+
+            // Reload to refresh everything (header, market cooldowns, ledger)
+            window.location.reload();
 
         } catch (e) {
             console.error(e);
-            alert("Error de conexión");
+            alert("Error comunicación servidor");
         }
+    }
+
+    async function handleTradeAction() {
+        if (currentAction.type === 'buy') {
+            addToCart();
+        } else {
+            confirmSell();
+        }
+    }
+
+    async function confirmSell() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game_id');
+        const form = new FormData();
+
+        const unitPrice = parseInt(document.getElementById('neg-new-price').textContent);
+        const total = unitPrice * currentAction.item.quantity;
+
+        form.append('order_id', currentAction.id);
+        const txt = document.getElementById('trade-planet').textContent;
+        const match = txt.match(/\((\d+)\)/);
+        form.append('planet_code', match[1]);
+        form.append('sell_price_total', total);
+
+        try {
+            const res = await fetch(`/api/games/${gameId}/trade/sell`, { method: 'POST', body: form });
+            const result = await res.json();
+            if (!res.ok) { alert(result.detail); return; }
+
+            closeNegotiationModal();
+            loadTradeData();
+            showToast("Venta realizada con éxito", "success");
+        } catch (e) { console.error(e); }
     }
 
     // Init
