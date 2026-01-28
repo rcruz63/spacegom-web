@@ -1,27 +1,52 @@
 """
-Script to import planets from Excel to SQLite database
+Script para importar planetas desde archivo Excel simplificado a la base de datos SQLite.
 
-This script reads the simplified Excel file and populates the database
-with proper parsing of spaceport and orbital facilities fields.
+Este script lee el archivo Excel y pobla la base de datos con parsing adecuado
+de campos complejos como espaciopuerto e instalaciones orbitales.
+
+Proceso:
+    1. Inicializa la base de datos
+    2. Lee archivo Excel con pandas
+    3. Limpia nombres de columnas
+    4. Elimina planetas existentes (no custom)
+    5. Para cada fila: parsea código, espaciopuerto y crea objeto Planet
+    6. Commit y muestra estadísticas
+
+Dependencias:
+    - pandas: Lectura de archivos Excel
+    - app.database: Modelos y sesión de base de datos
 """
+
 import pandas as pd
+from typing import Dict, Any
 from app.database import init_db, SessionLocal, Planet
 
 
-def parse_spaceport(spaceport_str: str) -> dict:
+def parse_spaceport(spaceport_str: str) -> Dict[str, Any]:
     """
-    Parse spaceport code into components
+    Parsea código de espaciopuerto en componentes.
     
-    Format: XXX-ZZ-N
-    - XXX: Quality (EXC, NOT, MED, BAS, RUD, SIN)
-    - ZZ: Fuel density (DB, DM, DA, N)
-    - N: Docking price (number)
+    El formato del código es "XXX-ZZ-N" donde:
+    - XXX: Calidad del espaciopuerto (EXC, NOT, MED, BAS, RUD, SIN)
+    - ZZ: Densidad de combustible (DB, DM, DA, N)
+    - N: Precio de amarre (número 0-9)
+    
+    Maneja valores NaN y formatos inválidos retornando valores por defecto.
     
     Args:
-        spaceport_str: String like "MED-DB-2"
+        spaceport_str: String con código de espaciopuerto (ej: "MED-DB-2")
         
     Returns:
-        dict with quality, fuel_density, docking_price
+        Diccionario con:
+        {
+            "quality": str,        # Código de calidad
+            "fuel_density": str,    # Código de densidad de combustible
+            "docking_price": int    # Precio de amarre
+        }
+        
+    Note:
+        Si el string es NaN o tiene formato inválido, retorna valores por defecto
+        (SIN, N, 0).
     """
     if pd.isna(spaceport_str) or not spaceport_str:
         return {
@@ -55,25 +80,57 @@ def parse_spaceport(spaceport_str: str) -> dict:
     }
 
 
-def parse_boolean(value, true_values=['X', 'SÍ', 'SI', 'YES', '1', 'TRUE']) -> bool:
+def parse_boolean(value: Any, true_values: list = None) -> bool:
     """
-    Parse a value to boolean
+    Convierte valor a booleano con lista configurable de valores verdaderos.
+    
+    Útil para parsear campos del Excel que pueden venir en diferentes formatos
+    (X, SÍ, SI, YES, 1, TRUE, etc.). Si el valor no está en la lista de valores
+    verdaderos o es NaN, retorna False.
     
     Args:
-        value: Value to parse
-        true_values: List of values that should be considered True
+        value: Valor a convertir (puede ser string, número, NaN, etc.)
+        true_values: Lista de valores que se consideran True (default: ['X', 'SÍ', 'SI', 'YES', '1', 'TRUE'])
         
     Returns:
-        Boolean value
+        True si el valor está en la lista de valores verdaderos, False en caso contrario
     """
+    if true_values is None:
+        true_values = ['X', 'SÍ', 'SI', 'YES', '1', 'TRUE']
     if pd.isna(value):
         return False
     
     return str(value).strip().upper() in true_values
 
 
-def import_planets_from_excel(excel_path: str):
-    """Import planets from simplified Excel file to database"""
+def import_planets_from_excel(excel_path: str) -> None:
+    """
+    Importa planetas desde archivo Excel a la base de datos.
+    
+    Lee el archivo Excel, parsea cada fila y crea objetos Planet en la base de datos.
+    Elimina planetas existentes que no sean custom antes de importar.
+    
+    Campos mapeados desde Excel:
+        - Identificación: code, name
+        - Soporte Vital: life_support, local_contagion_risk, days_to_hyperspace, legal_order_threshold
+        - Espaciopuerto: spaceport_quality, fuel_density, docking_price (parsed desde string)
+        - Instalaciones Orbitales: orbital_cartography_center, orbital_hackers, etc. (boolean)
+        - Productos: product_indu, product_basi, etc. (boolean)
+        - Comercio: self_sufficiency_level, ucn_per_order, max_passengers, mission_threshold
+        - Validación: convenio_spacegom (tech_level y population_over_1000 se llenan después)
+    
+    Campos preservados/por defecto:
+        - tech_level: None (se llena durante setup)
+        - population_over_1000: None (se llena durante setup)
+        - notes: "" (vacío)
+        - is_custom: False (no son planetas custom)
+    
+    Args:
+        excel_path: Ruta al archivo Excel con datos de planetas
+    
+    Raises:
+        Exception: Si hay error durante la importación (hace rollback)
+    """
     
     # Initialize database
     init_db()

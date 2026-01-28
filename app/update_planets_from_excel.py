@@ -1,17 +1,60 @@
 """
-Script to update planets from Excel WITHOUT deleting existing data
+Script para actualizar planetas desde archivo Excel SIN eliminar datos existentes.
 
-This script reads the simplified Excel file and updates ONLY the fields
-that come from Excel, preserving any custom data or fields that were
-modified after the initial import (like tech_level, population_over_1000, notes).
+Este script lee el archivo Excel simplificado y actualiza SOLO los campos que
+vienen del Excel, preservando cualquier dato custom o campos que fueron modificados
+después de la importación inicial (como tech_level, population_over_1000, notes).
+
+Diferencia con import_planets_from_excel:
+    - NO elimina planetas existentes
+    - Preserva campos modificados durante el juego
+    - Actualiza solo campos que vienen del Excel
+    - Crea nuevos planetas si el Excel tiene planetas adicionales
+
+Dependencias:
+    - pandas: Lectura de archivos Excel
+    - app.database: Modelos y sesión de base de datos
+    - app.import_planets: Funciones de parsing reutilizadas
 """
+
 import pandas as pd
+from typing import Dict, Any
 from app.database import SessionLocal, Planet
 from app.import_planets import parse_spaceport, parse_boolean
 
 
-def update_planets_from_excel(excel_path: str):
-    """Update planets from simplified Excel file, preserving existing data"""
+def update_planets_from_excel(excel_path: str) -> None:
+    """
+    Actualiza planetas desde archivo Excel preservando datos existentes.
+    
+    Lee el archivo Excel y actualiza solo los campos que provienen del Excel,
+    manteniendo intactos los campos que fueron modificados durante el juego.
+    
+    Campos actualizados desde Excel:
+        - Identificación: name
+        - Soporte Vital: life_support, local_contagion_risk, days_to_hyperspace, legal_order_threshold
+        - Espaciopuerto: spaceport_quality, fuel_density, docking_price (parsed)
+        - Instalaciones Orbitales: orbital_cartography_center, orbital_hackers, etc.
+        - Productos: product_indu, product_basi, etc.
+        - Comercio: self_sufficiency_level, ucn_per_order, max_passengers, mission_threshold
+        - Convenio: convenio_spacegom
+    
+    Campos preservados (NO se actualizan):
+        - tech_level: Nivel tecnológico (seteado en setup)
+        - population_over_1000: Población (seteado en setup)
+        - notes: Notas del usuario
+        - is_custom: Flag de planetas custom
+    
+    Lógica:
+        - Si el planeta existe: actualiza solo campos del Excel
+        - Si el planeta no existe: crea nuevo planeta con datos del Excel
+    
+    Args:
+        excel_path: Ruta al archivo Excel con datos de planetas
+    
+    Raises:
+        Exception: Si hay error durante la actualización (hace rollback)
+    """
     
     # Read Excel
     df = pd.read_excel(excel_path)

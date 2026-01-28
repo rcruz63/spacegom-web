@@ -1,8 +1,16 @@
 """
-Trade Manager for Spacegom
-Handles logic for buying/selling, price calculation, and cooldowns.
+Módulo de gestión de comercio para Spacegom.
+
+Maneja la lógica de compra/venta, cálculo de precios, negociación y cooldowns
+de comercio según las reglas del manual del juego.
+
+Dependencias:
+    - app.database: Planet, TradeOrder
+    - app.game_state: GameState
+    - app.dice: DiceRoller
+    - app.time_manager: GameCalendar
 """
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 from app.database import Planet, TradeOrder
@@ -11,9 +19,9 @@ from app.dice import DiceRoller
 from app.time_manager import GameCalendar
 import math
 
-# Trading Constants from Manual (Page 1)
-# Code: {buy_price, sell_price, production_days, demand_days}
-TRADE_PRODUCTS = {
+# Constantes de productos comerciales del manual (Página 1)
+# Estructura: código_producto: {nombre, precio_compra, precio_venta, días_producción, días_demanda}
+TRADE_PRODUCTS: Dict[str, Dict[str, Any]] = {
     "INDU": {"name": "Productos industriales", "buy": 9, "sell": 18, "prod_days": 30, "demand_days": 50},
     "BASI": {"name": "Materiales básicos", "buy": 11, "sell": 21, "prod_days": 40, "demand_days": 50},
     "ALIM": {"name": "Alimentos", "buy": 4, "sell": 11, "prod_days": 30, "demand_days": 40},
@@ -30,15 +38,63 @@ TRADE_PRODUCTS = {
 }
 
 class TradeManager:
+    """
+    Gestor de comercio para una partida específica.
+    
+    Maneja todas las operaciones comerciales incluyendo:
+    - Obtención de datos de mercado (productos disponibles para compra/venta)
+    - Negociación de precios con tiradas de dados
+    - Ejecución de órdenes de compra y venta
+    - Cálculo de tiempos de carga según operarios de logística
+    - Gestión de cooldowns basados en órdenes previas
+    
+    Attributes:
+        game_id: Identificador de la partida
+        db: Sesión de base de datos SQLAlchemy
+        game_state: Instancia de GameState para la partida
+    """
+    
     def __init__(self, game_id: str, db: Session):
+        """
+        Inicializa el gestor de comercio para una partida.
+        
+        Args:
+            game_id: Identificador único de la partida
+            db: Sesión de base de datos SQLAlchemy
+        """
         self.game_id = game_id
         self.db = db
         self.game_state = GameState(game_id)
 
     def get_market_data(self, planet_code: int) -> Dict:
         """
-        Get available products to buy and demand for selling at current planet.
-        Checks cooldowns based on previous TradeOrders.
+        Obtiene productos disponibles para comprar/vender en un planeta.
+        
+        Considera las capacidades de producción del planeta y los cooldowns
+        basados en órdenes comerciales previas. Los productos disponibles para
+        compra son aquellos que el planeta produce. Los productos disponibles
+        para venta son aquellos que el planeta NO produce (demanda).
+        
+        Args:
+            planet_code: Código del planeta (111-666)
+        
+        Returns:
+            Diccionario con:
+            {
+                "buy": List[Dict],  # Productos disponibles para compra
+                "sell": List[Dict], # Órdenes disponibles para venta
+                "planet_ucn_limit": int  # Límite UCN por orden del planeta
+            }
+            
+            Cada producto de compra incluye:
+            - code, name, base_price, base_sell, base_profit
+            - prod_days, demand_days, max_ucn
+            - cooldown (bool), days_remaining
+            
+            Cada orden de venta incluye:
+            - order_id, product_code, product_name, quantity
+            - buy_price, base_sell_price_unit
+            - can_sell (bool), days_remaining
         """
         planet = self.db.query(Planet).filter(Planet.code == planet_code).first()
         if not planet:
@@ -182,12 +238,23 @@ class TradeManager:
 
     def calculate_loading_time(self, total_ucn: int) -> int:
         """
-        Calculate loading days based on Logistics Operators
-        Rule: 
-        - Roll 2d6 for each 'Operario de logística y almacén'
-        - >= 7: 10 UCN/day
-        - < 7: 5 UCN/day
-        - If no operators: 5 UCN/day (Base rate)
+        Calcula días de carga basado en Operarios de logística y almacén.
+        
+        Reglas:
+        - Por cada operario: tirar 2d6
+        - Resultado >= 7: 10 UCN/día por operario
+        - Resultado < 7: 5 UCN/día por operario
+        - Sin operarios: 5 UCN/día (tasa base)
+        
+        Los modificadores de experiencia y moral se aplican a la tirada:
+        - Experiencia: Novato (-1), Estándar (0), Veterano (+1)
+        - Moral: Baja (-1), Media (0), Alta (+1)
+        
+        Args:
+            total_ucn: Total de UCN a cargar
+        
+        Returns:
+            Días necesarios para completar la carga (mínimo 1 día)
         """
         from app.database import Personnel
         
@@ -222,9 +289,26 @@ class TradeManager:
 
     def execute_batch_buy(self, items: List[Dict], planet_code: int) -> Dict:
         """
-        Execute a batch of buy orders (Shopping Basket).
-        Returns success, total cost, and loading time details.
-        items: List of {"product_code": str, "quantity": int, "unit_price": int}
+        Ejecuta un lote de órdenes de compra (cesta de compra).
+        
+        Valida todas las compras antes de ejecutar ninguna, asegurando que
+        hay fondos y capacidad suficientes para todo el lote. Si alguna validación
+        falla, no se ejecuta ninguna compra.
+        
+        Args:
+            items: Lista de items a comprar, cada uno con:
+                  {"product_code": str, "quantity": int, "unit_price": int}
+            planet_code: Código del planeta donde se compra (111-666)
+        
+        Returns:
+            Diccionario con:
+            {
+                "success": bool,           # True si todas las compras fueron exitosas
+                "total_cost": int,         # Coste total del lote
+                "loading_days": int,       # Días necesarios para cargar
+                "orders": List[int],       # IDs de órdenes creadas
+                "error": str               # Mensaje de error (si !success)
+            }
         """
         total_cost_all = 0
         total_ucn_all = 0
@@ -341,7 +425,39 @@ class TradeManager:
 
     def negotiate_price(self, negotiator_skill: int, reputation: int, is_buy: bool, manual_roll: Optional[int] = None) -> Dict:
         """
-        Calculate price multiplier based on 2d6 roll
+        Calcula multiplicador de precio basado en tirada de 2d6.
+        
+        La negociación determina el precio final de compra/venta:
+        - Resultado < 7: Malo (1.2x compra, 0.8x venta) + pérdida de moral
+        - Resultado 7-9: Normal (1.0x) sin efectos
+        - Resultado >= 10: Bueno (0.8x compra, 1.2x venta) + ganancia de moral
+        
+        Modificadores aplicados:
+        - Reputación: Reputación / 2 (redondeo hacia abajo)
+        - Habilidad del negociador: Según nivel de experiencia y moral
+        
+        Las negociaciones consumen tiempo:
+        - Compra: 1 día por producto
+        - Venta: 1d6 días
+        
+        Args:
+            negotiator_skill: Habilidad del negociador (modificador de skill)
+            reputation: Reputación actual de la compañía
+            is_buy: True si es compra, False si es venta
+            manual_roll: Opcional resultado manual de tirada (dados físicos)
+        
+        Returns:
+            Diccionario con:
+            {
+                "roll": int,              # Suma de los dados
+                "dice": List[int],        # Valores individuales de dados
+                "modifiers": Dict,        # Modificadores aplicados
+                "total": int,             # Resultado final con modificadores
+                "multiplier": float,      # Multiplicador de precio (0.8, 1.0, 1.2)
+                "moral_effect": str,      # "Loss", "None", "Gain"
+                "is_manual": bool,        # True si fue tirada manual
+                "days_consumed": int      # Días consumidos por la negociación
+            }
         """
         if manual_roll:
             roll = manual_roll
@@ -396,18 +512,47 @@ class TradeManager:
             "days_consumed": days_consumed
         }
 
-    def _get_game_date_value(self):
-        # Helper to get numeric date value for diffs
-        # Year * 12 * 35 + Month * 35 + Day
+    def _get_game_date_value(self) -> int:
+        """
+        Helper para obtener valor numérico de fecha del juego.
+        
+        Convierte la fecha del juego a un número entero para facilitar
+        cálculos de diferencias de días. Usa el sistema de calendario
+        personalizado (35 días/mes, 12 meses/año).
+        
+        Returns:
+            Valor numérico: (año * 420) + (mes * 35) + día
+        """
         state = self.game_state.state
         return (state.get("year", 1) * 420) + (state.get("month", 1) * 35) + state.get("day", 1)
 
     def execute_buy(self, planet_code: int, product_code: str, quantity: int, unit_price: int, traceability: bool = True) -> Dict:
         """
-        Execute a buy order.
-        1. Check treasury
-        2. Deduct cost
-        3. Create TradeOrder
+        Ejecuta una orden de compra.
+        
+        Proceso:
+        1. Verifica tesorería suficiente
+        2. Verifica capacidad de almacenamiento
+        3. Descuenta costo de tesorería
+        4. Crea TradeOrder en estado "in_transit"
+        5. Actualiza almacenamiento y cargo
+        6. Registra transacción y evento
+        
+        Args:
+            planet_code: Código del planeta donde se compra (111-666)
+            product_code: Código del producto (ej: "INDU", "BASI")
+            quantity: Cantidad en UCN a comprar
+            unit_price: Precio unitario negociado
+            traceability: Si el producto tiene trazabilidad (default: True)
+        
+        Returns:
+            Diccionario con:
+            {
+                "success": bool,      # True si la compra fue exitosa
+                "order_id": int,      # ID de la orden creada (si success)
+                "balance": int,       # Saldo restante en tesorería
+                "error": str          # Mensaje de error (si !success)
+            }
         """
         total_cost = quantity * unit_price
         
@@ -490,9 +635,29 @@ class TradeManager:
 
     def execute_sell(self, order_id: int, planet_code: int, sell_price_total: int) -> Dict:
         """
-        Execute a sell order.
-        1. Update TradeOrder
-        2. Add credits
+        Ejecuta una orden de venta.
+        
+        Proceso:
+        1. Actualiza TradeOrder con datos de venta
+        2. Cambia estado a "sold"
+        3. Calcula ganancia (precio_venta - precio_compra)
+        4. Agrega créditos a tesorería
+        5. Actualiza almacenamiento y cargo
+        6. Registra transacción y evento
+        
+        Args:
+            order_id: ID de la TradeOrder a vender
+            planet_code: Código del planeta donde se vende (111-666)
+            sell_price_total: Precio total de venta negociado
+        
+        Returns:
+            Diccionario con:
+            {
+                "success": bool,      # True si la venta fue exitosa
+                "profit": int,        # Ganancia obtenida (si success)
+                "balance": int,       # Saldo actualizado en tesorería
+                "error": str          # Mensaje de error (si !success)
+            }
         """
         order = self.db.query(TradeOrder).filter(TradeOrder.id == order_id).first()
         if not order:

@@ -1,44 +1,67 @@
 """
-Event Logger Module for Spacegom
+Módulo de logging centralizado para eventos del juego Spacegom.
 
-Provides simple, centralized logging functionality for game events.
-Events are stored in the game_state and displayed in the logs page.
+Proporciona funcionalidad simple y centralizada para registrar eventos del juego.
+Los eventos se almacenan en el estado del juego y se muestran en la página de logs.
 
-Usage:
+Uso:
     from app.event_logger import EventLogger
     
     logger = EventLogger(game_id)
     logger.log("Iniciada búsqueda de Piloto Novato, tardará 2 días")
-    logger.log("Contratado Asistente de vuelo por 150 SC/mes")
+    logger.log("Contratado Asistente de vuelo por 150 SC/mes", "success")
+
+Dependencias:
+    - app.game_state: GameState para almacenar eventos
+    - datetime: Para timestamps de eventos
 """
 
 from app.game_state import GameState
 from datetime import datetime
+from typing import List, Dict, Any, Optional
 
 
 class EventLogger:
-    """Simple event logger for game events"""
+    """
+    Logger centralizado para eventos del juego.
+    
+    Almacena eventos en el estado del juego con fecha del juego, timestamp real,
+    mensaje y tipo. Los eventos se pueden filtrar y recuperar para mostrar en
+    la interfaz de usuario.
+    
+    Tipos de eventos soportados:
+        - "info": Información general
+        - "success": Acción exitosa
+        - "warning": Advertencia
+        - "error": Error o fallo
+    """
     
     def __init__(self, game_id: str):
         """
-        Initialize logger for a specific game
+        Inicializa el logger para una partida específica.
         
         Args:
-            game_id: ID of the game to log events for
+            game_id: Identificador único de la partida
         """
         self.game_id = game_id
         self.game = GameState(game_id)
     
-    def log(self, message: str, event_type: str = "info"):
+    def log(self, message: str, event_type: str = "info") -> None:
         """
-        Register an event in the game log
+        Registra un evento en el log del juego.
+        
+        Crea una entrada de log con fecha del juego, timestamp real, mensaje
+        y tipo. La entrada se añade al array "event_logs" en el estado del juego
+        y se guarda automáticamente.
         
         Args:
-            message: Descriptive message of the event
-            event_type: Type of event (info, success, warning, error)
+            message: Mensaje descriptivo del evento
+            event_type: Tipo de evento ("info", "success", "warning", "error")
         
         Example:
-            logger.log("Iniciada búsqueda de Piloto Novato, tardará 2 días")
+            >>> logger = EventLogger("game_123")
+            >>> logger.log("Iniciada búsqueda de Piloto Novato, tardará 2 días")
+            >>> logger.log("Contratado Asistente de vuelo por 150 SC/mes", "success")
         """
         # Get current game date
         year = self.game.state.get('year', 1)
@@ -67,16 +90,25 @@ class EventLogger:
         # Save game state
         self.game.save()
     
-    def get_logs(self, limit: int = None, event_type: str = None):
+    def get_logs(self, limit: Optional[int] = None, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Retrieve game logs
+        Recupera logs del juego con filtros opcionales.
+        
+        Los logs se retornan en orden inverso (más recientes primero) y pueden
+        filtrarse por tipo de evento y limitarse en cantidad.
         
         Args:
-            limit: Maximum number of logs to return (most recent first)
-            event_type: Filter by event type (optional)
+            limit: Número máximo de logs a retornar (None = todos)
+            event_type: Filtrar por tipo de evento ("info", "success", "warning", "error")
         
         Returns:
-            List of event dictionaries
+            Lista de diccionarios con eventos, cada uno contiene:
+            {
+                "game_date": str,      # Fecha del juego (dd-mm-yy)
+                "timestamp": str,       # Timestamp ISO real
+                "message": str,         # Mensaje del evento
+                "type": str            # Tipo de evento
+            }
         """
         logs = self.game.state.get("event_logs", [])
         
@@ -93,20 +125,29 @@ class EventLogger:
         
         return logs
     
-    def clear_logs(self):
-        """Clear all logs for this game (use with caution)"""
+    def clear_logs(self) -> None:
+        """
+        Limpia todos los logs del juego (usar con precaución).
+        
+        Elimina permanentemente todos los eventos registrados. Esta acción
+        no se puede deshacer.
+        """
         self.game.state["event_logs"] = []
         self.game.save()
     
     @staticmethod
-    def _log_to_game(game: GameState, message: str, event_type: str = "info"):
+    def _log_to_game(game: GameState, message: str, event_type: str = "info") -> None:
         """
-        Log event to an existing GameState instance (avoids creating new instance)
+        Loggea evento a una instancia existente de GameState.
+        
+        Método estático útil cuando ya se tiene una instancia de GameState
+        y se quiere evitar crear una nueva instancia solo para logging.
+        Más eficiente que crear un EventLogger nuevo.
         
         Args:
-            game: Existing GameState instance
-            message: Descriptive message of the event
-            event_type: Type of event (info, success, warning, error)
+            game: Instancia existente de GameState
+            message: Mensaje descriptivo del evento
+            event_type: Tipo de evento ("info", "success", "warning", "error")
         """
         # Get current game date
         year = game.state.get('year', 1)
@@ -135,38 +176,106 @@ class EventLogger:
         # Save game state
         game.save()
     
+    # Funciones helper de formato - Proporcionan mensajes consistentes para eventos comunes
+    
     @staticmethod
-    def format_hire_start(position: str, experience: str, days: int):
-        """Helper to format hire search start message"""
+    def format_hire_start(position: str, experience: str, days: int) -> str:
+        """
+        Formatea mensaje de inicio de búsqueda de contratación.
+        
+        Args:
+            position: Puesto a contratar (ej: "Piloto")
+            experience: Nivel de experiencia (ej: "Novato")
+            days: Días que tardará la búsqueda
+        
+        Returns:
+            Mensaje formateado (ej: "Iniciada búsqueda de Piloto Novato, tardará 2 días")
+        """
         return f"Iniciada búsqueda de {position} {experience}, tardará {days} días"
     
     @staticmethod
-    def format_hire_success(position: str, name: str, salary: int):
-        """Helper to format successful hire message"""
+    def format_hire_success(position: str, name: str, salary: int) -> str:
+        """
+        Formatea mensaje de contratación exitosa.
+        
+        Args:
+            position: Puesto contratado
+            name: Nombre del empleado contratado
+            salary: Salario mensual en SC
+        
+        Returns:
+            Mensaje formateado (ej: "Contratado Piloto: Juan Pérez por 150 SC/mes")
+        """
         return f"Contratado {position}: {name} por {salary} SC/mes"
     
     @staticmethod
-    def format_hire_failure(position: str, experience: str):
-        """Helper to format failed hire message"""
+    def format_hire_failure(position: str, experience: str) -> str:
+        """
+        Formatea mensaje de fallo en contratación.
+        
+        Args:
+            position: Puesto que se intentó contratar
+            experience: Nivel de experiencia buscado
+        
+        Returns:
+            Mensaje formateado (ej: "Fallo en la búsqueda de Piloto Novato")
+        """
         return f"Fallo en la búsqueda de {position} {experience}"
     
     @staticmethod
-    def format_salary_payment(total: int, balance: int):
-        """Helper to format salary payment message"""
+    def format_salary_payment(total: int, balance: int) -> str:
+        """
+        Formatea mensaje de pago de salarios.
+        
+        Args:
+            total: Total pagado en SC
+            balance: Saldo resultante en tesorería
+        
+        Returns:
+            Mensaje formateado (ej: "Se pagan salarios por un total de 500 SC, saldo resultante: 1000 SC")
+        """
         return f"Se pagan salarios por un total de {total} SC, saldo resultante: {balance} SC"
     
     @staticmethod
-    def format_fire(position: str, name: str):
-        """Helper to format employee dismissal message"""
+    def format_fire(position: str, name: str) -> str:
+        """
+        Formatea mensaje de despido de empleado.
+        
+        Args:
+            position: Puesto del empleado
+            name: Nombre del empleado
+        
+        Returns:
+            Mensaje formateado (ej: "Despedido Piloto: Juan Pérez")
+        """
         return f"Despedido {position}: {name}"
     
     @staticmethod
-    def format_mission_start(mission_type: str, objective: str):
-        """Helper to format mission start message"""
+    def format_mission_start(mission_type: str, objective: str) -> str:
+        """
+        Formatea mensaje de inicio de misión.
+        
+        Args:
+            mission_type: Tipo de misión (ej: "campaign", "special")
+            objective: Objetivo o descripción de la misión
+        
+        Returns:
+            Mensaje formateado (ej: "Iniciada misión campaign: Objetivo #1")
+        """
         return f"Iniciada misión {mission_type}: {objective}"
     
     @staticmethod
-    def format_mission_complete(mission_type: str, objective: str, result: str):
-        """Helper to format mission completion message"""
+    def format_mission_complete(mission_type: str, objective: str, result: str) -> str:
+        """
+        Formatea mensaje de completación de misión.
+        
+        Args:
+            mission_type: Tipo de misión
+            objective: Objetivo de la misión
+            result: Resultado ("exito" o "fracaso")
+        
+        Returns:
+            Mensaje formateado (ej: "Misión completada con éxito: Objetivo #1")
+        """
         result_text = "éxito" if result == "exito" else "fracaso"
         return f"Misión completada con {result_text}: {objective}"

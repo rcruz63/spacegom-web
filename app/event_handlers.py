@@ -1,13 +1,19 @@
 """
-Sistema de handlers para eventos del juego Spacegom
+Sistema modular de handlers para eventos del juego Spacegom.
 
-Cada tipo de evento tiene su propio handler que:
-1. Procesa la lógica específica del evento
-2. Actualiza el estado del juego
-3. Registra logs
-4. Retorna si el evento debe borrarse de la cola
+Cada tipo de evento tiene su propio handler que procesa lógica específica,
+actualiza estado y decide si remover el evento de la cola.
 
-Patrón: Strategy/Command para escalabilidad
+Patrones de diseño utilizados:
+    - Strategy Pattern: Cada evento tiene su propia estrategia de procesamiento
+    - Command Pattern: Handlers encapsulan lógica compleja
+    - Registry Pattern: Registro centralizado de handlers
+
+Dependencias:
+    - app.game_state: GameState para actualizar estado del juego
+    - app.database: Personnel, Mission, EmployeeTask para queries
+    - app.time_manager: GameCalendar, EventQueue para gestión temporal
+    - app.event_logger: EventLogger para logging de eventos
 """
 
 from typing import Dict, Any, Optional
@@ -20,20 +26,49 @@ import json
 
 
 class EventHandlerResult:
-    """Resultado de un event handler"""
+    """
+    Resultado estandarizado de un event handler.
+    
+    Encapsula la información sobre el resultado del procesamiento de un evento,
+    incluyendo si fue exitoso, si debe removerse de la cola, y si requiere
+    interacción del usuario.
+    
+    Attributes:
+        success: True si el handler se ejecutó correctamente
+        remove_from_queue: True si el evento debe borrarse de la cola
+        requires_user_input: True si requiere interacción del usuario
+        event_data: Diccionario con datos adicionales del resultado
+    """
     def __init__(
         self,
         success: bool = True,
         remove_from_queue: bool = True,
         requires_user_input: bool = False,
-        event_data: Dict[str, Any] = None
+        event_data: Optional[Dict[str, Any]] = None
     ):
+        """
+        Inicializa el resultado de un handler.
+        
+        Args:
+            success: Si el handler se ejecutó correctamente
+            remove_from_queue: Si el evento debe borrarse de la cola
+            requires_user_input: Si requiere interacción del usuario
+            event_data: Datos adicionales del resultado
+        """
         self.success = success
         self.remove_from_queue = remove_from_queue
         self.requires_user_input = requires_user_input
         self.event_data = event_data or {}
     
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Retorna representación diccionario para serialización.
+        
+        Útil para respuestas API o logging.
+        
+        Returns:
+            Diccionario con todos los atributos del resultado
+        """
         return {
             "success": self.success,
             "remove_from_queue": self.remove_from_queue,
@@ -47,21 +82,33 @@ class EventHandlerResult:
 # ============================================================================
 
 def handle_salary_payment(
-    event: Dict,
+    event: Dict[str, Any],
     game: GameState,
     db: Session,
     manual_dice: Optional[str] = None
 ) -> EventHandlerResult:
     """
-    Handler para pago mensual de salarios (día 35)
+    Handler para procesar pago mensual de salarios (día 35).
     
-    Acciones:
-    1. Calcular total de salarios de personal activo
-    2. Descontar de tesorería (game state)
-    3. Registrar transacción en game state
-    4. Logging del evento
-    5. Crear siguiente evento de pago (próximo mes día 35)
-    6. Borrar evento actual de la cola
+    Este handler se ejecuta automáticamente cada día 35 del mes para procesar
+    el pago de salarios de todo el personal activo.
+    
+    Acciones realizadas:
+    1. Calcula total de salarios de personal activo
+    2. Descuenta de tesorería en el estado del juego
+    3. Registra transacción en el historial de transacciones
+    4. Registra evento en el log del juego
+    5. Crea siguiente evento de pago para el próximo mes (día 35)
+    6. Marca el evento para ser removido de la cola
+    
+    Args:
+        event: Diccionario con datos del evento (debe incluir "date")
+        game: Instancia de GameState de la partida
+        db: Sesión de base de datos SQLAlchemy
+        manual_dice: No usado en este handler (mantenido por compatibilidad)
+    
+    Returns:
+        EventHandlerResult con información del pago procesado
     """
     game_id = game.game_id
     
@@ -123,24 +170,36 @@ def handle_salary_payment(
 
 
 def handle_task_completion(
-    event: Dict,
+    event: Dict[str, Any],
     game: GameState,
     db: Session,
     manual_dice: Optional[str] = None
 ) -> EventHandlerResult:
     """
-    Handler para completar búsqueda de personal
+    Handler para completar búsqueda de contratación de personal.
     
-    Acciones:
-    1. Obtener tarea y empleado (Director)
-    2. Calcular modificadores
-    3. Tirar dados (manual o automático)
-    4. Determinar éxito/fracaso
-    5. Si éxito: crear nuevo empleado
-    6. Actualizar experiencia/moral del Director
-    7. Logging
-    8. Iniciar siguiente tarea en cola si existe
-    9. Borrar evento de la cola
+    Este handler se ejecuta cuando llega la fecha de finalización de una
+    búsqueda de contratación iniciada por el Director.
+    
+    Acciones realizadas:
+    1. Obtiene la tarea y el empleado Director
+    2. Calcula modificadores (experiencia, moral, reputación)
+    3. Tira dados para determinar éxito (manual o automático)
+    4. Determina éxito/fracaso comparando con umbral
+    5. Si éxito: crea nuevo empleado en la base de datos
+    6. Actualiza experiencia y moral del Director según resultado
+    7. Registra evento en el log con detalles
+    8. Inicia siguiente tarea en cola si existe
+    9. Marca el evento para ser removido de la cola
+    
+    Args:
+        event: Diccionario con datos del evento (debe incluir "data.task_id" y "date")
+        game: Instancia de GameState de la partida
+        db: Sesión de base de datos SQLAlchemy
+        manual_dice: Opcional string con resultados manuales (ej: "4,6")
+    
+    Returns:
+        EventHandlerResult con información detallada del resultado de la contratación
     """
     from app.dice import DiceRoller
     
@@ -295,20 +354,35 @@ def handle_task_completion(
 
 
 def handle_mission_deadline(
-    event: Dict,
+    event: Dict[str, Any],
     game: GameState,
     db: Session,
     manual_dice: Optional[str] = None
 ) -> EventHandlerResult:
     """
-    Handler para fecha límite de misión
+    Handler para fecha límite de misión.
     
-    Acciones:
-    1. Obtener datos de la misión
-    2. Retornar datos para mostrar modal al usuario
-    3. NO borrar evento (espera resolución del usuario)
+    Este handler se ejecuta cuando llega la fecha límite de una misión.
+    A diferencia de otros handlers, NO procesa automáticamente la misión,
+    sino que retorna información para que el usuario tome una decisión.
     
-    Nota: El usuario debe llamar a /resolve_mission para completar
+    Acciones realizadas:
+    1. Obtiene datos de la misión desde la base de datos
+    2. Construye descripción de la misión según su tipo
+    3. Retorna datos para mostrar modal al usuario
+    4. NO borra el evento de la cola (espera resolución manual del usuario)
+    
+    Nota: El usuario debe llamar al endpoint de resolución de misión para
+    completar el evento y marcarlo como resuelto.
+    
+    Args:
+        event: Diccionario con datos del evento (debe incluir "data.mission_id")
+        game: Instancia de GameState de la partida
+        db: Sesión de base de datos SQLAlchemy
+        manual_dice: No usado en este handler (mantenido por compatibilidad)
+    
+    Returns:
+        EventHandlerResult con requires_user_input=True y datos de la misión
     """
     mission_id = event["data"]["mission_id"]
     mission = db.query(Mission).get(mission_id)
@@ -345,21 +419,29 @@ def handle_mission_deadline(
 # HANDLER REGISTRY
 # ============================================================================
 
-EVENT_HANDLERS = {
+# Registro centralizado de handlers - mapea tipos de eventos a funciones handler
+EVENT_HANDLERS: Dict[str, Callable] = {
     "salary_payment": handle_salary_payment,
     "task_completion": handle_task_completion,
     "mission_deadline": handle_mission_deadline
 }
 
 
-def get_event_handler(event_type: str):
+def get_event_handler(event_type: str) -> Optional[Callable]:
     """
-    Obtiene el handler para un tipo de evento
+    Obtiene el handler apropiado para un tipo de evento.
+    
+    Usa el registro centralizado EVENT_HANDLERS para encontrar la función
+    handler correspondiente al tipo de evento.
     
     Args:
-        event_type: Tipo de evento
-        
+        event_type: Tipo de evento (ej: "salary_payment", "task_completion")
+    
     Returns:
-        Función handler o None si no existe
+        Función handler correspondiente o None si no existe el tipo
+    
+    Example:
+        >>> handler = get_event_handler("salary_payment")
+        >>> result = handler(event, game, db)
     """
     return EVENT_HANDLERS.get(event_type)

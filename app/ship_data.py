@@ -1,8 +1,18 @@
 """
-Ship model data and utility functions for Spacegom Companion
+Modelos de naves y estadísticas para Spacegom Companion.
+
+Este módulo contiene datos estáticos de todos los modelos de naves disponibles
+en Spacegom, incluyendo estadísticas de combate, capacidad y costos según el
+manual del juego.
+
+Dependencias: Ninguna (módulo puro de datos)
 """
 
-SHIP_MODELS = {
+from typing import Dict, Any
+
+# Diccionario con configuración completa de cada modelo de nave
+# Estructura: nombre_modelo: {jump, passengers, storage, damage_support, modifier, cost}
+SHIP_MODELS: Dict[str, Dict[str, Any]] = {
     "Basic Starfall": {
         "jump": 1,
         "passengers": 10,
@@ -103,5 +113,33 @@ SHIP_NAME_SUGGESTIONS = [
     "Vanguardia Estelar"
 ]
 
-def get_ship_stats(model_name: str) -> dict:
+def get_ship_stats(model_name: str) -> Dict[str, Any]:
+    """
+    Obtiene las estadísticas de un modelo de nave.
+    
+    Retorna el diccionario completo con todas las estadísticas del modelo
+    especificado. Si el modelo no existe, retorna las estadísticas del
+    modelo básico por defecto ("Basic Starfall").
+    
+    Campos por modelo:
+        - jump: Capacidad de salto hiperespacial (rango)
+        - passengers: Capacidad máxima de pasajeros
+        - storage: Capacidad de almacenamiento en UCN
+        - damage_support: Puntos de daño por nivel {"L": leve, "M": moderado, "G": grave}
+        - modifier: Modificador general (para cálculos de combate)
+        - cost: Costo en Créditos Spacegom (SC)
+    
+    Args:
+        model_name: Nombre del modelo de nave (ej: "Basic Starfall", "Space Glory")
+    
+    Returns:
+        Diccionario con estadísticas del modelo o del modelo básico si no existe
+    
+    Example:
+        >>> stats = get_ship_stats("Basic Starfall")
+        >>> stats["storage"]
+        40
+        >>> stats["cost"]
+        500
+    """
     return SHIP_MODELS.get(model_name, SHIP_MODELS["Basic Starfall"])
