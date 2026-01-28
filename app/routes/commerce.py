@@ -6,7 +6,7 @@ Este módulo contiene los endpoints relacionados con:
 - Comercio (compra/venta de productos)
 - Transporte de pasajeros
 """
-from fastapi import APIRouter, Form, HTTPException, Depends
+from fastapi import APIRouter, Form, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Any
 from datetime import datetime
@@ -18,6 +18,47 @@ from app.dice import DiceRoller
 from app.time_manager import GameCalendar
 
 router = APIRouter(tags=["commerce"])
+
+
+# ===== HELPER FUNCTIONS =====
+
+def advance_game_time(game: GameState, days: int) -> str:
+    """
+    Avanza el tiempo del juego N días, manejando el cambio de calendario.
+    
+    Args:
+        game: Instancia de GameState del juego
+        days: Número de días a avanzar
+        
+    Returns:
+        Nueva fecha en formato string (DD-MM-YYYY)
+    """
+    if days <= 0:
+        return GameCalendar.date_to_string(
+            game.state.get("year", 1),
+            game.state.get("month", 1),
+            game.state.get("day", 1)
+        )
+        
+    current_date = GameCalendar.date_to_string(
+        game.state.get("year", 1),
+        game.state.get("month", 1),
+        game.state.get("day", 1)
+    )
+    
+    # Avance directo simple según el manual paso a paso
+    # Idealmente se haría día a día si tuviéramos eventos granulares
+    # Por ahora, simplemente saltamos.
+    # TODO: Implementar bucle robusto de eventos día a día si es necesario.
+    new_date_str = GameCalendar.add_days(current_date, days)
+    y, m, d = GameCalendar.parse_date(new_date_str)
+    
+    game.state["year"] = y
+    game.state["month"] = m
+    game.state["day"] = d
+    
+    game.save()
+    return new_date_str
 
 
 # ===== TREASURY API =====
@@ -268,6 +309,9 @@ async def execute_passenger_transport(
     # Add to treasury
     game.state["treasury"] += final_revenue
     
+    # Mark as unavailable until next travel
+    game.state["passenger_transport_available"] = False
+    
     # Log Transaction
     if "transactions" not in game.state:
         game.state["transactions"] = []
@@ -347,6 +391,7 @@ async def negotiate_trade(
     """Simular la tirada de negociación.
 
     Devuelve modificadores y resultados pero NO ejecuta la transacción.
+    Avanza el tiempo según los días consumidos por la negociación.
     """
     from app.trade_manager import TradeManager
     
@@ -362,6 +407,49 @@ async def negotiate_trade(
         manual_roll=manual_roll
     )
     
+    # Avanzar tiempo (la negociación consume tiempo)
+    days = result.get("days_consumed", 0)
+    if days > 0:
+        new_date_str = advance_game_time(game, days)
+        # Añadir al resultado para información de la UI
+        result["new_date"] = new_date_str
+    
+    return result
+
+
+@router.post("/api/games/{game_id}/trade/buy-batch")
+async def execute_trade_buy_batch(
+    game_id: str,
+    request: Request,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """Ejecutar una transacción de compra en lote (cesta de compra).
+    
+    Acepta un cuerpo JSON con `planet_code` e `items` (lista de productos).
+    Avanza el tiempo según los días de carga necesarios.
+    """
+    from app.trade_manager import TradeManager
+    
+    data = await request.json()
+    planet_code = data.get("planet_code")
+    items = data.get("items", [])
+    
+    if not items or not planet_code:
+        raise HTTPException(status_code=400, detail="Missing items or planet_code")
+        
+    manager = TradeManager(game_id, db)
+    result = manager.execute_batch_buy(items, planet_code)
+    
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result.get("error"))
+        
+    # Avanzar tiempo para la carga
+    loading_days = result.get("loading_days", 0)
+    if loading_days > 0:
+        game = GameState(game_id)
+        new_date_str = advance_game_time(game, loading_days)
+        result["new_date"] = new_date_str
+        
     return result
 
 
