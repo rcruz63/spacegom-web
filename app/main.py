@@ -442,7 +442,7 @@ async def roll_dice_universal(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error in universal dice roll: {e}")
+        # logger.error(f"Error in universal dice roll: {e}")
         raise HTTPException(500, str(e))
 
 
