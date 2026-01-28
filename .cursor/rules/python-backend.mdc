@@ -1,0 +1,11 @@
+---
+description: Convenciones Python del backend
+globs: app/**/*.py
+alwaysApply: false
+---
+
+# Python backend
+- Usar snake_case para funciones y variables; PascalCase para clases.
+- Mantener docstrings en espanol de Espana, como en los endpoints de `app/main.py`.
+- Tipar parametros y retornos cuando sea viable (typing/annotaciones).
+- Preferir `Depends(get_db)` para sesiones DB en endpoints.

@@ -1,0 +1,13 @@
+---
+description: Reglas base del proyecto Spacegom
+alwaysApply: true
+---
+
+# Reglas base
+- Mantener separacion Frontend/Backend (HTML/JS en `app/templates` y `app/static/js`, API en `app/*.py`).
+- No eliminar codigo funcional sin confirmacion explicita.
+- Reutilizar funciones existentes antes de crear nuevas.
+- Escribir docstrings en cualquier funcion nueva.
+- Mantener endpoints JSON bajo `/api/...` y paginas HTML con Jinja2.
+- Usar espanol de Espana en comentarios, docstrings, logs, interfaz y commits.
+- Commits segun Conventional Commits (v1.0.0-beta.2).

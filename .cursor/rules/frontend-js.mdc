@@ -1,0 +1,11 @@
+---
+description: Convenciones JS del frontend
+globs: app/static/js/**/*.js
+alwaysApply: false
+---
+
+# Frontend JS
+- Usar camelCase para funciones/variables; PascalCase para clases.
+- Consumir la API via `fetch` hacia `/api/...` con JSON o FormData.
+- Exponer en `window` solo lo necesario para ser llamado desde HTML.
+- Mantener mensajes visibles, logs y textos de UI en espanol de Espana.
