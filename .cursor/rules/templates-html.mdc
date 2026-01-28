@@ -1,0 +1,12 @@
+---
+description: Convenciones de plantillas Jinja2
+globs: app/templates/**/*.html
+alwaysApply: false
+---
+
+# Plantillas HTML
+- Usar herencia Jinja2 con `{% extends "base.html" %}` y `{% block content %}`.
+- Mantener scripts de pagina en la propia plantilla cuando ya es el patron.
+- Referenciar JS estatico via `/static/js/...` desde `base.html` o la plantilla.
+- Estilos principales via clases Tailwind en el markup.
+- Textos de la interfaz en espanol de Espana.
