@@ -1,7 +1,32 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!--
+    DASHBOARD PRINCIPAL - SpaceGOM Companion
+    
+    Propósito: Interfaz principal del juego que muestra el estado de la nave, navegación por áreas/cuadrantes,
+    información de planetas y gestión de recursos.
+    
+    Dependencias:
+    - base.html: Herencia de template, funciones globales, navegación
+    - passenger_transport.js: Manejo de acciones de transporte de pasajeros
+    - HTMX: Actualizaciones dinámicas de contenido (heredado)
+    - TailwindCSS: Framework de estilos (heredado)
+    
+    Integraciones API:
+    - /api/games/{game_id}: Estado del juego y estadísticas de nave
+    - /api/games/{game_id}/navigate-area: Navegación entre áreas (2-12)
+    - /api/games/{game_id}/explore: Exploración de cuadrantes
+    - /api/games/{game_id}/update-location: Actualización de ubicación en planeta
+    - /api/games/{game_id}/treasury: Datos de tesorería y gastos mensuales
+    - /api/planets/{code}: Información detallada de planetas
+    - /api/games/{game_id}/area/{area}/planets: Lista de planetas por área
+    
+    Nota técnica: Las coordenadas del backend son 0-based, pero el HTML usa atributos data-row/data-col
+    con valores 1-based. Se requiere conversión en las funciones JavaScript.
+-->
 <style>
+    /* Fondo estelar: Gradientes radiales simulando campo de estrellas para el área de navegación */
     .star-background {
         background-color: #0b0e14;
         background-image:
@@ -18,6 +43,7 @@
         background-size: 300px 300px;
     }
 
+    /* Estado activo para botones de ubicación: Resaltado con acentos verde neón */
     .location-btn.active {
         background-color: rgba(0, 255, 157, 0.2);
         border-color: #00ff9d;
@@ -49,7 +75,17 @@
         </div>
     </div>
 
-    <!-- HUD SUPERIOR - ESTADO CRÍTICO -->
+    <!-- HUD SUPERIOR - ESTADO CRÍTICO
+         Panel de vidrio con métricas esenciales de la nave:
+         - Combustible: Barra visual 0-30 unidades con codificación de color (rojo si <10)
+         - Almacén: Capacidad UCN con máximo dinámico según estadísticas de nave
+         - Sistema de daños: Estados toggleables (Leves/Moderados/Graves)
+         - Alerta crítica: Se muestra cuando el hiperimpulsor está destruido (daños graves)
+         - Calendario: Fecha del juego (dd-mm-yyyy)
+         - Reputación: Escala ajustable -5 a +5 con codificación de color
+         - Tesorería: Balance actual en Space Credits (SC)
+         - Gastos mensuales: Suma de salarios y préstamos
+    -->
     <div class="glass-panel tech-border p-6 rounded-lg">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <!-- Reserva de Combustible -->
@@ -170,7 +206,18 @@
 
     <!-- GRID: Navegación y Plantilla -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- MÓDULO DE NAVEGACIÓN - VISTA DE ÁREA -->
+        <!-- MÓDULO DE NAVEGACIÓN - VISTA DE ÁREA
+             Sistema de navegación por áreas y cuadrantes:
+             - Navegación de áreas: Botones anterior/siguiente para áreas 2-12
+             - Grid 6x6: Representa cuadrantes del área actual (coordenadas A-F, 1-6)
+             - Fog of War: Cuadrantes inicialmente ocultos, se revelan al explorar
+             - Posición de nave: Icono animado con efecto glow en cuadrante actual
+             - Códigos de planeta: Identificadores revelados al explorar cuadrantes
+             - Controles de ubicación: 5 estados (Mundo, Espaciopuerto, Instalación, En ruta, Estación)
+             - Panel de información planetaria: Expandible con datos detallados del planeta seleccionado
+             - Archivos estelares: Registro de planetas descubiertos con coordenadas
+             - Planetas del área: Lista de planetas descubiertos en el área actual
+        -->
         <div class="glass-panel tech-border p-6 rounded-lg">
             <!-- Area Navigation Header -->
             <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-3">
@@ -202,7 +249,14 @@
                     --</span>
             </div>
 
-            <!-- Quadrant Container with Labels -->
+            <!-- Quadrant Container with Labels
+                 Grid 6x6 con sistema de coordenadas:
+                 - Columnas: A-F (marcadores superiores)
+                 - Filas: 1-6 (marcadores laterales)
+                 - Marcadores de posición: Flechas que indican fila/columna actual (se muestran al hacer hover/click)
+                 - Fog overlay: Capa semitransparente que oculta cuadrantes no explorados
+                 - Códigos de planeta: Se muestran en cuadrantes explorados que contienen planetas
+            -->
             <div class="pt-6 pl-6 star-background rounded-lg border border-gray-800 p-4">
 
                 <div class="relative">
@@ -295,7 +349,15 @@
                     </div>
                 </div>
 
-                <!-- Panel de Información del Planeta EXPANDIDO -->
+                <!-- Panel de Información del Planeta EXPANDIDO
+                     Panel expandible que muestra información detallada del planeta seleccionado:
+                     - Información básica: Nombre, código, soporte vital, nivel tecnológico
+                     - Factores de riesgo: Riesgo de contagio, umbral de orden legal
+                     - Datos comerciales: Autosuficiencia, UCN por pedido, pasajeros máximos, umbral de misiones
+                     - Instalaciones: Detalles del espaciopuerto (calidad, combustible, precio amarre)
+                     - Instalaciones orbitales: CC (Cartografía), PI (Piratas Info), DS (Suministros), AA (Academia)
+                     - Productos disponibles: Códigos de productos con codificación de color por tipo
+                -->
                 <div id="planet-info" class="hidden mt-4">
                     <div class="bg-space-800 border border-neon-blue rounded p-4">
                         <div class="flex items-start justify-between mb-3">
@@ -422,7 +484,13 @@
 
         <!-- RIGHT COLUMN -->
         <div class="space-y-6">
-            <!-- WIDGET TRANSPORTE DE PASAJEROS -->
+            <!-- WIDGET TRANSPORTE DE PASAJEROS
+                 Widget para gestionar transporte de pasajeros:
+                 - Capacidad de nave: Límite de pasajeros según estadísticas de nave
+                 - Media planeta: Promedio de pasajeros disponibles en planetas del área
+                 - Modificadores activos: Bonificaciones/penalizaciones actuales
+                 - Botón de embarque: Inicia acción de transporte (manejado por passenger_transport.js)
+            -->
             <div id="passenger-transport-widget" class="glass-panel tech-border p-6 rounded-lg">
                 <div class="flex items-center justify-between mb-4 border-b border-gray-700 pb-3">
                     <h2 class="text-xl font-orbitron text-neon-blue">
@@ -461,8 +529,16 @@
     <!-- Scripts -->
     <script src="/static/js/passenger_transport.js"></script>
     <script>
-        // ... existing scripts ...
-        // Estado del juego
+        /**
+         * GESTIÓN DE ESTADO DEL JUEGO
+         * 
+         * gameState: Objeto central que almacena el estado de la UI y se sincroniza con el servidor.
+         * Se carga desde /api/games/{game_id} al inicializar el dashboard y se actualiza dinámicamente
+         * mediante llamadas API cuando el usuario realiza acciones.
+         * 
+         * Nota técnica: Las coordenadas del backend son 0-based, pero los atributos HTML data-row/data-col
+         * usan valores 1-based. Las funciones de conversión manejan esta diferencia.
+         */
         let gameState = {
             fuel: 18,
             storage: 16,
@@ -489,7 +565,13 @@
         </svg>
     </div>`;
 
-        // Funciones de ajuste
+        /**
+         * FUNCIONES DE AJUSTE DE ESTADO
+         * 
+         * Ajustan valores del gameState y actualizan la UI inmediatamente.
+         * Estas funciones modifican solo el estado local; las actualizaciones persistentes
+         * al servidor se realizan mediante llamadas API específicas cuando es necesario.
+         */
         function adjustFuel(delta) {
             gameState.fuel = Math.max(0, Math.min(30, gameState.fuel + delta));
             updateFuelDisplay();
@@ -505,12 +587,19 @@
             updateReputationDisplay();
         }
 
+        /**
+         * FUNCIONES DE ACTUALIZACIÓN DE DISPLAY
+         * 
+         * Actualizan elementos visuales del HUD basándose en el estado actual.
+         * Estas funciones se llaman después de modificar gameState para mantener
+         * la sincronización entre estado y UI.
+         */
         function updateFuelDisplay() {
             const percentage = (gameState.fuel / 30) * 100;
             document.getElementById('fuel-level').style.height = percentage + '%';
             document.getElementById('fuel-value').textContent = gameState.fuel;
 
-            // Cambiar color si está bajo
+            // Cambiar color si está bajo (umbral: <10 unidades)
             const fuelLevel = document.getElementById('fuel-level');
             if (gameState.fuel < 10) {
                 fuelLevel.className = fuelLevel.className.replace('from-neon-blue to-cyan-400', 'from-neon-red to-red-400');
@@ -531,7 +620,8 @@
             const val = gameState.reputation;
             el.textContent = val >= 0 ? '+' + val : val;
 
-            // Color según reputación
+            // Codificación de color según rango de reputación:
+            // >= 3: Verde neón (#00ff9d), >= 0: Cyan (#00f3ff), >= -2: Naranja (#ffa500), < -2: Rojo (#ff2a6d)
             if (val >= 3) el.style.color = '#00ff9d';
             else if (val >= 0) el.style.color = '#00f3ff';
             else if (val >= -2) el.style.color = '#ffa500';
@@ -562,7 +652,19 @@
             }
         }
 
-        // Initialize UI from state
+        /**
+         * INICIALIZACIÓN DEL DASHBOARD
+         * 
+         * Carga el estado del juego desde el servidor y configura toda la UI.
+         * Se ejecuta al cargar la página (window.onload).
+         * 
+         * Proceso:
+         * 1. Obtiene game_id de los parámetros URL
+         * 2. Carga estado completo del juego desde /api/games/{game_id}
+         * 3. Actualiza todos los elementos del HUD
+         * 4. Configura posición de nave y cuadrantes explorados
+         * 5. Carga datos adicionales (tesorería, planetas del área, archivos estelares)
+         */
         async function initDashboard() {
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game_id');
@@ -620,7 +722,8 @@
                     showPlanetDetails(gameState.starting_planet_code);
                 }
 
-                // Show Explored Quadrants
+                // Mostrar cuadrantes explorados: Remueve fog overlay y marca como explorado
+                // IMPORTANTE: Conversión de coordenadas 0-based (backend) a 1-based (HTML data attributes)
                 if (gameState.explored_quadrants) {
                     gameState.explored_quadrants.forEach(coord => {
                         const [r, c] = coord.split(',').map(Number);
@@ -637,7 +740,8 @@
                     });
                 }
 
-                // Update quadrant planet codes
+                // Actualizar códigos de planeta en cuadrantes: Muestra códigos descubiertos
+                // IMPORTANTE: Conversión de coordenadas 0-based (backend) a 1-based (HTML data attributes)
                 if (gameState.quadrant_planets) {
                     Object.entries(gameState.quadrant_planets).forEach(([coord, code]) => {
                         const [r, c] = coord.split(',').map(Number);
@@ -679,7 +783,13 @@
             }
         }
 
-        // NEW:Area Navigation Functions
+        /**
+         * NAVEGACIÓN ENTRE ÁREAS
+         * 
+         * Permite navegar entre áreas 2-12 del mapa del juego.
+         * Al cambiar de área, se recarga el estado completo del juego para mantener consistencia
+         * y se actualiza la lista de planetas del área.
+         */
         async function navigateArea(direction) {
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game_id');
@@ -700,7 +810,7 @@
                     const data = await response.json();
                     console.log('Navigation response:', data);
                     if (data.success) {
-                        // Reload full game state to ensure consistency
+                        // Recargar estado completo del juego para asegurar consistencia
                         const stateResponse = await fetch(`/api/games/${gameId}`);
                         const stateData = await stateResponse.json();
                         gameState = stateData.state;
@@ -716,6 +826,12 @@
             }
         }
 
+        /**
+         * CARGA DE DATOS DEL ÁREA
+         * 
+         * Obtiene la lista de planetas descubiertos en el área especificada.
+         * Actualiza el contador y la lista visual de planetas.
+         */
         async function loadAreaData(areaNumber) {
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game_id');
@@ -737,6 +853,14 @@
             }
         }
 
+        /**
+         * ACTUALIZACIÓN DE LISTA DE PLANETAS DEL ÁREA
+         * 
+         * Renderiza la lista de planetas descubiertos en el área actual.
+         * Muestra información básica y marca el planeta actual donde está la nave.
+         * 
+         * Nota: Conversión de coordenadas 0-based (backend) a formato de display 1-based (A-F, 1-6)
+         */
         function updateAreaPlanetsList(planets, shipQuadrant, currentPlanetCode) {
             const listEl = document.getElementById('area-planets-list');
             listEl.innerHTML = '';
@@ -750,7 +874,7 @@
                 const isCurrent = planet.code === currentPlanetCode || planet.quadrant === shipQuadrant;
                 // planet.quadrant uses 0-based coords, convert to 1-based for display
                 const [row, col] = planet.quadrant.split(',').map(Number);
-                const quadLetter = String.fromCharCode(64 + col + 1);  // +1 to convert to 1-based
+                const quadLetter = String.fromCharCode(64 + col + 1);  // +1 to convert to 1-based (A=1)
                 const quadRow = row + 1;  // +1 to convert to 1-based
 
                 // Create compact planet card
@@ -778,11 +902,16 @@
             });
         }
 
+        /**
+         * ACTUALIZACIÓN DE BOTONES DE NAVEGACIÓN DE ÁREA
+         * 
+         * Habilita/deshabilita botones según los límites del mapa (áreas 2-12).
+         */
         function updateAreaNavigationButtons(currentArea) {
             const prevBtn = document.getElementById('area-prev-btn');
             const nextBtn = document.getElementById('area-next-btn');
 
-            // Disable/enable buttons based on area limits
+            // Disable/enable buttons based on area limits (2-12)
             if (currentArea <= 2) {
                 prevBtn.disabled = true;
             } else {
@@ -798,6 +927,14 @@
 
         window.onload = initDashboard;
 
+        /**
+         * ACTUALIZACIÓN DEL REGISTRO DE MUNDOS (ARCHIVOS ESTELARES)
+         * 
+         * Carga y muestra todos los planetas descubiertos con sus coordenadas.
+         * Cada entrada es clickeable para mostrar detalles del planeta.
+         * 
+         * Nota: Conversión de coordenadas 0-based (backend) a formato de display 1-based (A-F, 1-6)
+         */
         async function updateWorldLog() {
             const logContainer = document.getElementById('world-log');
             if (!gameState.discovered_planets || Object.keys(gameState.discovered_planets).length === 0) {
@@ -806,7 +943,7 @@
 
             logContainer.innerHTML = '';
 
-            // Fetch details for all discovered planets to show names
+            // Obtener detalles de todos los planetas descubiertos para mostrar nombres
             for (const [code, info] of Object.entries(gameState.discovered_planets)) {
                 try {
                     const response = await fetch(`/api/planets/${code}`);
@@ -843,17 +980,25 @@
             selectQuadrant(row, col);
         }
 
+        /**
+         * SELECCIÓN Y EXPLORACIÓN DE CUADRANTE
+         * 
+         * Maneja el click en un cuadrante del grid. Actualiza la posición visual de la nave
+         * y guarda la exploración en el servidor.
+         * 
+         * Nota: Los parámetros row/col son 1-based (vienen de data attributes HTML)
+         */
         async function selectQuadrant(row, col) {
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game_id');
 
             if (!gameId) return;
 
-            // Visual update only for now if move is intended
+            // Actualización visual inmediata
             updateGridPosition(row, col);
 
             try {
-                // Save exploration to API
+                // Guardar exploración en el servidor (backend espera coordenadas 1-based)
                 const formData = new FormData();
                 formData.append('row', row);
                 formData.append('col', col);
@@ -867,11 +1012,19 @@
             }
         }
 
+        /**
+         * ACTUALIZACIÓN DE POSICIÓN EN EL GRID
+         * 
+         * Mueve visualmente el icono de la nave al cuadrante especificado y actualiza
+         * los marcadores de fila/columna. Automáticamente revela el fog overlay en la posición.
+         * 
+         * Nota: Los parámetros row/col son 1-based (coordenadas del grid HTML)
+         */
         function updateGridPosition(row, col) {
-            // Remove old ship icon
+            // Remover icono de nave anterior
             document.querySelectorAll('.ship-icon').forEach(el => el.remove());
 
-            // Update markers
+            // Actualizar marcadores: ocultar todos, luego mostrar los de la posición actual
             document.querySelectorAll('[id^="marker-"]').forEach(el => el.classList.add('opacity-0'));
 
             const colMarker = document.getElementById(`marker-col-${col}`);
@@ -880,12 +1033,12 @@
             if (colMarker) colMarker.classList.remove('opacity-0');
             if (rowMarker) rowMarker.classList.remove('opacity-0');
 
-            // Add ship to new cell
+            // Agregar nave a la nueva celda
             const cell = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
             if (cell) {
                 cell.insertAdjacentHTML('beforeend', SHIP_ICON);
 
-                // Auto-reveal fog for ship position
+                // Revelar automáticamente fog overlay en la posición de la nave
                 const fog = cell.querySelector('.fog-overlay');
                 if (fog) {
                     fog.classList.add('opacity-0');
@@ -896,6 +1049,14 @@
 
         window.onload = initDashboard;
 
+        /**
+         * MOSTRAR DETALLES DEL PLANETA
+         * 
+         * Carga información completa del planeta desde la API y la muestra en el panel expandible.
+         * Incluye datos básicos, factores de riesgo, información comercial, instalaciones y productos.
+         * 
+         * Los productos se muestran con codificación de color según su tipo (INDU, BASI, ALIM, etc.)
+         */
         async function showPlanetDetails(code) {
             try {
                 const response = await fetch(`/api/planets/${code}`);
@@ -973,10 +1134,11 @@
                     facilitiesEl.innerHTML = '<span class="text-gray-500 italic text-xs">Ninguna</span>';
                 }
 
-                // NEW: Productos Disponibles
+                // Productos Disponibles: Renderiza códigos de productos con codificación de color por tipo
                 const productsEl = document.getElementById('planet-products');
                 productsEl.innerHTML = '';
 
+                // Mapa de colores por código de producto (según reglas del juego)
                 const productColors = {
                     'INDU': 'bg-indigo-500 bg-opacity-20 border-indigo-500',
                     'BASI': 'bg-yellow-500 bg-opacity-20 border-yellow-500',
@@ -1031,6 +1193,12 @@
             document.getElementById('price-' + index).textContent = finalPrice + ' CR';
         }
 
+        /**
+         * ACTUALIZACIÓN DE UBICACIÓN DE NAVE EN PLANETA
+         * 
+         * Actualiza la ubicación de la nave en el planeta actual (Mundo, Espaciopuerto, etc.)
+         * y sincroniza con el servidor. Los valores válidos están definidos en los botones de ubicación.
+         */
         async function updateShipLocation(location) {
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game_id');
@@ -1054,19 +1222,30 @@
             }
         }
 
+        /**
+         * ACTUALIZACIÓN DE UI DE UBICACIÓN
+         * 
+         * Actualiza visualmente qué botón de ubicación está activo.
+         */
         function updateLocationUI(location) {
-            // Remove active class from all
+            // Remover clase active de todos los botones
             document.querySelectorAll('.location-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
 
-            // Add active class to current
+            // Agregar clase active al botón actual
             const activeBtn = document.getElementById('loc-' + location);
             if (activeBtn) {
                 activeBtn.classList.add('active');
             }
         }
 
+        /**
+         * CARGA DE DATOS DE TESORERÍA
+         * 
+         * Obtiene el balance actual y los gastos mensuales (salarios + préstamos)
+         * desde el servidor y actualiza el HUD.
+         */
         async function loadTreasuryData(gameId) {
             try {
                 const response = await fetch(`/api/games/${gameId}/treasury`);
@@ -1079,7 +1258,7 @@
                 const monthlyExpenses = data.monthly_expenses?.total || 0;
                 document.getElementById('monthly-expenses-value').textContent = monthlyExpenses;
 
-                // Store in gameState for reference
+                // Almacenar en gameState para referencia
                 gameState.treasury = data.current_balance;
                 gameState.monthly_expenses = monthlyExpenses;
 
