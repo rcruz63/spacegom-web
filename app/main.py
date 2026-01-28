@@ -3,7 +3,27 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
+"""Módulo principal FastAPI.
+
+Este módulo es el punto de entrada API de la aplicación Spacegom. Expone
+rutas que renderizan páginas HTML y un API REST JSON consumido por el
+frontend. Fragmentos relevantes de la documentación del proyecto han sido
+embebidos como docstrings y comentarios dentro del código para mantener la
+información cerca de la implementación.
+
+Resumen de responsabilidades:
+- Páginas web: index, dashboard, setup, personnel, treasury, missions, logs, trade.
+- Gestión de juegos: creación/listado, lectura/actualización de estado, logs y setup.
+- Sistema de dados: `DiceRoller` con endpoint HTMX legado y API JSON.
+- Planetas: obtención por código 3d6, validación para planeta inicial, notas/bootstrap.
+- Personal y contratación: modelos `Personnel` y `EmployeeTask`.
+- Tiempo y eventos: `GameCalendar` y `EventQueue` para eventos programados.
+- Comercio y pasajeros: gestores específicos encapsulan reglas de negocio.
+
+Todos los endpoints públicos incluyen anotaciones de tipo y docstrings
+concisos en español para facilitar su lectura por desarrolladores y linters.
+"""
 import random
 import json
 import math
@@ -24,63 +44,88 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Initialize database on startup
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
+    """Inicializa recursos al arrancar la aplicación.
+
+    Llama a `init_db()` para asegurar que la base de datos y las tablas
+    requeridas existen o se migran cuando arranca la aplicación FastAPI.
+    """
     init_db()
 
 
 # ===== WEB PAGES =====
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def read_root(request: Request) -> HTMLResponse:
+    """Renderiza la página principal (`index.html`)."""
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request):
+async def dashboard(request: Request) -> HTMLResponse:
+    """Renderiza el panel de control (dashboard)."""
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 @app.get("/setup", response_class=HTMLResponse)
-async def setup_page(request: Request):
+async def setup_page(request: Request) -> HTMLResponse:
+    """Renderiza la página de configuración inicial (setup)."""
     return templates.TemplateResponse("setup.html", {"request": request})
 
 @app.get("/personnel", response_class=HTMLResponse)
-async def personnel_page(request: Request):
+async def personnel_page(request: Request) -> HTMLResponse:
+    """Renderiza la página de gestión de personal."""
     return templates.TemplateResponse("personnel.html", {"request": request})
 
 @app.get("/treasury", response_class=HTMLResponse)
-async def treasury_page(request: Request):
+async def treasury_page(request: Request) -> HTMLResponse:
+    """Renderiza la página de tesorería y finanzas."""
     return templates.TemplateResponse("treasury.html", {"request": request})
 
 @app.get("/missions", response_class=HTMLResponse)
-async def missions_page(request: Request):
+async def missions_page(request: Request) -> HTMLResponse:
+    """Renderiza la página de gestión de misiones."""
     return templates.TemplateResponse("missions.html", {"request": request})
 
 @app.get("/logs", response_class=HTMLResponse)
-async def logs_page(request: Request):
+async def logs_page(request: Request) -> HTMLResponse:
+    """Renderiza la página de registros de eventos (logs)."""
     return templates.TemplateResponse("logs.html", {"request": request})
 
 @app.get("/trade", response_class=HTMLResponse)
-async def trade_page(request: Request):
+async def trade_page(request: Request) -> HTMLResponse:
+    """Renderiza la página de comercio/mercado."""
     return templates.TemplateResponse("trade.html", {"request": request})
 
 
 # ===== GAME MANAGEMENT API =====
 
 @app.get("/api/games")
-async def list_games():
-    """List all available games"""
+async def list_games() -> Dict[str, Any]:
+    """Listar todos los juegos disponibles.
+
+    Devuelve un diccionario JSON con la clave `games` que contiene la
+    información de los juegos existentes.
+    """
     games = GameState.list_games()
     return {"games": games}
 
 @app.post("/api/games/new")
-async def create_game(game_name: Optional[str] = Form(None)):
-    """Create a new game"""
+async def create_game(game_name: Optional[str] = Form(None)) -> Dict[str, Any]:
+    """Crear un nuevo juego.
+
+    Crea y persiste un nuevo `GameState`. Devuelve `game_id` y el estado
+    inicial del juego.
+    """
     game = GameState.create_new_game(game_name)
     game.save()
     return {"game_id": game.game_id, "state": game.state}
 
 @app.get("/api/games/{game_id}")
-async def get_game_state(game_id: str):
-    """Get current game state"""
+async def get_game_state(game_id: str) -> Dict[str, Any]:
+    """Obtener el estado actual del juego.
+
+    Devuelve el estado persistido y las estadísticas de la nave derivadas
+    del `ship_model` guardado en el estado.
+    """
     from app.ship_data import get_ship_stats
     game = GameState(game_id)
     ship_stats = get_ship_stats(game.state.get("ship_model", "Basic Starfall"))
@@ -99,8 +144,13 @@ async def update_game_state(
     damage_light: Optional[bool] = Form(None),
     damage_moderate: Optional[bool] = Form(None),
     damage_severe: Optional[bool] = Form(None)
-):
-    """Update game state fields"""
+) -> Dict[str, Any]:
+    """Actualizar campos del estado del juego.
+
+    Realiza validaciones básicas y límites (por ejemplo, combustible entre
+    0 y `fuel_max`) y actualiza indicadores booleanos de daños.
+    Devuelve el estado actualizado.
+    """
     game = GameState(game_id)
     
     if fuel is not None:
@@ -128,8 +178,12 @@ async def get_logs(
     game_id: str,
     limit: Optional[int] = None,
     event_type: Optional[str] = None
-):
-    """Get event logs for a game"""
+) -> Dict[str, Any]:
+    """Obtener registros de eventos del juego.
+
+    Soporta filtros `limit` y `event_type`. Devuelve la lista `logs` y el
+    recuento `count`.
+    """
     from app.event_logger import EventLogger
     
     logger = EventLogger(game_id)
@@ -146,10 +200,8 @@ async def get_logs(
 async def update_ship_location(
     game_id: str,
     location: str = Form(...)
-):
-    """
-    Update ship location on the planet (Mundo, Espaciopuerto, etc.)
-    """
+ ) -> Dict[str, Any]:
+    """Actualizar la ubicación de la nave en el planeta (por ejemplo, "Mundo", "Espaciopuerto")."""
     game = GameState(game_id)
     game.state["ship_location_on_planet"] = location
     game.save()
@@ -161,9 +213,10 @@ async def company_setup(
     company_name: str = Form(...),
     ship_name: str = Form(...),
     ship_model: str = Form("Basic Starfall")
-):
-    """
-    Save player company and ship details
+ ) -> Dict[str, Any]:
+    """Guardar los datos de la compañía y la nave del jugador.
+
+    Inicializa estadísticas de la nave en función del `ship_model`.
     """
     from app.ship_data import get_ship_stats
     
@@ -187,19 +240,17 @@ async def initial_company_setup(
     game_id: str,
     area_manual: Optional[str] = Form(None),  # e.g., "4,5" for manual 2d6
     density_manual: Optional[str] = Form(None)  # e.g., "6,3" for manual 2d6
-):
-    """
-    Initial company placement setup
-    
-    Step 1: Roll 2d6 for space area (2-12)
-    Step 2: Roll 2d6 for world density and determine level
-           - 2-4: Baja
-           - 5-9: Media  
-           - 10-12: Alta
-    
-    Args:
-        area_manual: Optional comma-separated manual 2d6 results
-        density_manual: Optional comma-separated manual 2d6 results
+ ) -> Dict[str, Any]:
+    """Configuración inicial de la compañía.
+
+    Paso 1: tirar 2d6 para área espacial (2-12).
+    Paso 2: tirar 2d6 para densidad de mundos y determinar nivel:
+        - 2-4: Baja
+        - 5-9: Media
+        - 10-12: Alta
+
+    Parámetros opcionales `area_manual` y `density_manual` permiten
+    proporcionar resultados manuales separados por comas.
     """
     game = GameState(game_id)
     
@@ -285,10 +336,10 @@ async def initial_position_setup(
     game_id: str,
     row_manual: Optional[int] = Form(None),
     col_manual: Optional[int] = Form(None)
-):
-    """
-    Initial ship position setup
-    Roll 1d6 for row (1-6) and 1d6 for col (1-6)
+ ) -> Dict[str, Any]:
+    """Configuración inicial de la posición de la nave.
+
+    Se tiran 1d6 para fila y 1d6 para columna (valores 1-6).
     """
     game = GameState(game_id)
     
@@ -351,8 +402,13 @@ async def update_planet_bootstrap(
     tech_level: str = Form(...),
     population_over_1000: bool = Form(...),
     db: Session = Depends(get_db)
-):
-    """Update missing planet data for bootstrap validation"""
+) -> Dict[str, Any]:
+    """Actualizar datos faltantes del planeta para el proceso de bootstrap.
+
+    Se usa en el flujo de bootstrap cuando faltan datos técnicos del
+    planeta y el jugador los proporciona manualmente (`tech_level` y
+    `population_over_1000`).
+    """
     planet = db.query(Planet).filter(Planet.code == code).first()
     if not planet:
         raise HTTPException(status_code=404, detail=f"Planet {code} not found")
@@ -367,8 +423,13 @@ async def update_planet_bootstrap(
 # ===== DICE ROLLING API =====
 
 @app.post("/api/roll-dice", response_class=HTMLResponse)
-async def roll_dice(request: Request, num_dices: int = Form(1), manual_result: str | None = Form(None)):
-    """Roll dice (for HTMX component - legacy endpoint)"""
+async def roll_dice(request: Request, num_dices: int = Form(1), manual_result: str | None = Form(None)) -> HTMLResponse:
+    """Tirada de dados (endpoint legado para HTMX).
+
+    Devuelve un fragmento HTML (`components/dice_result.html`) usado por la
+    interfaz HTMX. Para clientes programáticos, se recomiendan los
+    endpoints JSON.
+    """
     is_manual = False
     result_val = 0
     details = ""
@@ -394,23 +455,12 @@ async def roll_dice(request: Request, num_dices: int = Form(1), manual_result: s
 
 
 @app.post("/api/dice/roll")
-async def roll_dice_universal(request: Request):
-    """
-    Universal dice rolling endpoint for DiceRollerUI component
-    
-    Accepts JSON body:
-    {
-        "num_dice": 2,
-        "dice_sides": 6,
-        "manual_values": [3, 5]  // optional
-    }
-    
-    Returns:
-    {
-        "dice": [3, 5],
-        "sum": 8,
-        "mode": "manual" or "automatic"
-    }
+async def roll_dice_universal(request: Request) -> Dict[str, Any]:
+    """Endpoint universal de tiradas de dados (JSON).
+
+    Espera un JSON con `num_dice`, `dice_sides` y opcionalmente
+    `manual_values`. Devuelve los resultados de los dados, la suma y el
+    modo (`manual` o `automatic`).
     """
     try:
         data = await request.json()
@@ -452,14 +502,12 @@ async def roll_dice_json(
     num_dice: int = Form(1),
     manual_results: Optional[str] = Form(None),
     purpose: str = Form("")
-):
-    """
-    Roll dice and record in game history
-    
-    Args:
-        num_dice: Number of dice to roll (1-10)
-        manual_results: Optional comma-separated manual results (e.g., "4,6,6")
-        purpose: Purpose of the roll (e.g., "planet_code", "combat", "negotiation")
+ ) -> Dict[str, Any]:
+    """Tirar dados y registrar la tirada en el historial del juego.
+
+    Los parámetros coinciden con el formulario de la interfaz. Devuelve
+    los resultados, el total, si fue manual y una representación
+    formateada. El campo `purpose` se usa para etiquetar la tirada.
     """
     game = GameState(game_id)
     
@@ -497,12 +545,10 @@ async def roll_planet_code(
     game_id: str,
     manual_results: Optional[str] = Form(None),
     db: Session = Depends(get_db)
-):
-    """
-    Roll 3 dice to generate a planet code and fetch planet data
-    
-    Args:
-        manual_results: Optional comma-separated manual results (e.g., "4,6,6")
+ ) -> Dict[str, Any]:
+    """Tirar 3d6 para generar un código de planeta y devolver sus datos.
+
+    Si el planeta no existe en la base de datos, se devuelve `planet: None`.
     """
     game = GameState(game_id)
     
@@ -546,14 +592,13 @@ async def roll_planet_code(
 
 
 def format_planet_data(planet: Planet) -> dict:
-    """
-    Format planet data for API responses using decoded human-readable values
-    
+    """Formatea los datos de un `Planet` para las respuestas de la API.
+
     Args:
-        planet: Planet object from database
-        
+        planet: Instancia de `Planet` obtenida de la base de datos.
+
     Returns:
-        Formatted dictionary with all planet information (codes + descriptions)
+        dict: Diccionario con la información del planeta en formato legible.
     """
     from app.utils import decode_life_support, decode_tech_level, parse_spaceport
     
@@ -650,8 +695,12 @@ def is_valid_starting_planet(planet: Planet) -> dict:
 # ===== PLANET API =====
 
 @app.get("/api/planets/{code}")
-async def get_planet(code: int, db: Session = Depends(get_db)):
-    """Get planet by code"""
+async def get_planet(code: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Obtener un planeta por su código.
+
+    Devuelve los datos formateados del planeta y la validación para
+    determinar si es apto como planeta inicial.
+    """
     planet = db.query(Planet).filter(Planet.code == code).first()
     if not planet:
         raise HTTPException(status_code=404, detail=f"Planet {code} not found")
@@ -662,8 +711,11 @@ async def get_planet(code: int, db: Session = Depends(get_db)):
     }
 
 @app.get("/api/planets")
-async def search_planets(name: Optional[str] = None, db: Session = Depends(get_db)):
-    """Search planets by name"""
+async def search_planets(name: Optional[str] = None, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Buscar planetas por nombre.
+
+    Devuelve una lista de coincidencias (límite 50).
+    """
     query = db.query(Planet)
     
     if name:
@@ -684,8 +736,12 @@ async def search_planets(name: Optional[str] = None, db: Session = Depends(get_d
 
 
 @app.post("/api/games/{game_id}/set-starting-planet")
-async def set_starting_planet(game_id: str, code: int = Form(...)):
-    """Set the starting planet for the game"""
+async def set_starting_planet(game_id: str, code: int = Form(...)) -> Dict[str, Any]:
+    """Establece el planeta inicial para la partida.
+
+    Actualiza el `GameState` y marca el planeta como descubierto en el
+    cuadrante actual si existe información de posición.
+    """
     game = GameState(game_id)
     game.state["current_planet_code"] = code
     game.state["starting_planet_code"] = code
@@ -709,7 +765,7 @@ async def set_starting_planet(game_id: str, code: int = Form(...)):
 
 
 @app.get("/api/planets/next/{current_code}")
-async def get_next_planet(current_code: int, db: Session = Depends(get_db)):
+async def get_next_planet(current_code: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Obtiene el siguiente planeta en la secuencia 3d6 (búsqueda consecutiva)
     
@@ -741,7 +797,7 @@ async def update_planet_notes(
     code: int,
     notes: str = Form(...),
     db: Session = Depends(get_db)
-):
+) -> Dict[str, Any]:
     """
     Actualizar notas de un planeta
     
@@ -769,7 +825,7 @@ async def update_planet_notes(
 # ===== NAME SUGGESTIONS API =====
 
 @app.get("/api/suggestions/company-name")
-async def suggest_company_name():
+async def suggest_company_name() -> Dict[str, Any]:
     """
     Retorna un nombre de compañía aleatorio desde el CSV
     
@@ -780,7 +836,7 @@ async def suggest_company_name():
 
 
 @app.get("/api/suggestions/ship-name")
-async def suggest_ship_name():
+async def suggest_ship_name() -> Dict[str, Any]:
     """
     Retorna un nombre de nave aleatorio desde el CSV
     
@@ -797,8 +853,12 @@ async def explore_quadrant(
     game_id: str,
     row: int = Form(...),
     col: int = Form(...)
-):
-    """Mark a quadrant as explored"""
+) -> Dict[str, Any]:
+    """Marcar un cuadrante como explorado.
+
+    Actualiza el estado del juego para reflejar la exploración y devuelve
+    la lista actualizada de cuadrantes explorados.
+    """
     game = GameState(game_id)
     game.explore_quadrant(row, col)
     
@@ -813,16 +873,15 @@ async def explore_quadrant(
 async def navigate_area(
     game_id: str,
     direction: str = Form(...)
-):
-    """
-    Navigate to adjacent area (prev/next)
-    
+) -> Dict[str, Any]:
+    """Navegar a un área adyacente (anterior/siguiente).
+
     Args:
-        game_id: Game identifier
-        direction: "prev" or "next"
-        
+        game_id: Identificador de la partida.
+        direction: "prev" o "next" indicando dirección.
+
     Returns:
-        JSON with new area number and status
+        JSON con el nuevo número de área y el estado de la operación.
     """
     game = GameState(game_id)
     current_area = game.state.get("area", 2)
@@ -844,7 +903,7 @@ async def get_area_planets(
     game_id: str,
     area_number: int,
     db: Session = Depends(get_db)
-):
+) -> Dict[str, Any]:
     """
     Get all discovered planets in a specific area
     
@@ -882,7 +941,7 @@ async def get_area_planets(
 # ===== PERSONNEL API =====
 
 @app.get("/api/games/{game_id}/personnel")
-async def get_personnel(game_id: str, db: Session = Depends(get_db)):
+async def get_personnel(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Get all personnel for a game
     
@@ -924,8 +983,11 @@ async def hire_personnel(
     morale: str = Form(...),
     notes: str = Form(""),
     db: Session = Depends(get_db)
-):
-    """Hire new personnel"""
+) -> Dict[str, Any]:
+    """Contratar nuevo personal.
+
+    Crea una fila `Personnel` y devuelve la información del empleado creado.
+    """
     from datetime import date
     
     new_employee = Personnel(
@@ -965,8 +1027,8 @@ async def update_personnel(
     morale: Optional[str] = Form(None),
     notes: Optional[str] = Form(None),
     db: Session = Depends(get_db)
-):
-    """Update personnel information"""
+) -> Dict[str, Any]:
+    """Actualizar información de personal y persistir los cambios."""
     employee = db.query(Personnel).filter(
         Personnel.id == employee_id,
         Personnel.game_id == game_id
@@ -999,8 +1061,8 @@ async def fire_personnel(
     game_id: str,
     employee_id: int,
     db: Session = Depends(get_db)
-):
-    """Fire personnel (mark as inactive)"""
+) -> Dict[str, Any]:
+    """Dar de baja a un empleado (marcar como inactivo) y devolver el resultado."""
     employee = db.query(Personnel).filter(
         Personnel.id == employee_id,
         Personnel.game_id == game_id
@@ -1018,8 +1080,11 @@ async def fire_personnel(
 # ===== TREASURY API =====
 
 @app.get("/api/games/{game_id}/treasury")
-async def get_treasury(game_id: str, db: Session = Depends(get_db)):
-    """Get treasury information"""
+async def get_treasury(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Obtener información de la tesorería.
+
+    Devuelve saldo actual, dificultad, reputación y transacciones recientes.
+    """
     game = GameState(game_id)
     
     # Calculate monthly salaries from personnel
@@ -1048,8 +1113,8 @@ async def add_transaction(
     amount: int = Form(...),
     description: str = Form(...),
     category: str = Form("other"),
-):
-    """Add a treasury transaction"""
+) -> Dict[str, Any]:
+    """Añadir una transacción a la tesorería y actualizar el historial de transacciones del juego."""
     from datetime import datetime
     
     game = GameState(game_id)
@@ -1081,8 +1146,11 @@ async def add_transaction(
 # ===== MISSIONS MANAGEMENT API =====
 
 @app.get("/api/games/{game_id}/missions")
-async def get_missions(game_id: str, db: Session = Depends(get_db)):
-    """Get all missions for a game, separated by status"""
+async def get_missions(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Obtener todas las misiones de un juego, separadas por estado.
+
+    Devuelve un diccionario con las listas `active`, `completed` y `failed`.
+    """
     missions = db.query(Mission).filter(Mission.game_id == game_id).all()
     
     active = []
@@ -1139,8 +1207,12 @@ async def create_mission(
     mission_code: Optional[str] = Form(None),
     book_page: Optional[int] = Form(None),
     db: Session = Depends(get_db)
-):
-    """Create a new mission (campaign objective or special mission)"""
+) -> Dict[str, Any]:
+    """Crear una nueva misión (objetivo de campaña o misión especial).
+
+    Valida los campos requeridos según `mission_type` y programa un evento
+    de fecha límite si se proporciona `max_date`.
+    """
     from datetime import date
     
     # Validate mission type
@@ -1225,8 +1297,8 @@ async def update_mission_result(
     completed_date: str = Form(""),
     notes: Optional[str] = Form(None),
     db: Session = Depends(get_db)
-):
-    """Update mission result (mark as success or failure)"""
+ ) -> Dict[str, Any]:
+    """Actualizar el resultado de una misión (marcar como éxito o fracaso)."""
     mission = db.query(Mission).filter(
         Mission.id == mission_id,
         Mission.game_id == game_id
@@ -1259,12 +1331,10 @@ async def resolve_mission_deadline(
     mission_id: int,
     success: bool = Form(...),
     db: Session = Depends(get_db)
-):
-    """
-    Resolve a mission deadline event (from mission_deadline handler)
-    
-    Args:
-        success: True if mission was successful, False if failed
+ ) -> Dict[str, Any]:
+    """Resolver la fecha límite de una misión.
+
+    `success` indica si la misión se considera completada con éxito o no.
     """
     from app.time_manager import GameCalendar
     
@@ -1331,8 +1401,8 @@ async def delete_mission(
     game_id: str,
     mission_id: int,
     db: Session = Depends(get_db)
-):
-    """Delete a mission"""
+) -> Dict[str, Any]:
+    """Eliminar una misión de la base de datos y devolver el estado de la eliminación."""
     mission = db.query(Mission).filter(
         Mission.id == mission_id,
         Mission.game_id == game_id
@@ -1350,8 +1420,12 @@ async def delete_mission(
 # ===== HIRING SYSTEM API =====
 
 @app.get("/api/games/{game_id}/hire/available-positions")
-async def get_available_positions(game_id: str, db: Session = Depends(get_db)):
-    """Get positions available for hiring based on current planet's tech level"""
+async def get_available_positions(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Obtener posiciones disponibles para contratación según el nivel tecnológico del planeta.
+
+    Devuelve una lista de posiciones filtrada por `POSITIONS_CATALOG` y
+    `TECH_LEVEL_REQUIREMENTS`.
+    """
     game = GameState(game_id)
     current_planet_code = game.state.get("current_planet_code")
     
@@ -1390,8 +1464,12 @@ async def start_hire_search(
     experience_level: str = Form(...),
     manual_dice_days: Optional[str] = Form(None),  # ← AÑADIR
     db: Session = Depends(get_db)
-):
-    """Start a new hire search task for the Director Gerente"""
+ ) -> Dict[str, Any]:
+    """Iniciar búsqueda de contratación para el Director Gerente.
+
+    Valida la petición, crea una `EmployeeTask` y programa su finalización
+    si queda en primera posición de la cola.
+    """
     
     # Validate position exists
     if position not in POSITIONS_CATALOG:
@@ -1514,8 +1592,8 @@ async def get_employee_tasks(
     game_id: str,
     employee_id: int,
     db: Session = Depends(get_db)
-):
-    """Get all tasks for an employee (mainly Director Gerente)"""
+ ) -> Dict[str, Any]:
+    """Obtener todas las tareas de un empleado (principalmente Director Gerente)."""
     
     employee = db.query(Personnel).filter(
         Personnel.id == employee_id,
@@ -1577,8 +1655,8 @@ async def reorder_task(
     task_id: int,
     new_position: int = Form(...),
     db: Session = Depends(get_db)
-):
-    """Reorder a pending task in the queue"""
+) -> Dict[str, Any]:
+    """Reordenar una tarea pendiente en la cola; ajusta las posiciones de las demás."""
     
     task = db.query(EmployeeTask).filter(
         EmployeeTask.id == task_id,
@@ -1627,8 +1705,8 @@ async def delete_task(
     game_id: str,
     task_id: int,
     db: Session = Depends(get_db)
-):
-    """Delete a pending task"""
+) -> Dict[str, Any]:
+    """Eliminar una tarea pendiente y ajustar la cola en consecuencia."""
     
     task = db.query(EmployeeTask).filter(
         EmployeeTask.id == task_id,
@@ -1866,7 +1944,7 @@ async def complete_setup(
 async def get_passenger_transport_info(
     game_id: str,
     db: Session = Depends(get_db)
-):
+) -> Dict[str, Any]:
     """
     Get info for passenger transport action
     Returns capacity, current passengers, and modifiers
@@ -1938,7 +2016,7 @@ async def execute_passenger_transport(
     game_id: str,
     manual_dice: Optional[str] = Form(None),
     db: Session = Depends(get_db)
-):
+) -> Dict[str, Any]:
     """
     Execute passenger transport action
     
@@ -2106,8 +2184,8 @@ async def execute_passenger_transport(
 # ===== TRADING API =====
 
 @app.get("/api/games/{game_id}/trade/market")
-async def get_trade_market(game_id: str, db: Session = Depends(get_db)):
-    """Get available products to buy and active orders valid for sale"""
+async def get_trade_market(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Obtener productos disponibles para comprar y órdenes activas."""
     from app.trade_manager import TradeManager
     
     game = GameState(game_id)
@@ -2121,8 +2199,8 @@ async def get_trade_market(game_id: str, db: Session = Depends(get_db)):
     return market_data
 
 @app.get("/api/games/{game_id}/trade/orders")
-async def get_trade_orders(game_id: str, db: Session = Depends(get_db)):
-    """Get all trade orders (ledger)"""
+async def get_trade_orders(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """Obtener todas las órdenes de comercio (libro de operaciones)."""
     from app.database import TradeOrder
     
     orders = db.query(TradeOrder).filter(TradeOrder.game_id == game_id).all()
@@ -2134,10 +2212,10 @@ async def negotiate_trade(
     game_id: str,
     action: str = Form(...), # "buy" or "sell"
     manual_roll: Optional[int] = Form(None)
-):
-    """
-    Simulate negotiation dice roll.
-    Returns modifier/multiplier/result but DOES NOT execute trade.
+) -> Dict[str, Any]:
+    """Simular la tirada de negociación.
+
+    Devuelve modificadores y resultados pero NO ejecuta la transacción.
     """
     from app.trade_manager import TradeManager
     
@@ -2173,8 +2251,8 @@ async def execute_trade_buy(
     unit_price: int = Form(...),
     traceability: bool = Form(True),
     db: Session = Depends(get_db)
-):
-    """Execute a buy transaction"""
+) -> Dict[str, Any]:
+    """Ejecutar una transacción de compra."""
     from app.trade_manager import TradeManager
     
     manager = TradeManager(game_id, db)
@@ -2198,8 +2276,8 @@ async def execute_trade_sell(
     planet_code: int = Form(...),
     sell_price_total: int = Form(...),
     db: Session = Depends(get_db)
-):
-    """Execute a sell transaction"""
+) -> Dict[str, Any]:
+    """Ejecutar una transacción de venta."""
     from app.trade_manager import TradeManager
     
     manager = TradeManager(game_id, db)
