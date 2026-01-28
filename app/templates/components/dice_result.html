@@ -1,10 +1,24 @@
+<!--
+    Componente reutilizable para mostrar resultado de tirada de dados.
+    
+    Muestra el resultado con animación de pulso y un indicador de si fue
+    tirada manual (dados físicos) o automática (generada por el sistema).
+    
+    Variables del template:
+    - result: Número del resultado a mostrar (requerido)
+    - is_manual: Boolean indicando si fue entrada manual (opcional)
+    - details: Texto adicional opcional (ej: "2d6")
+-->
 <div class="text-center animate-pulse-once">
+    <!-- Indicador de fuente: USER INPUT (manual) o GENERATED (automático) -->
     <div class="text-xs text-gray-500 uppercase mb-1">
         {% if is_manual %}USER INPUT{% else %}GENERATED{% endif %}
     </div>
+    <!-- Resultado principal con efecto de brillo -->
     <div class="text-4xl font-orbitron font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
         {{ result }}
     </div>
+    <!-- Detalles adicionales opcionales (ej: "2d6", "Suma: 8") -->
     {% if details %}
     <div class="text-xs text-gray-600 font-mono mt-1">
         {{ details }}

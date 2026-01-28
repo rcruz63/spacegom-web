@@ -1,45 +1,65 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
+<!--
+    Template base para la aplicación Spacegom Companion.
+    
+    Proporciona la estructura HTML base, CSS styling, utilidades JavaScript y sistema
+    de navegación global usado en todas las páginas.
+    
+    Estructura:
+    - Head: Meta tags, TailwindCSS, HTMX, Google Fonts
+    - Body: Header, navegación global, bloque de contenido, footer
+    - Scripts: Sistema de notificaciones, panel de resultados, funciones globales
+-->
 
 <head>
+    <!-- Meta tags básicos -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spacegom Companion</title>
-    <!-- Tailwind CSS -->
+    
+    <!-- Tailwind CSS desde CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- HTMX -->
+    
+    <!-- HTMX para actualizaciones dinámicas de contenido -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <!-- Fonts -->
+    
+    <!-- Google Fonts: Orbitron (sci-fi) y Share Tech Mono (monospace técnico) -->
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap"
         rel="stylesheet">
 
+    <!-- Configuración de TailwindCSS con tema personalizado -->
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
+                    // Familias de fuentes personalizadas
                     fontFamily: {
-                        'orbitron': ['"Orbitron"', 'sans-serif'],
-                        'tech': ['"Share Tech Mono"', 'monospace'],
+                        'orbitron': ['"Orbitron"', 'sans-serif'],  // Fuente sci-fi para títulos
+                        'tech': ['"Share Tech Mono"', 'monospace'],  // Fuente técnica para datos
                     },
+                    // Paleta de colores temática espacial
                     colors: {
                         space: {
-                            900: '#0b0d17',
-                            800: '#15192b',
-                            700: '#1f2640',
+                            900: '#0b0d17',  // Fondo oscuro principal
+                            800: '#15192b',  // Fondo secundario
+                            700: '#1f2640',  // Fondo terciario
                         },
                         neon: {
-                            blue: '#00f3ff',
-                            green: '#00ff9d',
-                            red: '#ff2a6d',
+                            blue: '#00f3ff',   // Azul neón para elementos principales
+                            green: '#00ff9d',  // Verde neón para éxito/confirmación
+                            red: '#ff2a6d',    // Rojo neón para errores/alertas
                         }
                     }
                 }
             }
         }
     </script>
+    <!-- Estilos CSS personalizados -->
     <style>
+        /* Fondo con patrón de grid espacial */
         body {
             background-color: #050505;
             background-image:
@@ -48,6 +68,7 @@
             background-size: 30px 30px;
         }
 
+        /* Efecto glassmorphism para paneles */
         .glass-panel {
             background: rgba(11, 13, 23, 0.7);
             backdrop-filter: blur(10px);
@@ -55,6 +76,7 @@
             box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
         }
 
+        /* Bordes técnicos con esquinas decorativas */
         .tech-border {
             position: relative;
         }
@@ -81,7 +103,7 @@
             border-right: 2px solid #00f3ff;
         }
 
-        /* Notification System */
+        /* Sistema de notificaciones toast - Posicionado fijo en esquina superior derecha */
         #toast-container {
             position: fixed;
             top: 100px;
@@ -146,6 +168,7 @@
             }
         }
 
+        /* Panel de resultados deslizable desde la derecha - 450px de ancho */
         #results-panel {
             position: fixed;
             right: 0;
@@ -169,6 +192,7 @@
 
 <body class="text-gray-300 font-tech min-h-screen p-4 md:p-8">
     <div class="max-w-7xl mx-auto">
+        <!-- Header principal con título y fecha del juego -->
         <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-end">
             <div>
                 <h1
@@ -177,15 +201,16 @@
                 </h1>
                 <p class="text-neon-green text-sm tracking-widest mt-1">SYSTEM ONLINE // CAPTAIN ACCESS GRANTED</p>
             </div>
+            <!-- Fecha del juego en header (oculta en móvil) -->
             <div class="text-right hidden md:block">
                 <div class="text-xs text-gray-500 uppercase tracking-widest">Fecha del Juego</div>
                 <div id="header-game-date" class="text-neon-blue font-orbitron">--</div>
             </div>
         </header>
 
-        <!-- Global Navigation Bar -->
+        <!-- Barra de navegación global - Se muestra solo cuando hay game_id en URL -->
         <div id="global-nav" class="hidden mb-6">
-            <!-- Navigation Tabs -->
+            <!-- Pestañas de navegación: Dashboard, Personal, Tesorería, Comercio, Misiones, Logs -->
             <div class="glass-panel rounded-t-lg border-b-0">
                 <div class="flex flex-wrap gap-1 p-2">
                     <a href="#" id="nav-tab-dashboard" data-page="dashboard"
@@ -215,10 +240,10 @@
                 </div>
             </div>
 
-            <!-- Game Info Bar -->
+            <!-- Barra de información del juego: Fecha, Planeta, Saldo, Gastos, Próximo Evento -->
             <div class="glass-panel rounded-b-lg border-t-0 p-3">
                 <div class="flex flex-wrap items-center gap-4 text-xs">
-                    <!-- Game Info -->
+                    <!-- Información del juego actualizada dinámicamente -->
                     <div class="flex flex-wrap gap-3 flex-1">
                         <div class="flex items-center gap-2">
                             <span class="text-gray-500">📅</span>
@@ -249,7 +274,7 @@
                         </div>
                     </div>
 
-                    <!-- Advance Time Button -->
+                    <!-- Botón para avanzar tiempo del juego con tirada de dados -->
                     <button id="global-advance-time-btn" onclick="globalAdvanceTime()"
                         class="px-4 py-2 bg-neon-green bg-opacity-10 border-2 border-neon-green text-neon-green rounded font-orbitron text-sm hover:bg-opacity-20 transition-all flex items-center gap-2">
                         <span>▶️</span>
@@ -259,19 +284,21 @@
             </div>
         </div>
 
+        <!-- Contenido principal - Bloque Jinja2 para contenido específico de cada página -->
         <main>
             {% block content %}{% endblock %}
         </main>
 
+        <!-- Footer con información del sistema -->
         <footer class="mt-12 text-center text-xs text-gray-600 border-t border-gray-900 pt-4 font-mono">
             SPACEGOM COMPANION SYSTEM v0.1 // CONNECTION SECURE
         </footer>
     </div>
 
-    <!-- Toast Notifications Container -->
+    <!-- Contenedor de notificaciones toast - Posicionado fijo en esquina superior derecha -->
     <div id="toast-container"></div>
 
-    <!-- Results Panel -->
+    <!-- Panel de resultados deslizable - Se muestra desde la derecha con showResultsPanel() -->
     <div id="results-panel">
         <div class="p-6">
             <div class="flex items-center justify-between mb-6">
@@ -282,11 +309,20 @@
         </div>
     </div>
 
-    <!-- Global Notification System JS -->
-    <!-- Sistema Universal de Dados -->
+    <!-- Scripts JavaScript globales -->
+    
+    <!-- Sistema Universal de Dados - Disponible como window.DiceRollerUI -->
     <script src="/static/js/dice-roller.js"></script>
 
     <script>
+        /**
+         * Sistema de notificaciones toast global
+         * Muestra notificaciones temporales en la esquina superior derecha
+         * 
+         * @param {string} message - Mensaje a mostrar
+         * @param {string} type - Tipo: 'success', 'error', 'info', 'warning'
+         * @param {number} duration - Duración en milisegundos (default: 4000)
+         */
         function showToast(message, type = 'info', duration = 4000) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');

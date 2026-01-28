@@ -1,8 +1,19 @@
 {% extends "base.html" %}
+<!--
+    Página de inicio (landing page) de Spacegom Companion.
+    
+    Muestra estadísticas de partidas guardadas, lista de juegos disponibles,
+    y opciones para iniciar nueva partida o continuar la última.
+    
+    Funcionalidad JavaScript:
+    - loadGames(): Carga lista de partidas desde API
+    - continueLastGame(): Carga la partida más reciente
+    - Cálculo de estadísticas (total, activas, última actividad, áreas exploradas)
+-->
 
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-    <!-- Command Center -->
+    <!-- Sección Command Center: Bienvenida y opciones de navegación -->
     <div class="md:col-span-2">
         <div class="glass-panel tech-border p-6 rounded-lg mb-8">
             <h2 class="text-2xl font-orbitron text-white mb-4 border-b border-gray-700 pb-2">
@@ -10,7 +21,7 @@
             </h2>
             <p class="mb-6 text-gray-300">Bienvenido, Comandante. Sistema operativo. Esperando órdenes.</p>
 
-            <!-- Navigation Options -->
+            <!-- Opciones de navegación: Nueva Partida y Continuar Última -->
             <div class="mb-6 flex gap-4">
                 <a href="/setup"
                     class="flex-1 bg-neon-green bg-opacity-20 hover:bg-opacity-30 border-2 border-neon-green text-neon-green px-6 py-3 rounded font-orbitron uppercase tracking-wider transition-all hover:shadow-[0_0_20px_rgba(0,255,157,0.5)] text-center">
@@ -22,7 +33,7 @@
                 </button>
             </div>
 
-            <!-- Games Summary Stats -->
+            <!-- Estadísticas resumen: Total partidas, Activas, Última actividad, Áreas exploradas -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-space-800 p-3 rounded border border-gray-700">
                     <div class="text-xs text-gray-500 uppercase">Total Partidas</div>
@@ -44,7 +55,7 @@
         </div>
     </div>
 
-    <!-- Saved Games List -->
+    <!-- Lista de partidas guardadas - Se carga dinámicamente desde API -->
     <div class="md:col-span-1">
         <div class="glass-panel tech-border p-6 rounded-lg h-full">
             <h3 class="font-orbitron text-neon-blue mb-4 text-sm tracking-wider flex items-center gap-2">
@@ -56,7 +67,7 @@
         </div>
     </div>
 
-    <!-- System Information -->
+    <!-- Información del sistema: Versión, BD, áreas disponibles, estado -->
     <div class="md:col-span-1">
         <div class="glass-panel tech-border p-6 rounded-lg h-full">
             <h3 class="font-orbitron text-neon-blue mb-4 text-sm tracking-wider flex items-center gap-2">
@@ -92,6 +103,10 @@
 </div>
 
 <script>
+    /**
+     * Carga todas las partidas desde la API y actualiza la UI.
+     * Calcula estadísticas y popula la lista de partidas guardadas.
+     */
     async function loadGames() {
         try {
             const response = await fetch('/api/games');

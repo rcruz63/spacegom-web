@@ -21,13 +21,24 @@ templates = Jinja2Templates(directory="app/templates")
 async def roll_dice(
     request: Request, 
     num_dices: int = Form(1), 
-    manual_result: str | None = Form(None)
+    manual_result: Optional[str] = Form(None)
 ) -> HTMLResponse:
-    """Tirada de dados (endpoint legado para HTMX).
-
-    Devuelve un fragmento HTML (`components/dice_result.html`) usado por la
-    interfaz HTMX. Para clientes programáticos, se recomiendan los
-    endpoints JSON.
+    """
+    Tirada de dados (endpoint legado para HTMX).
+    
+    Endpoint diseñado para integración HTMX que devuelve un fragmento HTML
+    renderizado con el componente dice_result.html.
+    
+    Args:
+        request: Request de FastAPI (para renderizado de template)
+        num_dices: Número de dados a tirar (default: 1)
+        manual_result: Opcional resultado manual como string (dados físicos)
+    
+    Returns:
+        HTMLResponse con fragmento HTML del componente dice_result.html
+    
+    Note:
+        Para clientes programáticos, usar /api/dice/roll que retorna JSON.
     """
     is_manual = False
     result_val = 0
@@ -101,11 +112,28 @@ async def roll_dice_json(
     manual_results: Optional[str] = Form(None),
     purpose: str = Form("")
 ) -> Dict[str, Any]:
-    """Tirar dados y registrar la tirada en el historial del juego.
-
-    Los parámetros coinciden con el formulario de la interfaz. Devuelve
-    los resultados, el total, si fue manual y una representación
-    formateada. El campo `purpose` se usa para etiquetar la tirada.
+    """
+    Tira dados y registra la tirada en el historial del juego.
+    
+    Realiza la tirada (automática o manual) y la registra en el historial
+    de tiradas del GameState para su posterior consulta.
+    
+    Args:
+        game_id: Identificador único de la partida
+        num_dice: Número de dados a tirar (default: 1)
+        manual_results: Opcional string con resultados separados por comas (ej: "4,6")
+        purpose: Descripción del propósito de la tirada (para logs)
+    
+    Returns:
+        Diccionario con:
+        - "results": Lista de valores de cada dado
+        - "total": Suma de los resultados
+        - "is_manual": True si fue tirada manual, False si fue automática
+        - "purpose": Propósito de la tirada
+        - "formatted": String formateado (ej: "4 + 6")
+    
+    Raises:
+        HTTPException 400: Si los resultados manuales son inválidos
     """
     game = GameState(game_id)
     

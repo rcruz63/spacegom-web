@@ -1,10 +1,24 @@
 {% extends "base.html" %}
+<!--
+    Template de gestión de personal.
+    
+    Proporciona interfaz completa para:
+    - Ver personal activo con estadísticas (salario, experiencia, moral)
+    - Iniciar búsqueda de contratación (modal con selección de puesto y experiencia)
+    - Gestionar cola de tareas del Director Gerente
+    - Ver resumen de personal y gastos mensuales
+    
+    Funcionalidad JavaScript:
+    - Carga de personal desde API
+    - Sistema de modales para contratación
+    - Integración con DiceRollerUI para tiradas de contratación
+-->
 
 {% block title %}Personal - Spacegom{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-space-900 p-6">
-    <!-- Header -->
+    <!-- Encabezado con título, ID de partida y fecha -->
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-orbitron text-neon-blue">GESTIÓN DE PERSONAL</h1>
@@ -18,7 +32,7 @@
         </a>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Tarjetas de resumen: Total Personal, Salarios Mensuales, Tareas en Cola, Próximo Evento -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="glass-panel tech-border p-4 rounded">
             <div class="text-xs text-gray-500 uppercase mb-2">Total Personal</div>
@@ -39,7 +53,7 @@
         </div>
     </div>
 
-    <!-- Actions -->
+    <!-- Botones de acción: Iniciar búsqueda de contratación -->
     <div class="mb-6 flex gap-3">
         <button onclick="showHireModal()"
             class="px-6 py-3 bg-neon-green bg-opacity-20 border-2 border-neon-green text-neon-green rounded hover:bg-opacity-30 font-orbitron">
@@ -47,13 +61,13 @@
         </button>
     </div>
 
-    <!-- Director's Task Queue -->
+    <!-- Cola de tareas del Director Gerente - Se muestra si hay tareas activas o pendientes -->
     <div id="task-queue-section" class="glass-panel tech-border p-6 rounded mb-6 hidden">
         <h2 class="text-2xl font-orbitron text-neon-blue mb-4">🎯 Cola de Tareas del Director Gerente</h2>
         <div id="director-queue"></div>
     </div>
 
-    <!-- Personnel Table -->
+    <!-- Tabla de personal activo - Se carga dinámicamente desde API -->
     <div class="glass-panel tech-border rounded overflow-hidden">
         <div class="bg-space-800 border-b border-gray-700 p-4">
             <h2 class="text-xl font-orbitron text-white">👥 PERSONAL ACTIVO</h2>
@@ -76,7 +90,7 @@
     </div>
 </div>
 
-<!-- Hire Modal -->
+<!-- Modal de contratación - Sistema completo con selección de puesto, experiencia y tirada de dados -->
 <div id="hire-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
     <div class="glass-panel tech-border p-8 rounded-lg max-w-3xl w-full max-h-screen overflow-y-auto">
         <h3 class="text-2xl font-orbitron text-neon-blue mb-6">🔍 Nueva Búsqueda de Personal</h3>

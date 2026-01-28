@@ -1,8 +1,22 @@
 {% extends "base.html" %}
+<!--
+    Template de inicialización de partida (setup wizard).
+    
+    Guía al jugador a través del proceso completo de setup paso a paso:
+    1. Identificación de Compañía y Nave
+    2. Determinación de Área (2d6)
+    3. Densidad de Mundos (2d6)
+    4. Posición de la Nave (1d6 columna, 1d6 fila)
+    5. Planeta Inicial (3d6 con validación)
+    6. Selección de Dificultad
+    
+    Cada sección se desbloquea secuencialmente después de completar la anterior.
+    Las tiradas de dados pueden ser automáticas o manuales (dados físicos).
+-->
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <!-- Story/Lore Banner -->
+    <!-- Banner de historia/lore: Contexto narrativo de la herencia -->
     <div class="glass-panel tech-border p-6 rounded-lg mb-6 border-l-4 border-neon-blue">
         <h2 class="text-2xl font-orbitron text-neon-blue mb-3">HERENCIA FAMILIAR</h2>
         <p class="text-gray-300 leading-relaxed mb-2">
@@ -14,14 +28,14 @@
         </p>
     </div>
 
-    <!-- Setup Form -->
+    <!-- Formulario de setup con secciones secuenciales -->
     <div class="glass-panel tech-border p-8 rounded-lg">
         <h2 class="text-3xl font-orbitron text-white mb-6 border-b border-gray-700 pb-3">
             <span class="text-neon-blue">EMPLAZAMIENTO</span> INICIAL
         </h2>
 
         <div id="setup-form" class="space-y-6">
-            <!-- Company & Ship Identification -->
+            <!-- Sección 1: Identificación de Compañía y Nave -->
             <div class="bg-space-800 border border-gray-700 rounded-lg p-5" id="company-section">
                 <h3 class="text-lg font-orbitron text-neon-blue mb-3 flex items-center">
                     <span class="text-2xl mr-2">🏢</span> IDENTIFICACIÓN DE COMPAÑÍA
@@ -69,7 +83,7 @@
                 </div>
             </div>
 
-            <!-- Area Determination -->
+            <!-- Sección 2: Determinación de Área - Tirada 2d6 (rango 2-12) -->
             <div class="bg-space-800 border border-gray-700 rounded-lg p-5" id="area-section" style="display: none;">
                 <h3 class="text-lg font-orbitron text-neon-blue mb-3 flex items-center">
                     <span class="text-2xl mr-2">🎲</span> ÁREA DEL ESPACIO

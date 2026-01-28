@@ -1,10 +1,21 @@
 {% extends "base.html" %}
+<!--
+    Template de gestión financiera (Tesorería).
+    
+    Proporciona interfaz para:
+    - Ver resumen financiero (saldo, salarios, préstamos, dificultad)
+    - Registrar transacciones manuales (ingresos/gastos)
+    - Ver historial completo de transacciones con categorización
+    
+    Categorías de transacciones:
+    - Comercio, Misiones, Suministros, Reparaciones, Combustible, Salarios, Préstamos, Otros
+-->
 
 {% block title %}Tesorería - Spacegom{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-space-900 p-6">
-    <!-- Header -->
+    <!-- Encabezado con título y enlace de vuelta al dashboard -->
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-orbitron text-neon-blue">TESORERÍA</h1>
@@ -16,7 +27,7 @@
         </a>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Tarjetas de resumen: Saldo Actual, Salarios/Mes, Préstamos/Mes, Dificultad -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div class="glass-panel tech-border p-4 rounded">
             <div class="text-xs text-gray-500 uppercase mb-2">Saldo Actual</div>
@@ -39,7 +50,7 @@
         </div>
     </div>
 
-    <!-- Add Transaction -->
+    <!-- Formulario para registrar transacción manual: Monto, Categoría, Descripción -->
     <div class="glass-panel tech-border p-6 rounded mb-6">
         <h3 class="text-xl font-orbitron text-neon-blue mb-4">Registrar Transacción</h3>
         <form id="transaction-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">

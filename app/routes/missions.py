@@ -19,9 +19,24 @@ router = APIRouter(tags=["missions"])
 
 @router.get("/api/games/{game_id}/missions")
 async def get_missions(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Obtener todas las misiones de un juego, separadas por estado.
-
-    Devuelve un diccionario con las listas `active`, `completed` y `failed`.
+    """
+    Obtiene todas las misiones de una partida, separadas por estado.
+    
+    Categoriza las misiones según su resultado:
+    - active: Sin resultado asignado aún
+    - completed: Resultado "exito"
+    - failed: Resultado "fracaso"
+    
+    Args:
+        game_id: Identificador único de la partida
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con:
+        - "active": Lista de misiones activas
+        - "completed": Lista de misiones completadas
+        - "failed": Lista de misiones fallidas
+        - "total": Número total de misiones
     """
     missions = db.query(Mission).filter(Mission.game_id == game_id).all()
     
@@ -80,10 +95,33 @@ async def create_mission(
     book_page: Optional[int] = Form(None),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Crear una nueva misión (objetivo de campaña o misión especial).
-
-    Valida los campos requeridos según `mission_type` y programa un evento
-    de fecha límite si se proporciona `max_date`.
+    """
+    Crea una nueva misión (objetivo de campaña o misión especial).
+    
+    Valida los campos requeridos según el tipo de misión y programa un evento
+    de fecha límite en la cola de eventos si se proporciona max_date.
+    
+    Tipos de misión:
+    - "campaign": Objetivo de campaña (requiere objective_number)
+    - "special": Misión especial del manual (requiere mission_code y book_page)
+    
+    Args:
+        game_id: Identificador único de la partida
+        mission_type: Tipo de misión ("campaign" o "special")
+        origin_world: Mundo de origen (opcional)
+        execution_place: Lugar de ejecución (requerido)
+        max_date: Fecha límite en formato "dd-mm-yy" (opcional)
+        notes: Notas adicionales (opcional)
+        objective_number: Número de objetivo (requerido para campaign)
+        mission_code: Código de misión (requerido para special)
+        book_page: Página del manual (requerido para special)
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con "status": "success", "mission_id" y "mission_type"
+    
+    Raises:
+        HTTPException 400: Si los campos requeridos no están presentes
     """
     from app.event_logger import EventLogger
     
@@ -200,9 +238,31 @@ async def resolve_mission_deadline(
     success: bool = Form(...),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Resolver la fecha límite de una misión.
-
-    `success` indica si la misión se considera completada con éxito o no.
+    """
+    Resuelve la fecha límite de una misión marcándola como éxito o fracaso.
+    
+    Actualiza el estado de la misión, modifica la reputación según el resultado,
+    elimina el evento de fecha límite de la cola y registra el evento en el log.
+    
+    Efectos:
+    - Éxito: +1 reputación
+    - Fracaso: -1 reputación (mínimo 0)
+    
+    Args:
+        game_id: Identificador único de la partida
+        mission_id: ID de la misión a resolver
+        success: True si la misión fue exitosa, False si falló
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con:
+        - "status": "resolved"
+        - "success": Resultado de la misión
+        - "new_reputation": Nueva reputación después del cambio
+        - "mission_result": "exito" o "fracaso"
+    
+    Raises:
+        HTTPException 404: Si la misión no existe
     """
     from app.event_logger import EventLogger
     

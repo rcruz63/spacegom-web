@@ -24,14 +24,22 @@ router = APIRouter(tags=["commerce"])
 
 def advance_game_time(game: GameState, days: int) -> str:
     """
-    Avanza el tiempo del juego N días, manejando el cambio de calendario.
+    Avanza el tiempo del juego N días, manejando cambios de mes y año.
+    
+    Usa GameCalendar.add_days() para calcular la nueva fecha respetando el
+    calendario personalizado del juego (35 días/mes, 12 meses/año).
     
     Args:
         game: Instancia de GameState del juego
-        days: Número de días a avanzar
+        days: Número de días a avanzar (debe ser positivo)
         
     Returns:
-        Nueva fecha en formato string (DD-MM-YYYY)
+        Nueva fecha en formato string "dd-mm-yy"
+        
+    Note:
+        Actualmente avanza directamente sin procesar eventos día a día.
+        Para implementación completa, debería procesar eventos de la cola
+        durante el avance.
     """
     if days <= 0:
         return GameCalendar.date_to_string(
@@ -65,9 +73,23 @@ def advance_game_time(game: GameState, days: int) -> str:
 
 @router.get("/api/games/{game_id}/treasury")
 async def get_treasury(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Obtener información de la tesorería.
-
-    Devuelve saldo actual, dificultad, reputación y transacciones recientes.
+    """
+    Obtiene información completa de la tesorería de una partida.
+    
+    Calcula gastos mensuales desde el personal activo y retorna información
+    financiera completa incluyendo transacciones recientes.
+    
+    Args:
+        game_id: Identificador único de la partida
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con:
+        - "current_balance": Saldo actual en SC
+        - "difficulty": Nivel de dificultad ("easy", "normal", "hard")
+        - "reputation": Reputación actual
+        - "monthly_expenses": {salaries, loans, total}
+        - "recent_transactions": Últimas 10 transacciones
     """
     game = GameState(game_id)
     
@@ -133,7 +155,23 @@ async def get_passenger_transport_info(
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    Get info for passenger transport action.
+    Obtiene información para la acción de transporte de pasajeros.
+    
+    Calcula capacidad disponible, modificadores (responsable, auxiliares),
+    promedio de pasajeros del planeta y estado de disponibilidad de la acción.
+    
+    Args:
+        game_id: Identificador único de la partida
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con:
+        - "current_passengers": Pasajeros actuales a bordo
+        - "ship_capacity": Capacidad máxima de la nave
+        - "planet_avg_passengers": Promedio de pasajeros del planeta
+        - "modifiers": {has_manager, manager_bonus, manager_name, attendants_count}
+        - "available": True si la acción está disponible (se resetea al viajar)
+    """
     Returns capacity, current passengers, and modifiers.
     """
     from app.ship_data import get_ship_stats
@@ -198,6 +236,34 @@ async def execute_passenger_transport(
     manual_dice: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
+    """
+    Ejecuta la acción de transporte de pasajeros.
+    
+    Proceso completo:
+    1. Tira 2d6 para determinar afluencia (con modificadores)
+    2. Calcula número de pasajeros según afluencia (Alta x2, Baja /2, Media x1)
+    3. Calcula ingresos (base * multiplicador de auxiliares + bonus XP)
+    4. Actualiza moral/experiencia del personal según resultado
+    5. Registra evento en el log
+    
+    Args:
+        game_id: Identificador único de la partida
+        manual_dice: Opcional string con resultados manuales separados por comas (ej: "4,6")
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con:
+        - "status": "success"
+        - "dice": Valores de los dados
+        - "total_roll": Total con modificadores
+        - "outcome": "high", "medium", o "low"
+        - "passengers": {boarded, capacity}
+        - "revenue": {base, multiplier, veteran_bonus, novice_penalty, total}
+        - "modifiers": Modificadores aplicados
+        - "personnel_changes": Cambios en personal (opcional)
+    
+    Raises:
+        HTTPException 400: Si la acción no está disponible o hay error
     """
     Execute passenger transport action.
     
@@ -360,6 +426,23 @@ async def execute_passenger_transport(
 
 @router.get("/api/games/{game_id}/trade/market")
 async def get_trade_market(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    """
+    Obtiene datos del mercado comercial en el planeta actual.
+    
+    Retorna productos disponibles para compra (que el planeta produce) y
+    productos disponibles para venta (que el planeta demanda), considerando
+    cooldowns basados en órdenes comerciales previas.
+    
+    Args:
+        game_id: Identificador único de la partida
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con estructura de TradeManager.get_market_data():
+        - "buy": Lista de productos disponibles para compra
+        - "sell": Lista de órdenes disponibles para venta
+        - "planet_ucn_limit": Límite UCN por orden del planeta
+    """
     """Obtener productos disponibles para comprar y órdenes activas."""
     from app.trade_manager import TradeManager
     
@@ -376,7 +459,19 @@ async def get_trade_market(game_id: str, db: Session = Depends(get_db)) -> Dict[
 
 @router.get("/api/games/{game_id}/trade/orders")
 async def get_trade_orders(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """Obtener todas las órdenes de comercio (libro de operaciones)."""
+    """
+    Obtiene todas las órdenes de comercio de una partida (libro de operaciones).
+    
+    Retorna el historial completo de compras y ventas incluyendo órdenes en tránsito,
+    vendidas y cualquier otro estado.
+    
+    Args:
+        game_id: Identificador único de la partida
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con "orders": Lista de todas las TradeOrder de la partida
+    """
     orders = db.query(TradeOrder).filter(TradeOrder.game_id == game_id).all()
     
     # Convertir objetos SQLAlchemy a diccionarios para serialización JSON
@@ -413,10 +508,27 @@ async def negotiate_trade(
     action: str = Form(...),
     manual_roll: Optional[int] = Form(None)
 ) -> Dict[str, Any]:
-    """Simular la tirada de negociación.
-
-    Devuelve modificadores y resultados pero NO ejecuta la transacción.
-    Avanza el tiempo según los días consumidos por la negociación.
+    """
+    Simula la tirada de negociación de comercio.
+    
+    Calcula el multiplicador de precio basado en tirada de 2d6 + modificadores,
+    pero NO ejecuta la transacción. El cliente debe llamar a /buy o /sell después
+    con el precio negociado.
+    
+    Avanza el tiempo del juego según los días consumidos por la negociación
+    (1 día para compra, 1d6 días para venta).
+    
+    Args:
+        game_id: Identificador único de la partida
+        action: "buy" o "sell"
+        manual_roll: Opcional resultado manual de tirada (dados físicos)
+    
+    Returns:
+        Diccionario con resultado de TradeManager.negotiate_price():
+        - "roll", "dice", "modifiers", "total"
+        - "multiplier": Multiplicador de precio (0.8, 1.0, 1.2)
+        - "moral_effect": Efecto en moral ("Loss", "None", "Gain")
+        - "days_consumed": Días consumidos por la negociación
     """
     from app.trade_manager import TradeManager
     
@@ -448,10 +560,37 @@ async def execute_trade_buy_batch(
     request: Request,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Ejecutar una transacción de compra en lote (cesta de compra).
+    """
+    Ejecuta una transacción de compra en lote (cesta de compra).
     
-    Acepta un cuerpo JSON con `planet_code` e `items` (lista de productos).
-    Avanza el tiempo según los días de carga necesarios.
+    Valida que hay fondos y capacidad suficientes para todo el lote antes
+    de ejecutar ninguna compra. Si alguna validación falla, no se ejecuta
+    ninguna compra (transacción atómica).
+    
+    Body JSON esperado:
+    {
+        "planet_code": int,
+        "items": [
+            {"product_code": str, "quantity": int, "unit_price": int},
+            ...
+        ]
+    }
+    
+    Args:
+        game_id: Identificador único de la partida
+        request: Request de FastAPI con JSON body
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con resultado de TradeManager.execute_batch_buy():
+        - "success": True si todas las compras fueron exitosas
+        - "total_cost": Coste total del lote
+        - "loading_days": Días necesarios para cargar
+        - "orders": IDs de órdenes creadas
+        - "error": Mensaje de error si success=False
+    
+    Raises:
+        HTTPException 400: Si hay error en la validación o ejecución
     """
     from app.trade_manager import TradeManager
     
@@ -506,7 +645,31 @@ async def execute_trade_buy(
     traceability: bool = Form(True),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Ejecutar una transacción de compra."""
+    """
+    Ejecuta una transacción de compra individual.
+    
+    Valida tesorería y capacidad, descuenta costo, crea TradeOrder y actualiza
+    almacenamiento y cargo. Registra transacción y evento en el log.
+    
+    Args:
+        game_id: Identificador único de la partida
+        planet_code: Código del planeta donde se compra (111-666)
+        product_code: Código del producto (ej: "INDU", "BASI")
+        quantity: Cantidad en UCN a comprar
+        unit_price: Precio unitario negociado
+        traceability: Si el producto tiene trazabilidad (default: True)
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con resultado de TradeManager.execute_buy():
+        - "success": True si la compra fue exitosa
+        - "order_id": ID de la orden creada
+        - "balance": Saldo restante en tesorería
+        - "error": Mensaje de error si success=False
+    
+    Raises:
+        HTTPException 400: Si hay error en validación o ejecución
+    """
     from app.trade_manager import TradeManager
     
     manager = TradeManager(game_id, db)
@@ -532,7 +695,29 @@ async def execute_trade_sell(
     sell_price_total: int = Form(...),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Ejecutar una transacción de venta."""
+    """
+    Ejecuta una transacción de venta de una orden existente.
+    
+    Actualiza la TradeOrder con datos de venta, calcula ganancia, agrega créditos
+    a tesorería y actualiza almacenamiento. Registra transacción y evento.
+    
+    Args:
+        game_id: Identificador único de la partida
+        order_id: ID de la TradeOrder a vender
+        planet_code: Código del planeta donde se vende (111-666)
+        sell_price_total: Precio total de venta negociado
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con resultado de TradeManager.execute_sell():
+        - "success": True si la venta fue exitosa
+        - "profit": Ganancia obtenida (precio_venta - precio_compra)
+        - "balance": Saldo actualizado en tesorería
+        - "error": Mensaje de error si success=False
+    
+    Raises:
+        HTTPException 400: Si la orden no existe o ya fue vendida
+    """
     from app.trade_manager import TradeManager
     
     manager = TradeManager(game_id, db)

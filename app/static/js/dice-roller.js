@@ -1,10 +1,53 @@
 /**
  * DiceRollerUI - Sistema Universal de Dados para Spacegom
  * 
- * Proporciona una interfaz consistente para todas las tiradas de dados del juego.
- * SIEMPRE ofrece modo manual/automático y muestra dados individuales.
+ * Interfaz JavaScript consistente para todas las tiradas de dados del juego.
+ * Proporciona modo automático/manual y visualización de resultados.
+ * 
+ * Decisiones de diseño:
+ * - SIEMPRE ofrece modo manual/automático: El manual del juego permite usar dados físicos,
+ *   por lo que todas las tiradas deben dar esta opción al jugador
+ * - Muestra dados individuales: Proporciona sensación de juego más auténtica al ver
+ *   cada dado por separado, no solo la suma
+ * - Interfaz unificada: Un solo componente para todas las tiradas asegura consistencia
+ *   visual y de comportamiento en toda la aplicación
+ * - Fallback local: Si falla el backend, hace tirada local para no bloquear el juego
+ * 
+ * Características principales:
+ * - Modo dual: Automático (backend) o manual (dados físicos)
+ * - Visualización: Muestra dados individuales con diseño cyberpunk
+ * - Modificadores: Soporte para múltiples modificadores nombrados
+ * - Responsive: Modales centrados y adaptables
+ * - Fallback: Tirada local si falla el backend
+ * 
+ * Estructura del resultado:
+ * {
+ *     dice: [3, 5],        // Valores individuales de cada dado
+ *     sum: 8,              // Suma de los dados
+ *     mode: "manual",      // "manual" o "automatic"
+ *     modifiers: {rep: 2}, // Modificadores aplicados
+ *     total: 10            // Suma + modificadores
+ * }
+ * 
+ * Dependencias:
+ * - Fetch API para llamadas al backend
+ * - DOM manipulation para creación de modales
+ * 
+ * Estilos utilizados:
+ * - glass-panel: Panel con efecto glassmorphism
+ * - tech-border: Bordes neón
+ * - font-orbitron: Tipografía técnica
+ * - neon-blue/green: Colores temáticos
+ * 
+ * Disponible globalmente como window.DiceRollerUI
+ * 
+ * @example
+ * const result = await DiceRollerUI.requestRoll({
+ *     numDice: 2,
+ *     title: "Tirada de Combate",
+ *     modifiers: {fuerza: 2, armadura: -1}
+ * });
  */
-
 class DiceRollerUI {
     /**
      * Solicita una tirada de dados con interfaz consistente
@@ -84,7 +127,18 @@ class DiceRollerUI {
     }
 
     /**
-     * Muestra modal para seleccionar modo automático o manual
+     * Muestra modal para elegir entre modo automático o manual.
+     * 
+     * Crea un modal con dos opciones:
+     * - Automática: El sistema tira los dados en el backend
+     * - Manual: El usuario introduce resultados de dados físicos
+     * 
+     * @param {Object} config - Configuración del modal
+     * @param {Number} config.numDice - Número de dados a tirar
+     * @param {Number} config.diceSides - Caras por dado (default: 6)
+     * @param {String} config.title - Título del modal
+     * @param {String} config.description - Descripción opcional
+     * @param {Function} config.onModeSelected - Callback(mode) cuando se selecciona modo
      */
     static showModeSelectionModal({ numDice, diceSides, title, description, onModeSelected }) {
         const modal = document.createElement('div');
@@ -135,7 +189,17 @@ class DiceRollerUI {
     }
 
     /**
-     * Muestra modal para entrada manual de dados
+     * Muestra modal para introducir resultados manuales de dados físicos.
+     * 
+     * Crea un formulario con un input numérico por cada dado, validando que
+     * los valores estén en el rango válido (1 a diceSides).
+     * 
+     * @param {Object} config - Configuración del modal
+     * @param {Number} config.numDice - Número de dados (determina número de inputs)
+     * @param {Number} config.diceSides - Caras por dado (determina rango válido)
+     * @param {String} config.title - Título del modal
+     * 
+     * @returns {Promise<Array<Number>|null>} Array con valores de dados o null si se cancela
      */
     static showManualInputModal({ numDice, diceSides, title }) {
         return new Promise((resolve) => {
@@ -212,7 +276,17 @@ class DiceRollerUI {
     }
 
     /**
-     * Realiza tirada automática llamando al backend
+     * Realiza tirada automática llamando al endpoint del backend.
+     * 
+     * Envía una petición POST a /api/dice/roll con los parámetros de la tirada.
+     * Si falla la conexión, hace fallback a una tirada local usando Math.random().
+     * 
+     * @param {Number} numDice - Número de dados a tirar
+     * @param {Number} diceSides - Caras por dado (default: 6)
+     * 
+     * @returns {Promise<Array<Number>>} Array con valores de cada dado
+     * 
+     * @throws {Error} Si hay error de red (se maneja con fallback local)
      */
     static async rollAutomatic(numDice, diceSides) {
         try {
@@ -237,7 +311,21 @@ class DiceRollerUI {
     }
 
     /**
-     * Muestra modal con resultado de la tirada
+     * Muestra modal con resultado de la tirada, dados individuales y modificadores.
+     * 
+     * Crea un modal visual con:
+     * - Visualización de cada dado individual
+     * - Suma de los dados
+     * - Modificadores aplicados (si hay)
+     * - Total final (suma + modificadores)
+     * - Indicador de modo (manual/automático)
+     * 
+     * @param {Object} config - Configuración del modal
+     * @param {Number} config.numDice - Número de dados tirados
+     * @param {Number} config.diceSides - Caras por dado
+     * @param {String} config.title - Título del modal
+     * @param {Object} config.modifiers - Objeto con modificadores {name: value}
+     * @param {Object} config.result - Resultado de la tirada con dice, sum, mode, total
      */
     static showResultModal({ numDice, diceSides, title, modifiers, result }) {
         const modal = document.createElement('div');

@@ -1,10 +1,23 @@
 {% extends "base.html" %}
+<!--
+    Template de gestión de misiones.
+    
+    Proporciona interfaz para:
+    - Ver resumen de misiones (activas, completadas, fallidas)
+    - Crear objetivos de campaña (objetivos a largo plazo)
+    - Crear misiones especiales (referenciadas en el manual)
+    - Gestionar estado de misiones (completar, fallar)
+    
+    Tipos de misiones:
+    - Campaign: Objetivos de campaña con número de objetivo
+    - Special: Misiones especiales con código y página del manual
+-->
 
 {% block title %}Misiones - Spacegom{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-space-900 p-6">
-    <!-- Header -->
+    <!-- Encabezado con título y enlace de vuelta al dashboard -->
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-orbitron text-neon-blue">📋 MISIONES</h1>
@@ -16,7 +29,7 @@
         </a>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Tarjetas de resumen: Misiones Activas, Completadas, Fallidas -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="glass-panel tech-border p-4 rounded">
             <div class="text-xs text-gray-500 uppercase mb-2">Activas</div>
@@ -32,7 +45,7 @@
         </div>
     </div>
 
-    <!-- Action Buttons -->
+    <!-- Botones de acción: Crear Objetivo de Campaña o Misión Especial -->
     <div class="mb-6 flex gap-3">
         <button onclick="showCampaignForm()"
             class="px-6 py-3 bg-neon-blue bg-opacity-20 border-2 border-neon-blue text-neon-blue rounded hover:bg-opacity-30 font-orbitron transition-all">
@@ -44,7 +57,7 @@
         </button>
     </div>
 
-    <!-- Campaign Objective Form (hidden by default) -->
+    <!-- Formulario de Objetivo de Campaña - Se muestra al hacer clic en "OBJETIVO DE CAMPAÑA" -->
     <div id="campaign-form" class="hidden glass-panel tech-border p-6 rounded mb-6">
         <h3 class="text-xl font-orbitron text-neon-blue mb-4">Nuevo Objetivo de Campaña</h3>
         <form id="create-campaign-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">

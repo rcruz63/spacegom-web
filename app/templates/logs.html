@@ -1,10 +1,25 @@
 {% extends "base.html" %}
+<!--
+    Template de registro de eventos (Logs).
+    
+    Muestra el historial completo de eventos del juego con:
+    - Filtrado por tipo de evento (info, success, warning, error)
+    - Orden cronológico (más recientes primero)
+    - Información de fecha del juego y timestamp real
+    
+    Los eventos se registran automáticamente por el sistema durante:
+    - Contrataciones de personal
+    - Pagos de salarios
+    - Transacciones comerciales
+    - Avances de tiempo
+    - Y otras acciones del juego
+-->
 
 {% block title %}Logs - Spacegom{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-space-900 p-6">
-    <!-- Header -->
+    <!-- Encabezado con título, ID de partida y fecha del juego -->
     <div class="flex items-center justify-between mb-6">
         <div>
             <h1 class="text-3xl font-orbitron text-neon-blue">REGISTRO DE EVENTOS</h1>
@@ -18,7 +33,7 @@
         </a>
     </div>
 
-    <!-- Summary Cards -->
+    <!-- Tarjetas de resumen: Total Eventos, Último Evento, Selector de Filtro -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div class="glass-panel tech-border p-4 rounded">
             <div class="text-xs text-gray-500 uppercase mb-2">Total Eventos</div>
@@ -41,7 +56,7 @@
         </div>
     </div>
 
-    <!-- Event Logs -->
+    <!-- Contenedor de logs con scroll - Se carga dinámicamente desde API -->
     <div class="glass-panel tech-border rounded overflow-hidden">
         <div class="bg-space-800 border-b border-gray-700 p-4">
             <h2 class="text-xl font-orbitron text-white">📜 HISTORIAL DE EVENTOS</h2>

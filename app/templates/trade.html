@@ -1,8 +1,23 @@
 {% extends "base.html" %}
+<!--
+    Template de terminal de comercio.
+    
+    Proporciona interfaz completa para:
+    - Comprar productos (Oferta) con negociación de precios mediante tiradas de dados
+    - Vender productos (Demanda) desde la carga actual
+    - Cesta de compra para compras múltiples
+    - Registro de pedidos (Ledger) con historial completo
+    
+    Funcionalidad JavaScript:
+    - Carga de datos de mercado desde API
+    - Sistema de negociación con DiceRollerUI
+    - Gestión de cesta de compra
+    - Cálculo de tiempos de carga según operarios de logística
+-->
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Header -->
+    <!-- Encabezado con título y tarjetas de estado: Créditos, Almacén, Planeta -->
     <div class="glass-panel tech-border p-6 rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
             <h2 class="text-2xl font-orbitron text-orange-400 flex items-center gap-3">
@@ -26,10 +41,10 @@
         </div>
     </div>
 
-    <!-- Main Content Grid -->
+    <!-- Grid principal: Sección de Compra (izquierda) y Venta (derecha) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        <!-- BUY SECTION -->
+        <!-- Sección de Compra: Productos disponibles para comprar en el planeta actual -->
         <div class="glass-panel tech-border p-6 rounded-lg">
             <h3 class="text-xl font-orbitron text-neon-green mb-4 border-b border-gray-700 pb-2">
                 OFERTA (COMPRAR)
@@ -38,7 +53,7 @@
                 <div class="text-gray-500 italic text-center py-4">Cargando mercado...</div>
             </div>
 
-            <!-- SHOPPING CART -->
+            <!-- Cesta de compra: Permite agregar múltiples productos antes de finalizar compra -->
             <div id="shopping-cart-section" class="mt-6 border-t border-gray-700 pt-4 hidden">
                 <h4 class="text-lg font-orbitron text-orange-400 mb-2">CESTA DE COMPRA</h4>
                 <div id="cart-items" class="space-y-2 mb-4"></div>
@@ -65,7 +80,7 @@
             </div>
         </div>
 
-        <!-- SELL SECTION -->
+        <!-- Sección de Venta: Órdenes de compra actuales disponibles para vender -->
         <div class="glass-panel tech-border p-6 rounded-lg">
             <h3 class="text-xl font-orbitron text-neon-red mb-4 border-b border-gray-700 pb-2">
                 DEMANDA (VENDER)
@@ -77,7 +92,7 @@
 
     </div>
 
-    <!-- TRADE LEDGER -->
+    <!-- Registro de pedidos (Ledger): Historial completo de compras y ventas -->
     <div class="glass-panel tech-border p-6 rounded-lg">
         <h3
             class="text-sm font-orbitron text-gray-400 mb-3 tracking-widest uppercase flex items-center justify-between">

@@ -27,10 +27,20 @@ router = APIRouter(tags=["personnel"])
 @router.get("/api/games/{game_id}/personnel")
 async def get_personnel(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
-    Get all personnel for a game.
+    Obtiene todo el personal activo de una partida.
+    
+    Retorna lista de empleados activos con sus estadísticas y calcula el total
+    de salarios mensuales.
+    
+    Args:
+        game_id: Identificador único de la partida
+        db: Sesión de base de datos SQLAlchemy
     
     Returns:
-        List of active personnel with total monthly salaries.
+        Diccionario con:
+        - "personnel": Lista de empleados activos con sus datos
+        - "total_monthly_salaries": Suma total de salarios mensuales en SC
+        - "count": Número de empleados activos
     """
     personnel = db.query(Personnel).filter(
         Personnel.game_id == game_id,
@@ -68,9 +78,25 @@ async def hire_personnel(
     notes: str = Form(""),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Contratar nuevo personal.
-
-    Crea una fila `Personnel` y devuelve la información del empleado creado.
+    """
+    Contrata nuevo personal directamente (sin proceso de búsqueda).
+    
+    Crea un nuevo registro en la tabla Personnel con los datos proporcionados.
+    Usado principalmente para contrataciones exitosas después de completar
+    una búsqueda de contratación.
+    
+    Args:
+        game_id: Identificador único de la partida
+        position: Puesto del empleado (ej: "Piloto", "Director Gerente")
+        name: Nombre del empleado
+        monthly_salary: Salario mensual en Créditos Spacegom (SC)
+        experience: Nivel de experiencia ("N", "E", "V")
+        morale: Nivel de moral ("B", "M", "A")
+        notes: Notas adicionales opcionales
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con "status": "success" e información del empleado creado
     """
     from datetime import date
     

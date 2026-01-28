@@ -21,14 +21,26 @@ router = APIRouter(tags=["planets"])
 
 # ===== HELPER FUNCTIONS =====
 
-def format_planet_data(planet: Planet) -> dict:
-    """Formatea los datos de un `Planet` para las respuestas de la API.
-
+def format_planet_data(planet: Planet) -> Dict[str, Any]:
+    """
+    Formatea los datos de un planeta para respuestas de API.
+    
+    Convierte códigos internos a descripciones legibles usando funciones
+    de utils.py y estructura los datos en secciones lógicas.
+    
     Args:
-        planet: Instancia de `Planet` obtenida de la base de datos.
-
+        planet: Instancia de Planet obtenida de la base de datos
+    
     Returns:
-        dict: Diccionario con la información del planeta en formato legible.
+        Diccionario estructurado con:
+        - code, name
+        - life_support: Información completa de soporte vital
+        - spaceport: Datos parseados del espaciopuerto
+        - orbital_facilities: Instalaciones orbitales (boolean)
+        - products: Productos disponibles (boolean por código)
+        - trade_info: Información comercial (UCN, pasajeros, etc.)
+        - bootstrap_data: Datos de bootstrap (tech_level, population, convenio)
+        - notes: Notas del usuario
     """
     from app.utils import decode_life_support, decode_tech_level, parse_spaceport
     
@@ -91,16 +103,24 @@ def format_planet_data(planet: Planet) -> dict:
     }
 
 
-def is_valid_starting_planet(planet: Planet) -> dict:
+def is_valid_starting_planet(planet: Planet) -> Dict[str, Any]:
     """
-    Check if planet is valid for starting position.
+    Verifica si un planeta es válido para ser planeta inicial.
     
-    Requirements:
-    - Population > 1000
-    - Tech level not PR (Primitivo) or RUD (Rudimentario)
-    - Life support not TA (Traje Avanzado) or TH (Traje Hiperavanzado)
+    Requisitos según las reglas del juego:
+    - Población > 1000 (population_over_1000 = True)
+    - Nivel tecnológico no PR (Primitivo) ni RUD (Rudimentario)
+    - Soporte vital no TA (Traje Avanzado) ni TH (Traje Hiperavanzado)
     - Convenio Spacegom = True
-    - At least one product available
+    - Al menos un producto disponible para comercio
+    
+    Args:
+        planet: Instancia de Planet a validar
+    
+    Returns:
+        Diccionario con:
+        - "is_valid": True si cumple todos los requisitos
+        - "checks": Diccionario con resultado de cada validación individual
     """
     checks = {
         "population": planet.population_over_1000 is True,
@@ -130,9 +150,27 @@ async def roll_planet_code(
     manual_results: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    """Tirar 3d6 para generar un código de planeta y devolver sus datos.
-
-    Si el planeta no existe en la base de datos, se devuelve `planet: None`.
+    """
+    Tira 3d6 para generar un código de planeta y retorna sus datos.
+    
+    Genera un código de planeta (111-666) mediante tirada de 3d6 y busca
+    el planeta correspondiente en la base de datos. También valida si el
+    planeta es apto para ser planeta inicial.
+    
+    Args:
+        game_id: Identificador único de la partida
+        manual_results: Opcional string con resultados separados por comas (ej: "1,1,1")
+        db: Sesión de base de datos SQLAlchemy
+    
+    Returns:
+        Diccionario con:
+        - "code": Código del planeta generado (111-666)
+        - "dice": Lista de valores de los 3 dados
+        - "planet": Datos formateados del planeta o None si no existe
+        - "is_valid_start": Resultado de validación para planeta inicial
+    
+    Raises:
+        HTTPException 400: Si los resultados manuales son inválidos
     """
     game = GameState(game_id)
     

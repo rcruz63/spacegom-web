@@ -25,10 +25,15 @@ router = APIRouter(tags=["games"])
 
 @router.get("/api/games")
 async def list_games() -> Dict[str, Any]:
-    """Listar todos los juegos disponibles.
-
-    Devuelve un diccionario JSON con la clave `games` que contiene la
-    información de los juegos existentes.
+    """
+    Lista todas las partidas guardadas disponibles.
+    
+    Retorna información básica de cada partida incluyendo ID, fechas de
+    creación y actualización, mes actual y créditos.
+    
+    Returns:
+        Diccionario con clave "games" conteniendo lista de partidas ordenadas
+        por fecha de actualización (más recientes primero)
     """
     games = GameState.list_games()
     return {"games": games}
@@ -36,10 +41,17 @@ async def list_games() -> Dict[str, Any]:
 
 @router.post("/api/games/new")
 async def create_game(game_name: Optional[str] = Form(None)) -> Dict[str, Any]:
-    """Crear un nuevo juego.
-
-    Crea y persiste un nuevo `GameState`. Devuelve `game_id` y el estado
-    inicial del juego.
+    """
+    Crea una nueva partida con ID único.
+    
+    Si no se proporciona nombre, genera uno automáticamente basado en timestamp.
+    Inicializa el estado del juego con valores por defecto.
+    
+    Args:
+        game_name: Nombre opcional para la partida (se limpia para crear ID válido)
+    
+    Returns:
+        Diccionario con "game_id" y "state" (estado inicial completo)
     """
     game = GameState.create_new_game(game_name)
     game.save()
@@ -48,10 +60,19 @@ async def create_game(game_name: Optional[str] = Form(None)) -> Dict[str, Any]:
 
 @router.get("/api/games/{game_id}")
 async def get_game_state(game_id: str) -> Dict[str, Any]:
-    """Obtener el estado actual del juego.
-
-    Devuelve el estado persistido y las estadísticas de la nave derivadas
-    del `ship_model` guardado en el estado.
+    """
+    Obtiene el estado completo del juego incluyendo estadísticas de la nave.
+    
+    Carga el estado persistido desde el archivo JSON y obtiene las estadísticas
+    de la nave desde ship_data.py basándose en el modelo guardado.
+    
+    Args:
+        game_id: Identificador único de la partida
+    
+    Returns:
+        Diccionario con:
+        - "state": Estado completo del juego (diccionario JSON)
+        - "ship_stats": Estadísticas de la nave (capacidad, daños, coste, etc.)
     """
     from app.ship_data import get_ship_stats
     game = GameState(game_id)

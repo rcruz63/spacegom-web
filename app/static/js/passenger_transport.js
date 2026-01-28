@@ -1,18 +1,43 @@
 /**
- * Passenger Transport Logic
+ * Passenger Transport Logic - Módulo de Transporte de Pasajeros
  * 
- * Handles interaction for the Passenger Transport widget in the dashboard.
- * - Checks status via API
- * - Triggers DiceRollerUI
- * - Executes transport action
- * - Displays results modal/toast
+ * Maneja la acción de transporte de pasajeros en el juego SpaceGOM.
+ * Proporciona un flujo completo de UI para tirar dados, determinar afluencia
+ * de pasajeros, ejecutar la acción vía API y mostrar resultados en un modal.
+ * 
+ * Flujo de datos:
+ * 1. Usuario hace clic en botón de transporte
+ * 2. Sistema carga información actual de transporte
+ * 3. Se solicita tirada de dados (2d6 + modificadores)
+ * 4. Resultado se envía al servidor para procesamiento
+ * 5. Servidor calcula pasajeros, ingresos y cambios de personal
+ * 6. Resultados se muestran en un modal
+ * 7. UI se refresca y página se recarga después de cerrar modal
+ * 
+ * Dependencias:
+ * - DiceRollerUI: Componente universal de tiradas de dados
+ * - showToast: Función global para notificaciones
+ * - Fetch API: Para llamadas al backend
+ * - TailwindCSS: Para estilos
+ * - Clases CSS custom: neon-green, space-800, etc.
+ * 
+ * Endpoints API utilizados:
+ * - GET /api/games/{gameId}/passenger-transport/info
+ * - POST /api/games/{gameId}/passenger-transport/execute
  */
 
 const PassengerTransport = {
-    // State
+    /** @type {Object|null} Información actual del transporte (cache) */
     currentInfo: null,
 
-    // Initialize
+    /**
+     * Inicializa la funcionalidad de transporte de pasajeros.
+     * 
+     * Solo se ejecuta si estamos en el dashboard y existe el widget.
+     * Configura listeners de eventos y carga información inicial.
+     * 
+     * @returns {Promise<void>}
+     */
     init: async function () {
         // Only run if we are in the dashboard and the widget exists
         if (!document.getElementById('passenger-transport-widget')) return;
@@ -26,7 +51,19 @@ const PassengerTransport = {
         }
     },
 
-    // Fetch info from backend
+    /**
+     * Recarga información de transporte desde el backend.
+     * 
+     * Obtiene información actualizada sobre:
+     * - Naves disponibles y sus capacidades
+     * - Asignaciones actuales de personal
+     * - Modificadores de transporte (responsable, auxiliares)
+     * - Estado de disponibilidad de la acción
+     * 
+     * Actualiza el cache interno y la UI después de obtener los datos.
+     * 
+     * @returns {Promise<void>}
+     */
     refreshInfo: async function () {
         try {
             const gameId = new URLSearchParams(window.location.search).get('game_id');
@@ -40,7 +77,22 @@ const PassengerTransport = {
         }
     },
 
-    // Update Widget UI
+    /**
+     * Actualiza la UI del widget con los datos recibidos.
+     * 
+     * Actualiza:
+     * - Capacidad de pasajeros (actual / máxima)
+     * - Promedio de pasajeros del planeta
+     * - Lista de modificadores (responsable, auxiliares)
+     * - Estado del botón de acción (habilitado/deshabilitado)
+     * 
+     * @param {Object} data - Datos de transporte del backend
+     * @param {Number} data.current_passengers - Pasajeros actuales
+     * @param {Number} data.ship_capacity - Capacidad máxima de la nave
+     * @param {Number} data.planet_avg_passengers - Promedio de pasajeros del planeta
+     * @param {Object} data.modifiers - Modificadores {has_manager, manager_bonus, attendants_count}
+     * @param {Boolean} data.available - Si la acción está disponible
+     */
     updateUI: function (data) {
         // Update capacity display
         const capEl = document.getElementById('pt-capacity');
@@ -90,7 +142,17 @@ const PassengerTransport = {
         }
     },
 
-    // Start Action Flow
+    /**
+     * Inicia el flujo de acción de transporte de pasajeros.
+     * 
+     * Verifica disponibilidad, carga información actual, configura modificadores
+     * y solicita tirada de dados a través de DiceRollerUI.
+     * 
+     * Modificadores aplicados:
+     * - Responsable: Bonus según nivel de experiencia y moral del responsable
+     * 
+     * @returns {Promise<void>}
+     */
     startTransportAction: async function () {
         if (!this.currentInfo) await this.refreshInfo();
 
@@ -118,7 +180,26 @@ const PassengerTransport = {
         });
     },
 
-    // Execute Action via API
+    /**
+     * Ejecuta la acción de transporte vía API con el resultado de los dados.
+     * 
+     * Envía el resultado de la tirada al servidor que calcula:
+     * - Número de pasajeros embarcados (según afluencia)
+     * - Ingresos generados (base * multiplicador de auxiliares + bonus XP)
+     * - Cambios en personal (moral/experiencia)
+     * 
+     * Si el resultado es exitoso, muestra el modal de resultados.
+     * Si hay error, muestra notificación toast.
+     * 
+     * @param {Object} diceResult - Resultado de la tirada de DiceRollerUI
+     * @param {Array<Number>} diceResult.dice - Valores individuales de los dados
+     * @param {Number} diceResult.sum - Suma de los dados
+     * @param {String} diceResult.mode - "manual" o "automatic"
+     * @param {Object} diceResult.modifiers - Modificadores aplicados
+     * @param {Number} diceResult.total - Total con modificadores
+     * 
+     * @returns {Promise<void>}
+     */
     executeAction: async function (diceResult) {
         const gameId = new URLSearchParams(window.location.search).get('game_id');
         const formData = new FormData();
@@ -148,6 +229,29 @@ const PassengerTransport = {
         }
     },
 
+    /**
+     * Muestra modal completo con resultados del transporte de pasajeros.
+     * 
+     * El modal incluye:
+     * - Visualización de dados individuales
+     * - Resultado total de la tirada
+     * - Nivel de afluencia (Alta/Media/Baja)
+     * - Pasajeros embarcados (actual / capacidad)
+     * - Desglose de ingresos (base, multiplicador, bonus XP)
+     * - Cambios en personal (moral/experiencia) si los hay
+     * 
+     * El modal es persistente hasta que el usuario lo cierra. Al cerrar,
+     * se refresca la información y se recarga la página para actualizar
+     * la barra superior con nuevos valores.
+     * 
+     * @param {Object} result - Resultado del servidor
+     * @param {Array<Number>} result.dice - Valores de los dados
+     * @param {Number} result.total_roll - Total de la tirada
+     * @param {String} result.outcome - "high", "medium", o "low"
+     * @param {Object} result.passengers - {boarded, capacity}
+     * @param {Object} result.revenue - {base, multiplier, veteran_bonus, novice_penalty, total}
+     * @param {Object} result.personnel_changes - {messages: Array<String>} (opcional)
+     */
     showResultModal: function (result) {
         // Visual Dice HTML
         const diceHTML = result.dice.map(d =>
@@ -251,7 +355,12 @@ const PassengerTransport = {
     }
 };
 
-// Auto-init when DOM is ready
+/**
+ * Auto-inicialización cuando el DOM está listo.
+ * 
+ * Se ejecuta automáticamente al cargar la página si el script está incluido.
+ * Solo inicializa si el widget de transporte de pasajeros existe en la página.
+ */
 document.addEventListener('DOMContentLoaded', () => {
     PassengerTransport.init();
 });

@@ -1,19 +1,35 @@
+<!--
+    Componente completo de interfaz de tiradas de dados.
+    
+    Proporciona sistema de tabs para elegir entre:
+    - AUTO: Tirada automática mediante HTMX (POST a /api/roll-dice)
+    - MANUAL: Entrada de resultado de dados físicos
+    
+    Integración HTMX:
+    - Target: #dice-result-area (área de resultados)
+    - Swap: innerHTML (reemplaza contenido)
+    - Funciona sin JavaScript (progressive enhancement)
+    
+    El resultado se muestra en dice-result-area usando el componente dice_result.html
+-->
 <div class="glass-panel tech-border p-6 rounded-lg">
+    <!-- Encabezado del módulo con indicador de estado -->
     <h3 class="font-orbitron text-neon-red mb-4 text-lg tracking-wider flex justify-between items-center">
         <span>DICE MODULE</span>
         <span class="text-xs bg-red-900/30 text-red-400 px-2 py-1 rounded">ACTIVE</span>
     </h3>
 
+    <!-- Área de resultados - Target de HTMX para mostrar resultados -->
     <div id="dice-result-area"
         class="mb-6 h-24 flex flex-col items-center justify-center bg-space-900 rounded border border-gray-800 relative overflow-hidden group">
-        <!-- Default State -->
+        <!-- Estado por defecto: "Ready to Roll" con efecto scanline -->
         <span
             class="text-gray-600 font-tech uppercase text-sm tracking-widest group-hover:text-gray-500 transition-colors">Ready
             to Roll</span>
         <div class="absolute inset-0 bg-scanline opacity-10 pointer-events-none"></div>
     </div>
 
-    <!-- Toggle / Tabs -->
+    <!-- Sistema de tabs para alternar entre modo AUTO y MANUAL -->
     <div class="flex border-b border-gray-700 mb-4 text-sm" role="tablist">
         <button
             class="px-4 py-2 hover:text-neon-blue border-b-2 border-transparent hover:border-neon-blue transition-colors text-white"
@@ -27,7 +43,7 @@
         </button>
     </div>
 
-    <!-- Auto Roll Form -->
+    <!-- Formulario de tirada automática - HTMX envía POST a /api/roll-dice -->
     <div id="auto-roll">
         <form hx-post="/api/roll-dice" hx-target="#dice-result-area" hx-swap="innerHTML">
             <div class="mb-4">
@@ -44,9 +60,10 @@
         </form>
     </div>
 
-    <!-- Manual Roll Form -->
+    <!-- Formulario de entrada manual - Para resultados de dados físicos -->
     <div id="manual-roll" class="hidden">
         <form hx-post="/api/roll-dice" hx-target="#dice-result-area" hx-swap="innerHTML">
+            <!-- Campo oculto: num_dices=0 indica modo manual -->
             <input type="hidden" name="num_dices" value="0">
             <div class="mb-4">
                 <label class="block text-xs uppercase text-gray-500 mb-1">Manual Result Input</label>
