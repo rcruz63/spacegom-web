@@ -57,3 +57,7 @@ Me gustan los adornos, te introducen en el juego, pero además necesitaría que 
 - Teniendo una capacidad de 40, no veo donde se descuenta, podría comprar por encima de la capacidad
 - las compras de mercadería no aparecen en el log
 - despues de comprar esta la tarea de cargar que se tarda un tiempo que no se ha implementado
+
+## review 6
+
+- Al procesar la compra NO se muestran el resultado de las tiradas de dados, ni los modificadores, ni los efectos de la moral.

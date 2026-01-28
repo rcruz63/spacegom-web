@@ -254,66 +254,90 @@ class TradeManager:
             self.game_state.state.get("day", 1)
         )
         
+        # Obtener nombre del planeta una sola vez
+        try:
+            planet = self.db.query(Planet).filter(Planet.code == planet_code).first()
+            planet_name = planet.name if planet else f"Planeta {planet_code}"
+        except Exception as e:
+            planet_name = f"Planeta {planet_code}"
+        
         from app.event_logger import EventLogger
         
-        for item in items:
-            # Deduct funds
-            curr_cost = item["quantity"] * item["unit_price"]
-            self.game_state.state["treasury"] -= curr_cost
-            
-            # Create Order
-            new_order = TradeOrder(
-                game_id=self.game_id,
-                area=self.game_state.state.get("area", 0),
-                buy_planet_code=planet_code,
-                buy_planet_name="", 
-                product_code=item["product_code"],
-                quantity=item["quantity"],
-                buy_price_per_unit=item["unit_price"],
-                total_buy_price=curr_cost,
-                buy_date=current_date_str,
-                traceability=True, # Default True
-                status="in_transit"
-            )
-            self.db.add(new_order)
-            self.db.commit() # Commit to get ID
-            created_orders.append(new_order.id)
-            
-            # Log Transaction
-            self.game_state.state["transactions"].append({
-                "date": current_date_str,
-                "amount": -curr_cost,
-                "description": f"Compra {item['quantity']} UCN de {item['product_code']}",
-                "category": "Comercio"
-            })
-            
-            # Update Cargo Cache
-            if "cargo" not in self.game_state.state:
-                self.game_state.state["cargo"] = {}
-            curr_c = self.game_state.state["cargo"].get(item["product_code"], 0)
-            self.game_state.state["cargo"][item["product_code"]] = curr_c + item["quantity"]
+        # Timestamp para created_at y updated_at
+        timestamp = datetime.now().isoformat()
+        
+        try:
+            for item in items:
+                # Deduct funds
+                curr_cost = item["quantity"] * item["unit_price"]
+                self.game_state.state["treasury"] -= curr_cost
+                
+                # Create Order
+                new_order = TradeOrder(
+                    game_id=self.game_id,
+                    area=self.game_state.state.get("area", 0),
+                    buy_planet_code=planet_code,
+                    buy_planet_name=planet_name,
+                    product_code=item["product_code"],
+                    quantity=item["quantity"],
+                    buy_price_per_unit=item["unit_price"],
+                    total_buy_price=curr_cost,
+                    buy_date=current_date_str,
+                    traceability=True, # Default True
+                    status="in_transit",
+                    created_at=timestamp,
+                    updated_at=timestamp
+                )
+                self.db.add(new_order)
+                self.db.commit() # Commit to get ID
+                created_orders.append(new_order.id)
+                
+                # Log Transaction
+                self.game_state.state["transactions"].append({
+                    "date": current_date_str,
+                    "amount": -curr_cost,
+                    "description": f"Compra {item['quantity']} UCN de {item['product_code']}",
+                    "category": "Comercio"
+                })
+                
+                # Update Cargo Cache
+                if "cargo" not in self.game_state.state:
+                    self.game_state.state["cargo"] = {}
+                curr_c = self.game_state.state["cargo"].get(item["product_code"], 0)
+                self.game_state.state["cargo"][item["product_code"]] = curr_c + item["quantity"]
 
-        # Update Storage Global
-        self.game_state.state["storage"] += total_ucn_all
-        
-        # 3. Calculate Loading Time
-        loading_days = self.calculate_loading_time(total_ucn_all)
-        
-        # Log Event
-        EventLogger._log_to_game(
-            self.game_state,
-            f"🛒 Compra Lote: {len(items)} productos, {total_ucn_all} UCN total. Coste: {total_cost_all} SC. Tiempo de carga: {loading_days} días.",
-            "info"
-        )
-        
-        self.game_state.save()
-        
-        return {
-            "success": True, 
-            "total_cost": total_cost_all,
-            "loading_days": loading_days,
-            "orders": created_orders
-        }
+            # Update Storage Global
+            self.game_state.state["storage"] += total_ucn_all
+            
+            # 3. Calculate Loading Time
+            loading_days = self.calculate_loading_time(total_ucn_all)
+            
+            # Log Event
+            EventLogger._log_to_game(
+                self.game_state,
+                f"🛒 Compra Lote: {len(items)} productos, {total_ucn_all} UCN total. Coste: {total_cost_all} SC. Tiempo de carga: {loading_days} días.",
+                "info"
+            )
+            
+            self.game_state.save()
+            
+            return {
+                "success": True, 
+                "total_cost": total_cost_all,
+                "loading_days": loading_days,
+                "orders": created_orders
+            }
+        except Exception as e:
+            # Rollback en caso de error
+            self.db.rollback()
+            # Revertir cambios en el estado del juego
+            self.game_state.state["treasury"] = treasury
+            self.game_state.state["storage"] = current_storage
+            if "cargo" in self.game_state.state:
+                # Revertir cargo también si es necesario
+                pass
+            self.game_state.save()
+            return {"success": False, "error": f"Error al procesar la compra: {str(e)}"}
 
     def negotiate_price(self, negotiator_skill: int, reputation: int, is_buy: bool, manual_roll: Optional[int] = None) -> Dict:
         """
@@ -405,19 +429,28 @@ class TradeManager:
         # Update Storage
         self.game_state.state["storage"] = current_storage + quantity
         
+        # Obtener nombre del planeta
+        planet = self.db.query(Planet).filter(Planet.code == planet_code).first()
+        planet_name = planet.name if planet else f"Planeta {planet_code}"
+        
+        # Timestamp para created_at y updated_at
+        timestamp = datetime.now().isoformat()
+        
         # Create Trade Order
         new_order = TradeOrder(
             game_id=self.game_id,
             area=self.game_state.state.get("area", 0), # Fallback 0
             buy_planet_code=planet_code,
-            buy_planet_name="", # TODO: Fetch name
+            buy_planet_name=planet_name,
             product_code=product_code,
             quantity=quantity,
             buy_price_per_unit=unit_price,
             total_buy_price=total_cost,
             buy_date=f"{self.game_state.state.get('day'):02d}-{self.game_state.state.get('month'):02d}-{self.game_state.state.get('year')}",
             traceability=traceability,
-            status="in_transit"
+            status="in_transit",
+            created_at=timestamp,
+            updated_at=timestamp
         )
         self.db.add(new_order)
         self.db.commit()
@@ -467,15 +500,19 @@ class TradeManager:
             
         if order.status == "sold":
              return {"success": False, "error": "Order already sold"}
+        
+        # Obtener nombre del planeta de venta
+        planet = self.db.query(Planet).filter(Planet.code == planet_code).first()
+        planet_name = planet.name if planet else f"Planeta {planet_code}"
              
         # Update Order
         order.sell_planet_code = planet_code
-        order.sell_price_total = sell_price_total
-        order.sell_planet_code = planet_code
+        order.sell_planet_name = planet_name
         order.sell_price_total = sell_price_total
         order.sell_date = f"{self.game_state.state.get('day'):02d}-{self.game_state.state.get('month'):02d}-{self.game_state.state.get('year')}"
         order.status = "sold"
         order.profit = sell_price_total - order.total_buy_price
+        order.updated_at = datetime.now().isoformat()
         
         self.db.commit()
         

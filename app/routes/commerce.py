@@ -378,8 +378,33 @@ async def get_trade_market(game_id: str, db: Session = Depends(get_db)) -> Dict[
 async def get_trade_orders(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """Obtener todas las órdenes de comercio (libro de operaciones)."""
     orders = db.query(TradeOrder).filter(TradeOrder.game_id == game_id).all()
-    # TODO: Format nicely
-    return {"orders": orders}
+    
+    # Convertir objetos SQLAlchemy a diccionarios para serialización JSON
+    orders_dict = []
+    for order in orders:
+        orders_dict.append({
+            "id": order.id,
+            "game_id": order.game_id,
+            "area": order.area,
+            "buy_planet_code": order.buy_planet_code,
+            "buy_planet_name": order.buy_planet_name,
+            "product_code": order.product_code,
+            "quantity": order.quantity,
+            "buy_price_per_unit": order.buy_price_per_unit,
+            "total_buy_price": order.total_buy_price,
+            "buy_date": order.buy_date,
+            "traceability": order.traceability,
+            "status": order.status,
+            "sell_planet_code": order.sell_planet_code,
+            "sell_planet_name": order.sell_planet_name,
+            "sell_price_total": order.sell_price_total,
+            "sell_date": order.sell_date,
+            "profit": order.profit,
+            "created_at": order.created_at,
+            "updated_at": order.updated_at,
+        })
+    
+    return {"orders": orders_dict}
 
 
 @router.post("/api/games/{game_id}/trade/negotiate")
@@ -434,8 +459,26 @@ async def execute_trade_buy_batch(
     planet_code = data.get("planet_code")
     items = data.get("items", [])
     
-    if not items or not planet_code:
+    if not items or planet_code is None:
         raise HTTPException(status_code=400, detail="Missing items or planet_code")
+    
+    # Asegurar que planet_code es un entero
+    try:
+        planet_code = int(planet_code)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="planet_code debe ser un número entero")
+    
+    # Validar formato de items
+    if not isinstance(items, list):
+        raise HTTPException(status_code=400, detail="items debe ser una lista")
+    
+    for item in items:
+        if not isinstance(item, dict):
+            raise HTTPException(status_code=400, detail="Cada item debe ser un objeto")
+        required_fields = ["product_code", "quantity", "unit_price"]
+        for field in required_fields:
+            if field not in item:
+                raise HTTPException(status_code=400, detail=f"Falta el campo '{field}' en un item")
         
     manager = TradeManager(game_id, db)
     result = manager.execute_batch_buy(items, planet_code)
