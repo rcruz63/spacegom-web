@@ -7,13 +7,15 @@ Este módulo contiene los endpoints relacionados con:
 - Avance de tiempo
 - Exploración de cuadrantes
 """
-from fastapi import APIRouter, Form, HTTPException, Depends
-from sqlalchemy.orm import Session
-from typing import Optional, Dict, Any
-from datetime import date
-import json
+from __future__ import annotations
 
-from app.database import get_db, Planet, Personnel, INITIAL_PERSONNEL
+import json
+from datetime import date
+from typing import Any, Dict, Optional
+
+from fastapi import APIRouter, Form, HTTPException
+
+from app.database import INITIAL_PERSONNEL
 from app.game_state import GameState
 from app.dice import DiceRoller
 from app.time_manager import GameCalendar, EventQueue
@@ -400,20 +402,19 @@ async def navigate_area(
 async def get_area_planets(
     game_id: str,
     area_number: int,
-    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Get all discovered planets in a specific area.
     """
     from app.routes.planets import format_planet_data
-    
+    from app.planets_repo import get_planet_by_code
+
     game = GameState(game_id)
-    
-    # Filter discovered planets by area
+
     area_planets = []
     for code, info in game.state.get("discovered_planets", {}).items():
         if info["area"] == area_number:
-            planet = db.query(Planet).filter(Planet.code == int(code)).first()
+            planet = get_planet_by_code(int(code))
             if planet:
                 planet_data = format_planet_data(planet)
                 planet_data["quadrant"] = info["quadrant"]
@@ -436,193 +437,128 @@ async def get_area_planets(
 
 @router.post("/api/games/{game_id}/time/advance")
 async def advance_time(
-    game_id: str, 
+    game_id: str,
     manual_dice: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
 ):
-    """
-    Avanza el tiempo al próximo evento y lo procesa usando el sistema de handlers.
-    
-    Sistema modular:
-    - Cada tipo de evento tiene su propio handler
-    - Main dispatcher simplemente llama al handler apropiado
-    - Handler decide si el evento se borra de la cola
-    """
+    """Avanza el tiempo al próximo evento y lo procesa con el sistema de handlers."""
+    import traceback
+
     from app.event_handlers import get_event_handler
-    
+
     game = GameState(game_id)
     event_queue = game.state.get("event_queue", [])
-    
-    # Check if there are events
     if not event_queue:
         return {"status": "no_events", "message": "No hay eventos pendientes"}
-    
-    # Get next event
+
     next_event = EventQueue.get_next_event(event_queue)
     if not next_event:
         return {"status": "no_events"}
-    
-    # Store old date
+
     old_date = GameCalendar.date_to_string(
-        game.state.get('year', 1),
-        game.state.get('month', 1),
-        game.state.get('day', 1)
+        game.state.get("year", 1),
+        game.state.get("month", 1),
+        game.state.get("day", 1),
     )
-    
-    # Advance calendar to event date
     new_year, new_month, new_day = GameCalendar.parse_date(next_event["date"])
     game.state["year"] = new_year
     game.state["month"] = new_month
     game.state["day"] = new_day
     game.save()
-    
-    # Get handler for event type
+
     handler = get_event_handler(next_event["type"])
-    
     if not handler:
-        return {
-            "status": "error",
-            "message": f"No handler for event type: {next_event['type']}"
-        }
-    
-    # Execute handler
+        return {"status": "error", "message": f"No handler for event type: {next_event['type']}"}
+
     try:
-        result = handler(next_event, game, db, manual_dice)
-        
-        # Remove from queue if handler says so
+        result = handler(next_event, game, manual_dice)
         if result.remove_from_queue:
             game.state["event_queue"] = EventQueue.remove_event(
                 game.state.get("event_queue", []),
-                next_event
+                next_event,
             )
             game.save()
-        
-        db.commit()
-        
-        # Return result
         return {
             "status": "success",
             "old_date": old_date,
             "new_date": next_event["date"],
-            "event_result": result.to_dict()
+            "event_result": result.to_dict(),
         }
-        
     except Exception as e:
-        db.rollback()
-        import traceback
         traceback.print_exc()
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+        return {"status": "error", "message": str(e)}
 
 
 # ===== SETUP COMPLETION =====
 
 @router.post("/api/games/{game_id}/complete-setup")
-async def complete_setup(
-    game_id: str,
-    difficulty: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    """
-    Complete game setup with difficulty selection.
-    
-    This creates initial personnel and sets starting treasury.
-    """
+async def complete_setup(game_id: str, difficulty: str = Form(...)):
+    """Completa el setup con dificultad y crea el personal inicial."""
     from app.event_logger import EventLogger
-    
+
     game = GameState(game_id)
-    
-    # Validate difficulty
-    difficulty_funds = {
-        "easy": 600,
-        "normal": 500,
-        "hard": 400
-    }
-    
+    difficulty_funds = {"easy": 600, "normal": 500, "hard": 400}
     if difficulty not in difficulty_funds:
         raise HTTPException(status_code=400, detail="Invalid difficulty level")
-    
-    # Set difficulty and initial funds
+
     game.state["difficulty"] = difficulty
     game.state["treasury"] = difficulty_funds[difficulty]
     game.state["reputation"] = 0
     game.state["setup_complete"] = True
     game.save()
-    
-    # Log game start with more immersive details
+
     company_name = game.state.get("company_name", "Compañía Desconocida")
     ship_name = game.state.get("ship_name", "Nave Sin Nombre")
     current_planet = game.state.get("current_planet_code", "???")
-    
     EventLogger._log_to_game(
         game,
         f"📜 La empresa {company_name} inicia sus operaciones con la nave {ship_name} desde el planeta {current_planet}. "
         f"Dificultad: {difficulty.upper()}. Fondos iniciales: {difficulty_funds[difficulty]} SC",
-        event_type="success"
+        event_type="success",
     )
-    
-    # Create initial personnel
+
     hire_date = date.today().isoformat()
-    
     for emp_data in INITIAL_PERSONNEL:
-        employee = Personnel(
-            game_id=game_id,
-            position=emp_data["position"],
-            name=emp_data["name"],
-            monthly_salary=emp_data["salary"],
-            experience=emp_data["exp"],
-            morale=emp_data["morale"],
-            hire_date=hire_date,
-            is_active=True
-        )
-        db.add(employee)
-    
-    db.commit()
-    
-    # Log initial personnel
+        game.add_personnel({
+            "position": emp_data["position"],
+            "name": emp_data["name"],
+            "monthly_salary": emp_data["salary"],
+            "experience": emp_data["exp"],
+            "morale": emp_data["morale"],
+            "hire_date": hire_date,
+            "is_active": True,
+        })
+
     for emp_data in INITIAL_PERSONNEL:
         EventLogger._log_to_game(
             game,
             f"👥 {emp_data['name']} se une como {emp_data['position']} por {emp_data['salary']} SC/mes",
-            event_type="info"
+            event_type="info",
         )
-    
-    # Calculate total salaries
+
     total_salaries = sum(emp["salary"] for emp in INITIAL_PERSONNEL)
-    
-    # Create initial salary payment event
     current_date = GameCalendar.date_to_string(
-        game.state.get('year', 1),
-        game.state.get('month', 1),
-        game.state.get('day', 1)
+        game.state.get("year", 1),
+        game.state.get("month", 1),
+        game.state.get("day", 1),
     )
-    
-    # Create first salary payment event for day 35
     next_salary_date = GameCalendar.next_day_35(current_date)
-    
-    if "event_queue" not in game.state:
-        game.state["event_queue"] = []
-    
+    game.state.setdefault("event_queue", [])
     game.state["event_queue"] = EventQueue.add_event(
         game.state.get("event_queue", []),
         "salary_payment",
         next_salary_date,
-        {"monthly_payment": True}
+        {"monthly_payment": True},
     )
     game.save()
-    
     EventLogger._log_to_game(
         game,
         f"📅 Próximo pago de salarios programado para el día 35 ({next_salary_date})",
-        event_type="info"
+        event_type="info",
     )
-    
     return {
         "status": "success",
         "difficulty": difficulty,
         "starting_funds": difficulty_funds[difficulty],
         "personnel_count": len(INITIAL_PERSONNEL),
-        "monthly_salaries": total_salaries
+        "monthly_salaries": total_salaries,
     }

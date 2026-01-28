@@ -1,18 +1,17 @@
 """
 Routes para tesorería, comercio y transporte de pasajeros.
 
-Este módulo contiene los endpoints relacionados con:
-- Tesorería (balance, transacciones)
-- Comercio (compra/venta de productos)
-- Transporte de pasajeros
+Usa GameState y TradeManager (DynamoDB); sin SQL.
 """
-from fastapi import APIRouter, Form, HTTPException, Depends, Request
-from sqlalchemy.orm import Session
-from typing import Optional, Dict, Any
-from datetime import datetime
-import math
+from __future__ import annotations
 
-from app.database import get_db, Planet, Personnel, TradeOrder
+import math
+from datetime import datetime
+from typing import Any, Dict, Optional
+
+from fastapi import APIRouter, Form, HTTPException, Request
+
+from app.planets_repo import get_planet_by_code
 from app.game_state import GameState
 from app.dice import DiceRoller
 from app.time_manager import GameCalendar
@@ -72,44 +71,17 @@ def advance_game_time(game: GameState, days: int) -> str:
 # ===== TREASURY API =====
 
 @router.get("/api/games/{game_id}/treasury")
-async def get_treasury(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """
-    Obtiene información completa de la tesorería de una partida.
-    
-    Calcula gastos mensuales desde el personal activo y retorna información
-    financiera completa incluyendo transacciones recientes.
-    
-    Args:
-        game_id: Identificador único de la partida
-        db: Sesión de base de datos SQLAlchemy
-    
-    Returns:
-        Diccionario con:
-        - "current_balance": Saldo actual en SC
-        - "difficulty": Nivel de dificultad ("easy", "normal", "hard")
-        - "reputation": Reputación actual
-        - "monthly_expenses": {salaries, loans, total}
-        - "recent_transactions": Últimas 10 transacciones
-    """
+async def get_treasury(game_id: str) -> Dict[str, Any]:
+    """Obtiene información completa de la tesorería de una partida."""
     game = GameState(game_id)
-    
-    # Calculate monthly salaries from personnel
-    personnel = db.query(Personnel).filter(
-        Personnel.game_id == game_id,
-        Personnel.is_active == True
-    ).all()
-    total_salaries = sum(p.monthly_salary for p in personnel)
-    
+    personnel = game.get_personnel(active_only=True)
+    total_salaries = sum(p["monthly_salary"] for p in personnel)
     return {
         "current_balance": game.state.get("treasury", 0),
         "difficulty": game.state.get("difficulty"),
         "reputation": game.state.get("reputation", 0),
-        "monthly_expenses": {
-            "salaries": total_salaries,
-            "loans": 0,  # TODO: implement loans system
-            "total": total_salaries
-        },
-        "recent_transactions": game.state.get("transactions", [])[-10:]
+        "monthly_expenses": {"salaries": total_salaries, "loans": 0, "total": total_salaries},
+        "recent_transactions": game.state.get("transactions", [])[-10:],
     }
 
 
@@ -122,38 +94,22 @@ async def add_transaction(
 ) -> Dict[str, Any]:
     """Añadir una transacción a la tesorería."""
     game = GameState(game_id)
-    
-    transaction = {
-        "date": datetime.now().isoformat(),
-        "amount": amount,
-        "description": description,
-        "category": category
-    }
-    
-    # Add transaction to history
-    if "transactions" not in game.state:
-        game.state["transactions"] = []
-    game.state["transactions"].append(transaction)
-    
-    # Update treasury balance
+    game_date = GameCalendar.date_to_string(
+        game.state.get("year", 1),
+        game.state.get("month", 1),
+        game.state.get("day", 1),
+    )
+    transaction = {"date": game_date, "amount": amount, "description": description, "category": category}
+    game.append_transaction(transaction)
     game.state["treasury"] = game.state.get("treasury", 0) + amount
-    
     game.save()
-    
-    return {
-        "status": "success",
-        "new_balance": game.state["treasury"],
-        "transaction": transaction
-    }
+    return {"status": "success", "new_balance": game.state["treasury"], "transaction": transaction}
 
 
 # ===== PASSENGER TRANSPORT API =====
 
 @router.get("/api/games/{game_id}/passenger-transport/info")
-async def get_passenger_transport_info(
-    game_id: str,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
+async def get_passenger_transport_info(game_id: str) -> Dict[str, Any]:
     """
     Obtiene información para la acción de transporte de pasajeros.
     
@@ -172,8 +128,6 @@ async def get_passenger_transport_info(
         - "modifiers": {has_manager, manager_bonus, manager_name, attendants_count}
         - "available": True si la acción está disponible (se resetea al viajar)
     """
-    Returns capacity, current passengers, and modifiers.
-    """
     from app.ship_data import get_ship_stats
     
     game = GameState(game_id)
@@ -187,46 +141,32 @@ async def get_passenger_transport_info(
     planet_code = game.state.get("current_planet_code")
     avg_passengers = 0
     if planet_code:
-        planet = db.query(Planet).filter(Planet.code == planet_code).first()
+        planet = get_planet_by_code(planet_code)
         if planet:
             avg_passengers = planet.max_passengers
             
-    # 3. Check for modifiers (Personnel)
-    manager = db.query(Personnel).filter(
-        Personnel.game_id == game_id, 
-        Personnel.position == "Responsable de soporte a pasajeros",
-        Personnel.is_active == True
-    ).first()
-    
+    personnel = game.get_personnel(active_only=True)
+    manager = next((p for p in personnel if p.get("position") == "Responsable de soporte a pasajeros"), None)
     manager_bonus = 0
     if manager:
-        exp_mod = {"N": -1, "E": 0, "V": 1}.get(manager.experience, 0)
-        morale_mod = {"B": -1, "M": 0, "A": 1}.get(manager.morale, 0)
+        exp_mod = {"N": -1, "E": 0, "V": 1}.get(manager.get("experience", "N"), 0)
+        morale_mod = {"B": -1, "M": 0, "A": 1}.get(manager.get("morale", "M"), 0)
         rep_mod = math.floor(game.state.get("reputation", 0) / 2)
-        
         manager_bonus = exp_mod + morale_mod + rep_mod
-        
-    # Flight Attendants
-    flight_attendants = db.query(Personnel).filter(
-        Personnel.game_id == game_id,
-        Personnel.position == "Auxiliar de vuelo",
-        Personnel.is_active == True
-    ).all()
-    
-    attendants_count = len(flight_attendants)
-    
+    attendants_count = sum(1 for p in personnel if p.get("position") == "Auxiliar de vuelo")
+
     return {
         "ship_capacity": ship_capacity,
         "current_passengers": current_passengers,
         "planet_avg_passengers": avg_passengers,
         "modifiers": {
             "has_manager": manager is not None,
-            "manager_name": manager.name if manager else None,
+            "manager_name": manager["name"] if manager else None,
             "manager_bonus": manager_bonus,
-            "attendants_count": attendants_count
+            "attendants_count": attendants_count,
         },
         "location": game.state.get("ship_location_on_planet", "Mundo"),
-        "available": game.state.get("passenger_transport_available", True)
+        "available": game.state.get("passenger_transport_available", True),
     }
 
 
@@ -234,7 +174,6 @@ async def get_passenger_transport_info(
 async def execute_passenger_transport(
     game_id: str,
     manual_dice: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Ejecuta la acción de transporte de pasajeros.
@@ -265,14 +204,6 @@ async def execute_passenger_transport(
     Raises:
         HTTPException 400: Si la acción no está disponible o hay error
     """
-    Execute passenger transport action.
-    
-    1. Roll 2d6 (+ modifiers from Manager)
-    2. Determine outcome (<7, 7-9, 10-12) -> Number of passengers
-    3. Update Manager stats (Moral/XP) via personnel_manager
-    4. Calculate Revenue (Base x Attendants multiplier + Attendants XP bonus)
-    5. Update Game State (Treasury, Passengers)
-    """
     from app.personnel_manager import update_employee_roll_stats
     from app.ship_data import get_ship_stats
     from app.event_logger import EventLogger
@@ -284,7 +215,7 @@ async def execute_passenger_transport(
         raise HTTPException(400, "Transporte de pasajeros ya realizado en esta visita. Debes viajar a otro cuadrante y volver.")
 
     planet_code = game.state.get("current_planet_code")
-    planet = db.query(Planet).filter(Planet.code == planet_code).first()
+    planet = get_planet_by_code(planet_code)
     if not planet:
         raise HTTPException(400, "Not on a known planet")
         
@@ -292,21 +223,16 @@ async def execute_passenger_transport(
     ship_stats = get_ship_stats(game.state.get("ship_model", "Basic Starfall"))
     ship_capacity = ship_stats.get("passengers", 10)
     
-    # --- 2. Calculate Modifiers ---
-    manager = db.query(Personnel).filter(
-        Personnel.game_id == game_id, 
-        Personnel.position == "Responsable de soporte a pasajeros",
-        Personnel.is_active == True
-    ).first()
+    personnel = game.get_personnel(active_only=True)
+    manager = next((p for p in personnel if p.get("position") == "Responsable de soporte a pasajeros"), None)
     
     total_mod = 0
     mods_detail = {}
     
     if manager:
-        exp_mod = {"N": -1, "E": 0, "V": 1}.get(manager.experience, 0)
-        morale_mod = {"B": -1, "M": 0, "A": 1}.get(manager.morale, 0)
+        exp_mod = {"N": -1, "E": 0, "V": 1}.get(manager.get("experience", "N"), 0)
+        morale_mod = {"B": -1, "M": 0, "A": 1}.get(manager.get("morale", "M"), 0)
         rep_mod = math.floor(game.state.get("reputation", 0) / 2)
-        
         total_mod = exp_mod + morale_mod + rep_mod
         mods_detail = {"experience": exp_mod, "morale": morale_mod, "reputation_half": rep_mod}
     
@@ -335,21 +261,14 @@ async def execute_passenger_transport(
     # Cap at ship capacity
     boarding_passengers = min(int(raw_passengers), ship_capacity)
     
-    # --- 5. Update Personnel Stats (Manager) ---
     personnel_changes = None
     if manager:
         personnel_changes = update_employee_roll_stats(manager, dice_values, final_result)
-        # Log personnel changes
+        game.update_personnel(manager["id"], {"morale": manager["morale"], "experience": manager["experience"]})
         for msg in personnel_changes["messages"]:
-            EventLogger._log_to_game(game, f"👔 {manager.name}: {msg}", "info")
-            
-    # --- 6. Calculate Revenue ---
-    flight_attendants = db.query(Personnel).filter(
-        Personnel.game_id == game_id,
-        Personnel.position == "Auxiliar de vuelo",
-        Personnel.is_active == True
-    ).all()
-    
+            EventLogger._log_to_game(game, f"👔 {manager.get('name')}: {msg}", "info")
+
+    flight_attendants = [p for p in personnel if p.get("position") == "Auxiliar de vuelo"]
     num_aux = len(flight_attendants)
     if num_aux >= 3:
         multiplier = 4
@@ -425,80 +344,47 @@ async def execute_passenger_transport(
 # ===== TRADING API =====
 
 @router.get("/api/games/{game_id}/trade/market")
-async def get_trade_market(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """
-    Obtiene datos del mercado comercial en el planeta actual.
-    
-    Retorna productos disponibles para compra (que el planeta produce) y
-    productos disponibles para venta (que el planeta demanda), considerando
-    cooldowns basados en órdenes comerciales previas.
-    
-    Args:
-        game_id: Identificador único de la partida
-        db: Sesión de base de datos SQLAlchemy
-    
-    Returns:
-        Diccionario con estructura de TradeManager.get_market_data():
-        - "buy": Lista de productos disponibles para compra
-        - "sell": Lista de órdenes disponibles para venta
-        - "planet_ucn_limit": Límite UCN por orden del planeta
-    """
-    """Obtener productos disponibles para comprar y órdenes activas."""
+async def get_trade_market(game_id: str) -> Dict[str, Any]:
+    """Obtiene datos del mercado comercial en el planeta actual."""
     from app.trade_manager import TradeManager
-    
+
     game = GameState(game_id)
     planet_code = game.state.get("current_planet_code")
     if not planet_code:
         raise HTTPException(status_code=400, detail="Ship not on a planet")
-        
-    manager = TradeManager(game_id, db)
-    market_data = manager.get_market_data(planet_code)
-    
-    return market_data
+    manager = TradeManager(game_id)
+    return manager.get_market_data(planet_code)
 
 
 @router.get("/api/games/{game_id}/trade/orders")
-async def get_trade_orders(game_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
-    """
-    Obtiene todas las órdenes de comercio de una partida (libro de operaciones).
-    
-    Retorna el historial completo de compras y ventas incluyendo órdenes en tránsito,
-    vendidas y cualquier otro estado.
-    
-    Args:
-        game_id: Identificador único de la partida
-        db: Sesión de base de datos SQLAlchemy
-    
-    Returns:
-        Diccionario con "orders": Lista de todas las TradeOrder de la partida
-    """
-    orders = db.query(TradeOrder).filter(TradeOrder.game_id == game_id).all()
-    
-    # Convertir objetos SQLAlchemy a diccionarios para serialización JSON
-    orders_dict = []
-    for order in orders:
-        orders_dict.append({
-            "id": order.id,
-            "game_id": order.game_id,
-            "area": order.area,
-            "buy_planet_code": order.buy_planet_code,
-            "buy_planet_name": order.buy_planet_name,
-            "product_code": order.product_code,
-            "quantity": order.quantity,
-            "buy_price_per_unit": order.buy_price_per_unit,
-            "total_buy_price": order.total_buy_price,
-            "buy_date": order.buy_date,
-            "traceability": order.traceability,
-            "status": order.status,
-            "sell_planet_code": order.sell_planet_code,
-            "sell_planet_name": order.sell_planet_name,
-            "sell_price_total": order.sell_price_total,
-            "sell_date": order.sell_date,
-            "profit": order.profit,
-            "created_at": order.created_at,
-            "updated_at": order.updated_at,
-        })
-    
+async def get_trade_orders(game_id: str) -> Dict[str, Any]:
+    """Obtiene todas las órdenes de comercio de una partida."""
+    game = GameState(game_id)
+    orders = game.get_trade_orders()
+    orders_dict = [
+        {
+            "id": o["id"],
+            "game_id": o.get("game_id", game_id),
+            "area": o.get("area"),
+            "buy_planet_code": o.get("buy_planet_code"),
+            "buy_planet_name": o.get("buy_planet_name"),
+            "product_code": o.get("product_code"),
+            "quantity": o.get("quantity"),
+            "buy_price_per_unit": o.get("buy_price_per_unit"),
+            "total_buy_price": o.get("total_buy_price"),
+            "buy_date": o.get("buy_date"),
+            "traceability": o.get("traceability"),
+            "status": o.get("status"),
+            "sell_planet_code": o.get("sell_planet_code"),
+            "sell_planet_name": o.get("sell_planet_name"),
+            "sell_price_total": o.get("sell_price_total"),
+            "sell_date": o.get("sell_date"),
+            "profit": o.get("profit"),
+            "created_at": o.get("created_at"),
+            "updated_at": o.get("updated_at"),
+        }
+        for o in orders
+    ]
     return {"orders": orders_dict}
 
 
@@ -536,7 +422,7 @@ async def negotiate_trade(
     negotiator_skill = 0 
     reputation = game.state.get("reputation", 0)
     
-    manager = TradeManager(game_id, None) 
+    manager = TradeManager(game_id)
     result = manager.negotiate_price(
         negotiator_skill=negotiator_skill, 
         reputation=reputation, 
@@ -555,11 +441,7 @@ async def negotiate_trade(
 
 
 @router.post("/api/games/{game_id}/trade/buy-batch")
-async def execute_trade_buy_batch(
-    game_id: str,
-    request: Request,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
+async def execute_trade_buy_batch(game_id: str, request: Request) -> Dict[str, Any]:
     """
     Ejecuta una transacción de compra en lote (cesta de compra).
     
@@ -619,7 +501,7 @@ async def execute_trade_buy_batch(
             if field not in item:
                 raise HTTPException(status_code=400, detail=f"Falta el campo '{field}' en un item")
         
-    manager = TradeManager(game_id, db)
+    manager = TradeManager(game_id)
     result = manager.execute_batch_buy(items, planet_code)
     
     if not result["success"]:
@@ -643,7 +525,6 @@ async def execute_trade_buy(
     quantity: int = Form(...),
     unit_price: int = Form(...),
     traceability: bool = Form(True),
-    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Ejecuta una transacción de compra individual.
@@ -672,7 +553,7 @@ async def execute_trade_buy(
     """
     from app.trade_manager import TradeManager
     
-    manager = TradeManager(game_id, db)
+    manager = TradeManager(game_id)
     result = manager.execute_buy(
         planet_code=planet_code,
         product_code=product_code,
@@ -693,7 +574,6 @@ async def execute_trade_sell(
     order_id: int = Form(...),
     planet_code: int = Form(...),
     sell_price_total: int = Form(...),
-    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Ejecuta una transacción de venta de una orden existente.
@@ -720,7 +600,7 @@ async def execute_trade_sell(
     """
     from app.trade_manager import TradeManager
     
-    manager = TradeManager(game_id, db)
+    manager = TradeManager(game_id)
     result = manager.execute_sell(
         order_id=order_id,
         planet_code=planet_code,

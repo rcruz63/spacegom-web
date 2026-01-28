@@ -7,11 +7,16 @@ Este módulo contiene los endpoints relacionados con:
 - Actualización de notas y datos de bootstrap
 - Sugerencias de nombres
 """
-from fastapi import APIRouter, Form, HTTPException, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Form, HTTPException
 from typing import Optional, Dict, Any
 
-from app.database import get_db, Planet
+from app.planets_repo import (
+    Planet,
+    get_planet_by_code,
+    search_planets as repo_search_planets,
+    update_planet_notes as repo_update_planet_notes,
+    update_planet_bootstrap as repo_update_planet_bootstrap,
+)
 from app.game_state import GameState
 from app.dice import DiceRoller
 from app.name_suggestions import get_random_company_name, get_random_ship_name
@@ -148,7 +153,6 @@ def is_valid_starting_planet(planet: Planet) -> Dict[str, Any]:
 async def roll_planet_code(
     game_id: str,
     manual_results: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Tira 3d6 para generar un código de planeta y retorna sus datos.
@@ -194,9 +198,9 @@ async def roll_planet_code(
     # Record roll
     game.record_dice_roll(3, results, is_manual, "planet_code")
     
-    # Fetch planet from database
-    planet = db.query(Planet).filter(Planet.code == code).first()
-    
+    # Fetch planet from DynamoDB
+    planet = get_planet_by_code(code)
+
     if not planet:
         return {
             "code": code,
@@ -216,13 +220,13 @@ async def roll_planet_code(
 # ===== PLANET CRUD =====
 
 @router.get("/api/planets/{code}")
-async def get_planet(code: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def get_planet(code: int) -> Dict[str, Any]:
     """Obtener un planeta por su código.
 
     Devuelve los datos formateados del planeta y la validación para
     determinar si es apto como planeta inicial.
     """
-    planet = db.query(Planet).filter(Planet.code == code).first()
+    planet = get_planet_by_code(code)
     if not planet:
         raise HTTPException(status_code=404, detail=f"Planet {code} not found")
     
@@ -233,18 +237,13 @@ async def get_planet(code: int, db: Session = Depends(get_db)) -> Dict[str, Any]
 
 
 @router.get("/api/planets")
-async def search_planets(name: Optional[str] = None, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def search_planets(name: Optional[str] = None) -> Dict[str, Any]:
     """Buscar planetas por nombre.
 
     Devuelve una lista de coincidencias (límite 50).
     """
-    query = db.query(Planet)
-    
-    if name:
-        query = query.filter(Planet.name.ilike(f"%{name}%"))
-    
-    planets = query.limit(50).all()
-    
+    planets = repo_search_planets(name=name, limit=50)
+
     return {
         "planets": [
             {
@@ -258,18 +257,17 @@ async def search_planets(name: Optional[str] = None, db: Session = Depends(get_d
 
 
 @router.get("/api/planets/next/{current_code}")
-async def get_next_planet(current_code: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def get_next_planet(current_code: int) -> Dict[str, Any]:
     """
     Obtiene el siguiente planeta en la secuencia 3d6 (búsqueda consecutiva).
-    
+
     Este endpoint implementa la lógica del manual de juego:
     Si el planeta no es apto para inicio, se busca el siguiente código
     en orden (111 → 112 → 113...) hasta encontrar uno válido.
     """
-    # Calcular el siguiente código en la secuencia
     next_code = DiceRoller.get_next_planet_code(current_code)
-    planet = db.query(Planet).filter(Planet.code == next_code).first()
-    
+    planet = get_planet_by_code(next_code)
+
     if not planet:
         raise HTTPException(status_code=404, detail=f"Planet {next_code} not found")
         
@@ -283,17 +281,15 @@ async def get_next_planet(current_code: int, db: Session = Depends(get_db)) -> D
 async def update_planet_notes(
     code: int,
     notes: str = Form(...),
-    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Actualizar notas de un planeta."""
-    planet = db.query(Planet).filter(Planet.code == code).first()
+    planet = get_planet_by_code(code)
     if not planet:
         raise HTTPException(status_code=404, detail=f"Planet {code} not found")
-    
-    planet.notes = notes
-    db.commit()
-    db.refresh(planet)
-    
+
+    repo_update_planet_notes(code, notes)
+    planet = get_planet_by_code(code)
+
     return {
         "status": "success",
         "planet": format_planet_data(planet)
@@ -305,7 +301,6 @@ async def update_planet_bootstrap(
     code: int,
     tech_level: str = Form(...),
     population_over_1000: bool = Form(...),
-    db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Actualizar datos faltantes del planeta para el proceso de bootstrap.
 
@@ -313,19 +308,17 @@ async def update_planet_bootstrap(
     planeta y el jugador los proporciona manualmente (`tech_level` y
     `population_over_1000`).
     """
-    planet = db.query(Planet).filter(Planet.code == code).first()
+    planet = get_planet_by_code(code)
     if not planet:
         raise HTTPException(status_code=404, detail=f"Planet {code} not found")
-    
-    planet.tech_level = tech_level
-    planet.population_over_1000 = population_over_1000
-    db.commit()
-    
+
+    repo_update_planet_bootstrap(code, tech_level, population_over_1000)
+
     return {
         "status": "success",
         "planet": {
-            "code": code, 
-            "tech_level": tech_level, 
+            "code": code,
+            "tech_level": tech_level,
             "population_over_1000": population_over_1000
         }
     }

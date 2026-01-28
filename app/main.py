@@ -1,9 +1,10 @@
 """Módulo principal FastAPI.
 
-Este módulo es el punto de entrada API de la aplicación Spacegom. 
+Este módulo es el punto de entrada API de la aplicación Spacegom.
 Inicializa la aplicación FastAPI y monta todos los routers organizados por dominio.
 
 Resumen de responsabilidades:
+- Carga de variables de entorno desde .env (load_dotenv) para AWS y DynamoDB
 - Inicialización de FastAPI
 - Configuración de archivos estáticos
 - Montaje de routers desde app/routes/
@@ -18,6 +19,13 @@ Los endpoints están organizados en los siguientes módulos:
 - routes/missions.py: Gestión de misiones
 - routes/commerce.py: Tesorería, comercio y transporte de pasajeros
 """
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Cargar .env lo antes posible (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, etc.)
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 

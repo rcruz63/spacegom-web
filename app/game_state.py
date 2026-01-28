@@ -1,144 +1,107 @@
 """
-Gestión del estado del juego con persistencia en archivos JSON.
+Gestión del estado del juego con persistencia en DynamoDB (SpacegomGames).
 
-Este módulo maneja la persistencia del estado del juego usando archivos JSON.
-Cada partida tiene su propio directorio con un archivo `state.json` que contiene
-todo el estado persistente.
+Persistencia en tabla SpacegomGames (Single Table Design):
+- PK=game_id (GAME#<id>), SK=entity_id.
+- METADATA: estado base (sin events, dice_rolls, transactions, event_logs).
+- LOG#<tipo>#<timestamp>#<i>: eventos, tiradas, transacciones, logs UI.
 
-Estructura del estado JSON:
-    {
-        "game_id": "string",
-        "created_at": "ISO datetime",
-        "updated_at": "ISO datetime",
-        
-        # Setup inicial
-        "area": int,                    # Área espacial (2-12 desde 2d6)
-        "world_density": str,           # "Baja", "Media", "Alta"
-        "setup_complete": bool,
-        "ship_row": int,                # Fila 1-6
-        "ship_col": int,                # Columna 1-6
-        "ship_location_on_planet": str, # "Mundo", "Espaciopuerto", etc.
-        
-        # Compañía y Nave
-        "company_name": str,
-        "ship_name": str,
-        "ship_model": str,
-        "passengers": int,
-        
-        # HUD - Estado crítico
-        "fuel": int,
-        "fuel_max": int,
-        "storage": int,
-        "storage_max": int,
-        "month": int,
-        "reputation": int,
-        
-        # Calendario (35 días/mes, 12 meses/año)
-        "year": int,
-        "day": int,
-        "event_queue": List[Dict],      # Cola ordenada de eventos
-        
-        # Sistema de daños
-        "damages": {
-            "light": bool,
-            "moderate": bool,
-            "severe": bool,
-            "counts": {"light": int, "moderate": int, "severe": int}
-        },
-        
-        # Navegación
-        "current_planet_code": int,
-        "explored_quadrants": List[str],      # ["1,2", "1,3"]
-        "quadrant_planets": Dict[str, int],    # {"row,col": planet_code}
-        "discovered_planets": Dict[str, Dict], # {"planet_code": {"area": int, "quadrant": str}}
-        
-        # Economía
-        "difficulty": str,               # "easy", "normal", "hard"
-        "treasury": int,                 # Saldo en Créditos Spacegom (SC)
-        "transactions": List[Dict],
-        
-        # Carga
-        "cargo": Dict[str, int],         # {product_code: quantity}
-        
-        # Historial
-        "events": List[Dict],
-        "dice_rolls": List[Dict]
-    }
-
-Dependencias:
-    - json: Serialización/deserialización
-    - pathlib.Path: Manejo de rutas de archivos
-    - datetime: Timestamps
-
-Notas de implementación:
-    - Persistencia: Estado guardado automáticamente en operaciones críticas
-    - Thread Safety: No implementada (FastAPI maneja concurrencia)
-    - Validación: Campos actualizados sin validación (manejar en endpoints)
-    - Event Queue: Lista ordenada de eventos futuros
-    - Coordinate System: 1-based para display, 0-based para cálculos internos
+Sin escritura a disco; logs del sistema a stdout para CloudWatch.
 """
-import json
-import os
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from app.aws_client import (
+    get_games_table,
+    item_from_decimal,
+    item_to_decimal,
+)
+
+_BULK_KEYS = ("events", "dice_rolls", "transactions", "event_logs")
+
+
+def _pk(game_id: str) -> str:
+    return f"GAME#{game_id}"
 
 
 class GameState:
     """
-    Maneja el estado del juego con persistencia en archivos JSON.
-    
-    Cada partida tiene su propio directorio en `data/games/{game_id}/` con un
-    archivo `state.json` que contiene todo el estado persistente.
-    
-    El estado se guarda automáticamente después de operaciones críticas como
-    actualizaciones, eventos, o descubrimientos.
-    
-    Attributes:
-        GAMES_DIR: Directorio base donde se almacenan todas las partidas
-        game_id: Identificador único de la partida
-        game_dir: Path al directorio de esta partida
-        state_file: Path al archivo state.json
-        state: Diccionario con todo el estado del juego
-    
-    Mejores prácticas:
-        - Usar update() para cambios múltiples
-        - Registrar eventos importantes con add_event()
-        - Siempre llamar save() después de modificar estado manualmente
-        - Validar coordenadas antes de usar métodos de navegación
-        - Mantener consistencia entre explored_quadrants y quadrant_planets
+    Maneja el estado del juego con persistencia en DynamoDB (SpacegomGames).
+
+    Carga/guarda METADATA y LOG# en SpacegomGames. Sin archivos en disco.
     """
-    
-    GAMES_DIR = "data/games"
-    
-    def __init__(self, game_id: str):
-        """
-        Inicializa el gestor de estado para una partida.
-        
-        Args:
-            game_id: Identificador único de la partida
-        """
+
+    def __init__(self, game_id: str) -> None:
         self.game_id = game_id
-        self.game_dir = Path(self.GAMES_DIR) / game_id
-        self.state_file = self.game_dir / "state.json"
-        self.state = self._load_or_create_state()
-    
-    def _load_or_create_state(self) -> Dict[str, Any]:
-        """
-        Carga el estado existente o crea uno nuevo.
-        
-        Si existe un archivo state.json, lo carga. Si no existe, crea un
-        estado por defecto con todos los campos inicializados.
-        
-        Returns:
-            Diccionario con el estado del juego
-        """
-        if self.state_file.exists():
-            with open(self.state_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            # Crear nuevo estado de juego
-            return self._create_default_state()
+        self._table = get_games_table()
+        self.state, self.personnel, self.missions, self.trade_orders, self.employee_tasks = self._load_or_create()
+
+    def _load_or_create(self) -> tuple[Dict[str, Any], List[Dict], List[Dict], List[Dict], List[Dict]]:
+        """Carga desde DynamoDB o crea estado por defecto. Retorna (state, personnel, missions, orders, tasks)."""
+        pk = _pk(self.game_id)
+        resp = self._table.query(KeyConditionExpression="game_id = :pk", ExpressionAttributeValues={":pk": pk})
+        items = [item_from_decimal(i) for i in resp.get("Items", [])]
+        while "LastEvaluatedKey" in resp:
+            resp = self._table.query(
+                KeyConditionExpression="game_id = :pk",
+                ExpressionAttributeValues={":pk": pk},
+                ExclusiveStartKey=resp["LastEvaluatedKey"],
+            )
+            items.extend([item_from_decimal(i) for i in resp.get("Items", [])])
+
+        metadata = next((i for i in items if i.get("entity_id") == "METADATA"), None)
+        if not metadata:
+            defs = self._create_default_state()
+            return defs, [], [], [], []
+
+        state = {k: v for k, v in metadata.items() if k not in ("game_id", "entity_id")}
+        for key in _BULK_KEYS:
+            state.setdefault(key, [])
+
+        log_items = [i for i in items if (i.get("entity_id") or "").startswith("LOG#")]
+        for it in log_items:
+            eid = it["entity_id"]
+            parts = eid.split("#")
+            if len(parts) < 3:
+                continue
+            tipo = parts[1]
+            payload = {k: v for k, v in it.items() if k not in ("game_id", "entity_id")}
+            if tipo == "dice":
+                state["dice_rolls"].append(payload)
+            elif tipo == "tx":
+                state["transactions"].append(payload)
+            elif tipo == "sys":
+                state["events"].append(payload)
+            elif tipo == "ui":
+                state["event_logs"].append(payload)
+
+        for key in _BULK_KEYS:
+            state[key] = state.get(key) or []
+
+        personnel = []
+        missions = []
+        orders = []
+        tasks = []
+        for it in items:
+            eid = (it.get("entity_id") or "")
+            payload = {k: v for k, v in it.items() if k not in ("game_id", "entity_id")}
+            if "id" not in payload and "#" in eid:
+                try:
+                    payload["id"] = int(eid.split("#", 1)[1])
+                except (IndexError, ValueError):
+                    pass
+            if eid.startswith("PERSONNEL#"):
+                personnel.append(payload)
+            elif eid.startswith("MISSION#"):
+                missions.append(payload)
+            elif eid.startswith("ORDER#"):
+                orders.append(payload)
+            elif eid.startswith("TASK#"):
+                tasks.append(payload)
+
+        return state, personnel, missions, orders, tasks
     
     def _create_default_state(self) -> Dict[str, Any]:
         """
@@ -211,11 +174,14 @@ class GameState:
             "quadrant_planets": {},  # Mapeo {"row,col": planet_code}
             "discovered_planets": {},  # Registro completo {"planet_code": {"area": int, "quadrant": "row,col"}}
             
-            # Dificultad y Tesorería - Configurado durante setup
-            "difficulty": None,  # "easy" (600 SC), "normal" (500 SC), "hard" (400 SC)
-            "treasury": 0,  # Saldo en Créditos Spacegom (SC)
-            "reputation": 0,  # Reputación inicial
-            
+            "difficulty": None,
+            "treasury": 0,
+            "reputation": 0,
+            "last_personnel_id": 0,
+            "last_mission_id": 0,
+            "last_order_id": 0,
+            "last_task_id": 0,
+
             # Historial de Transacciones
             "transactions": [],  # [{date, amount, description, category}]
             
@@ -226,29 +192,24 @@ class GameState:
             "cargo": {},  # {product_code: quantity} - Productos en la bodega
             
             # Historial - Eventos y tiradas de dados
-            "events": [],  # Lista de eventos del juego
-            "dice_rolls": [],  # Historial de tiradas de dados
-            
-            # Flags de Acciones - Control de acciones disponibles
-            "passenger_transport_available": True  # Reset al moverse entre cuadrantes
+            "events": [],
+            "dice_rolls": [],
+            "event_logs": [],  # EventLogger
+
+            "passenger_transport_available": True
         }
     
-    def save(self) -> None:
-        """
-        Guarda el estado actual en el archivo state.json con timestamp actualizado.
-        
-        Crea el directorio si no existe y actualiza el campo `updated_at` con
-        la fecha y hora actual antes de guardar.
-        """
-        # Asegurar que el directorio existe
-        self.game_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Actualizar timestamp
+    def _save_metadata(self) -> None:
+        """Escribe solo METADATA en DynamoDB (sin listas pesadas)."""
         self.state["updated_at"] = datetime.now().isoformat()
-        
-        # Escribir a archivo
-        with open(self.state_file, 'w', encoding='utf-8') as f:
-            json.dump(self.state, f, indent=2, ensure_ascii=False)
+        meta = {k: v for k, v in self.state.items() if k not in _BULK_KEYS}
+        meta["game_id"] = _pk(self.game_id)
+        meta["entity_id"] = "METADATA"
+        self._table.put_item(Item=item_to_decimal(meta))
+
+    def save(self) -> None:
+        """Persiste el estado (METADATA) en DynamoDB. Sin escritura a disco."""
+        self._save_metadata()
     
     def get_adjacent_coordinates(self, row: int, col: int, jump_range: int = 1) -> List[Dict[str, Any]]:
         """
@@ -331,61 +292,187 @@ class GameState:
                 self.state[key] = value
         self.save()
     
-    def add_event(self, event_type: str, description: str, data: Optional[Dict] = None) -> None:
-        """
-        Agrega un evento al historial de eventos del juego.
-        
-        Los eventos se almacenan con timestamp, fecha del juego, tipo, descripción
-        y datos adicionales opcionales. Se guarda automáticamente después de agregar.
-        
-        Args:
-            event_type: Tipo de evento (ej: "hire", "trade", "mission")
-            description: Descripción legible del evento
-            data: Diccionario opcional con datos adicionales del evento
-        """
-        # Calcular fecha actual del juego
-        year = self.state.get('year', 1)
-        month = self.state.get('month', 1)
-        day = self.state.get('day', 1)
-        game_date = f"{day:02d}-{month:02d}-{year}"
+    def _put_log(self, tipo: str, payload: Dict[str, Any]) -> None:
+        """Escribe un ítem LOG#<tipo>#<ts>#<i> en DynamoDB."""
+        ts = payload.get("timestamp", datetime.now().isoformat())
+        idx = len(self.state["dice_rolls"] if tipo == "dice" else
+                  self.state["transactions"] if tipo == "tx" else
+                  self.state["events"] if tipo == "sys" else
+                  self.state["event_logs"])
+        entity_id = f"LOG#{tipo}#{ts}#{idx}"
+        item = {"game_id": _pk(self.game_id), "entity_id": entity_id, **payload}
+        self._table.put_item(Item=item_to_decimal(item))
 
-        event = {
-            "timestamp": datetime.now().isoformat(),
-            "game_date": game_date,
-            "type": event_type,
-            "description": description,
-            "data": data or {}
-        }
+    def add_event(self, event_type: str, description: str, data: Optional[Dict] = None) -> None:
+        """Agrega un evento al historial y persiste como LOG#sys."""
+        year = self.state.get("year", 1)
+        month = self.state.get("month", 1)
+        day = self.state.get("day", 1)
+        game_date = f"{day:02d}-{month:02d}-{year}"
+        ts = datetime.now().isoformat()
+        event = {"timestamp": ts, "game_date": game_date, "type": event_type, "description": description, "data": data or {}}
         self.state["events"].append(event)
-        self.save()
-    
+        self._put_log("sys", event)
+        self._save_metadata()
+
     def record_dice_roll(self, num_dice: int, results: list, is_manual: bool, purpose: str = "") -> Dict[str, Any]:
-        """
-        Registra una tirada de dados en el historial.
-        
-        Almacena información completa sobre la tirada para su posterior consulta.
-        Se integra con el sistema de logging y se guarda automáticamente.
-        
-        Args:
-            num_dice: Número de dados tirados
-            results: Lista de resultados individuales de cada dado
-            is_manual: True si fue tirada manual (dados físicos), False si fue automática
-            purpose: Propósito o descripción de la tirada (para debugging)
-        
-        Returns:
-            Diccionario con la información de la tirada registrada
-        """
-        roll = {
-            "timestamp": datetime.now().isoformat(),
-            "num_dice": num_dice,
-            "results": results,
-            "total": sum(results),
-            "is_manual": is_manual,
-            "purpose": purpose
-        }
+        """Registra una tirada de dados y persiste como LOG#dice."""
+        ts = datetime.now().isoformat()
+        roll = {"timestamp": ts, "num_dice": num_dice, "results": results, "total": sum(results), "is_manual": is_manual, "purpose": purpose}
         self.state["dice_rolls"].append(roll)
-        self.save()
+        self._put_log("dice", roll)
+        self._save_metadata()
         return roll
+
+    def append_transaction(self, entry: Dict[str, Any]) -> None:
+        """Añade una transacción y persiste como LOG#tx. No llama save()."""
+        if "timestamp" not in entry:
+            entry = {**entry, "timestamp": datetime.now().isoformat()}
+        self.state.setdefault("transactions", []).append(entry)
+        self._put_log("tx", entry)
+
+    def append_event_log(self, entry: Dict[str, Any]) -> None:
+        """Añade un log de UI (event_logs) y persiste como LOG#ui. No llama save()."""
+        if "timestamp" not in entry:
+            entry = {**entry, "timestamp": datetime.now().isoformat()}
+        self.state.setdefault("event_logs", []).append(entry)
+        self._put_log("ui", entry)
+
+    def _next_id(self, key: str) -> int:
+        """Incrementa last_<key>_id en state y retorna el nuevo valor."""
+        k = f"last_{key}_id"
+        self.state.setdefault(k, 0)
+        self.state[k] += 1
+        return self.state[k]
+
+    def _put_entity(self, prefix: str, eid: int, data: Dict[str, Any]) -> None:
+        """Escribe ítem ENTITY#<id> en DynamoDB."""
+        doc = {"game_id": _pk(self.game_id), "entity_id": f"{prefix}#{eid}", **data}
+        self._table.put_item(Item=item_to_decimal(doc))
+
+    def _delete_entity(self, prefix: str, eid: int) -> None:
+        """Elimina ítem ENTITY#<id>."""
+        self._table.delete_item(Key={"game_id": _pk(self.game_id), "entity_id": f"{prefix}#{eid}"})
+
+    # --- Personnel ---
+    def get_personnel(self, active_only: bool = True) -> List[Dict[str, Any]]:
+        out = self.personnel
+        if active_only:
+            out = [p for p in out if p.get("is_active", True)]
+        return out
+
+    def get_personnel_by_id(self, uid: int) -> Optional[Dict[str, Any]]:
+        for p in self.personnel:
+            if p.get("id") == uid:
+                return p
+        return None
+
+    def add_personnel(self, data: Dict[str, Any]) -> int:
+        uid = self._next_id("personnel")
+        payload = {"id": uid, **data}
+        self.personnel.append(payload)
+        self._put_entity("PERSONNEL", uid, payload)
+        self._save_metadata()
+        return uid
+
+    def update_personnel(self, uid: int, data: Dict[str, Any]) -> None:
+        p = self.get_personnel_by_id(uid)
+        if not p:
+            return
+        p.update(data)
+        self._put_entity("PERSONNEL", uid, p)
+        self._save_metadata()
+
+    # --- Missions ---
+    def get_missions(self) -> List[Dict[str, Any]]:
+        return list(self.missions)
+
+    def get_mission_by_id(self, mid: int) -> Optional[Dict[str, Any]]:
+        for m in self.missions:
+            if m.get("id") == mid:
+                return m
+        return None
+
+    def add_mission(self, data: Dict[str, Any]) -> int:
+        mid = self._next_id("mission")
+        payload = {"id": mid, **data}
+        self.missions.append(payload)
+        self._put_entity("MISSION", mid, payload)
+        self._save_metadata()
+        return mid
+
+    def update_mission(self, mid: int, data: Dict[str, Any]) -> None:
+        m = self.get_mission_by_id(mid)
+        if not m:
+            return
+        m.update(data)
+        self._put_entity("MISSION", mid, m)
+        self._save_metadata()
+
+    def delete_mission(self, mid: int) -> None:
+        self.missions[:] = [m for m in self.missions if m.get("id") != mid]
+        self._delete_entity("MISSION", mid)
+        self._save_metadata()
+
+    # --- Trade orders ---
+    def get_trade_orders(self) -> List[Dict[str, Any]]:
+        return list(self.trade_orders)
+
+    def get_order_by_id(self, oid: int) -> Optional[Dict[str, Any]]:
+        for o in self.trade_orders:
+            if o.get("id") == oid:
+                return o
+        return None
+
+    def add_trade_order(self, data: Dict[str, Any]) -> int:
+        oid = self._next_id("order")
+        payload = {"id": oid, **data}
+        self.trade_orders.append(payload)
+        self._put_entity("ORDER", oid, payload)
+        self._save_metadata()
+        return oid
+
+    def update_order(self, oid: int, data: Dict[str, Any]) -> None:
+        o = self.get_order_by_id(oid)
+        if not o:
+            return
+        o.update(data)
+        self._put_entity("ORDER", oid, o)
+        self._save_metadata()
+
+    # --- Employee tasks ---
+    def get_employee_tasks(self, employee_id: Optional[int] = None) -> List[Dict[str, Any]]:
+        out = self.employee_tasks
+        if employee_id is not None:
+            out = [t for t in out if t.get("employee_id") == employee_id]
+        return out
+
+    def get_task_by_id(self, tid: int) -> Optional[Dict[str, Any]]:
+        for t in self.employee_tasks:
+            if t.get("id") == tid:
+                return t
+        return None
+
+    def add_task(self, data: Dict[str, Any]) -> int:
+        tid = self._next_id("task")
+        payload = {"id": tid, **data}
+        self.employee_tasks.append(payload)
+        self._put_entity("TASK", tid, payload)
+        self._save_metadata()
+        return tid
+
+    def update_task(self, tid: int, data: Dict[str, Any]) -> None:
+        t = self.get_task_by_id(tid)
+        if not t:
+            return
+        t.update(data)
+        self._put_entity("TASK", tid, t)
+        self._save_metadata()
+
+    def delete_task(self, tid: int) -> None:
+        self.employee_tasks[:] = [t for t in self.employee_tasks if t.get("id") != tid]
+        self._delete_entity("TASK", tid)
+        self._save_metadata()
     
     def explore_quadrant(self, row: int, col: int) -> None:
         """
@@ -451,66 +538,39 @@ class GameState:
     
     @classmethod
     def list_games(cls) -> List[Dict[str, Any]]:
-        """
-        Lista todas las partidas disponibles con metadata básica.
-        
-        Recorre el directorio de juegos y carga información básica de cada
-        partida guardada. Retorna una lista ordenada por fecha de actualización
-        (más recientes primero).
-        
-        Returns:
-            Lista de diccionarios con información básica de cada partida:
-            - game_id: Identificador de la partida
-            - created_at: Fecha de creación
-            - updated_at: Última actualización
-            - month: Mes actual del juego
-            - credits: Créditos actuales (si existe)
-        """
-        games_path = Path(cls.GAMES_DIR)
-        if not games_path.exists():
-            return []
-        
+        """Lista partidas desde DynamoDB (Scan METADATA). Orden por updated_at descendente."""
+        table = get_games_table()
+        resp = table.scan(FilterExpression="entity_id = :eid", ExpressionAttributeValues={":eid": "METADATA"})
+        items = resp.get("Items", [])
+        while "LastEvaluatedKey" in resp:
+            resp = table.scan(
+                FilterExpression="entity_id = :eid",
+                ExpressionAttributeValues={":eid": "METADATA"},
+                ExclusiveStartKey=resp["LastEvaluatedKey"],
+            )
+            items.extend(resp.get("Items", []))
+
         games = []
-        for game_dir in games_path.iterdir():
-            if game_dir.is_dir():
-                state_file = game_dir / "state.json"
-                if state_file.exists():
-                    with open(state_file, 'r', encoding='utf-8') as f:
-                        state = json.load(f)
-                        games.append({
-                            "game_id": game_dir.name,
-                            "created_at": state.get("created_at"),
-                            "updated_at": state.get("updated_at"),
-                            "month": state.get("month", 1),
-                            "credits": state.get("credits", 0)
-                        })
-        
-        return sorted(games, key=lambda x: x["updated_at"], reverse=True)
-    
+        for it in items:
+            d = item_from_decimal(it)
+            raw_id = d.get("game_id", "")
+            if raw_id.startswith("GAME#"):
+                raw_id = raw_id[5:]
+            games.append({
+                "game_id": raw_id,
+                "created_at": d.get("created_at"),
+                "updated_at": d.get("updated_at"),
+                "month": d.get("month", 1),
+                "credits": d.get("treasury", 0),
+            })
+        return sorted(games, key=lambda x: (x["updated_at"] or ""), reverse=True)
+
     @classmethod
     def create_new_game(cls, game_name: Optional[str] = None) -> "GameState":
-        """
-        Crea una nueva partida con ID único.
-        
-        Si no se proporciona nombre, genera uno automáticamente basado en
-        timestamp. Limpia el nombre para crear un ID válido (solo alfanuméricos,
-        guiones y guiones bajos).
-        
-        Args:
-            game_name: Nombre opcional para la partida
-        
-        Returns:
-            Nueva instancia de GameState con estado inicializado
-        
-        Example:
-            >>> game = GameState.create_new_game("Mi Partida")
-            >>> game.game_id
-            'mi_partida'
-        """
+        """Crea una nueva partida (estado por defecto) y la persiste en DynamoDB."""
         if not game_name:
             game_name = f"game_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        
-        # Limpiar nombre del juego (remover caracteres inválidos)
-        game_id = "".join(c for c in game_name if c.isalnum() or c in ('_', '-')).lower()
-        
-        return cls(game_id)
+        game_id = "".join(c for c in game_name if c.isalnum() or c in ("_", "-")).lower()
+        inst = cls(game_id)
+        inst.save()
+        return inst

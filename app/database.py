@@ -768,17 +768,11 @@ TECH_LEVEL_REQUIREMENTS: dict[str, list[str]] = {
 
 def init_db() -> None:
     """
-    Inicializa la base de datos creando todas las tablas.
-    
-    Esta función debe llamarse al arrancar la aplicación para asegurar que
-    todas las tablas existen. SQLAlchemy crea las tablas si no existen.
-    
-    **Mejores Prácticas**:
-    - Llamar en el evento de startup de FastAPI
-    - No hace daño llamarla múltiples veces (idempotente)
-    - En producción, considerar usar migraciones (Alembic) en lugar de create_all
+    No-op: la app usa DynamoDB. Se mantiene para compatibilidad con startup.
+
+    Las tablas SQLite ya no se crean; persistencia en SpacegomPlanets y SpacegomGames.
     """
-    Base.metadata.create_all(bind=engine)
+    pass
 
 
 def get_db() -> Generator[Session, None, None]:

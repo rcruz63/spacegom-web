@@ -8,11 +8,9 @@ Las reglas están basadas en REGLAS_MORAL_EXPERIENCIA.md:
 - Moral: Aumenta con resultado >= 10, disminuye con resultado <= 4
 - Experiencia: Aumenta con doble 6 natural (6, 6) en tirada de dados
 
-Dependencias:
-    - app.database.Personnel: Modelo de empleado de la base de datos
+Acepta empleado como dict (DynamoDB/GameState) o objeto con .morale/.experience.
 """
-from typing import List, Dict, Any, Tuple
-from app.database import Personnel
+from typing import List, Dict, Any, Tuple, Union
 
 # Niveles de moral: Baja, Media, Alta
 MORAL_LEVELS: List[str] = ["B", "M", "A"]
@@ -25,9 +23,9 @@ EXP_LEVELS: List[str] = ["N", "E", "V"]
 EXP_MAP: Dict[str, int] = {level: i for i, level in enumerate(EXP_LEVELS)}
 
 def update_employee_roll_stats(
-    employee: Personnel, 
-    dice_values: List[int], 
-    final_result: int
+    employee: Union[Dict[str, Any], Any],
+    dice_values: List[int],
+    final_result: int,
 ) -> Dict[str, Any]:
     """
     Actualiza Moral y Experiencia de un empleado basado en resultado de tirada.
@@ -47,7 +45,7 @@ def update_employee_roll_stats(
     secundarios no deseados. Valida límites de niveles antes de aplicar cambios.
     
     Args:
-        employee: Instancia del modelo Personnel a actualizar
+        employee: Dict o objeto con morale/experience (se muta in-place)
         dice_values: Lista de valores individuales de los dados (ej: [4, 6])
         final_result: Resultado total incluyendo modificadores (Suma + Mods)
     
@@ -76,53 +74,53 @@ def update_employee_roll_stats(
         >>> employee.experience
         'E'
     """
+    def _get(e: Any, k: str, default: str = "M") -> str:
+        return e.get(k, default) if isinstance(e, dict) else getattr(e, k, default)
+
+    def _set(e: Any, k: str, v: str) -> None:
+        if isinstance(e, dict):
+            e[k] = v
+        else:
+            setattr(e, k, v)
+
+    old_m = _get(employee, "morale", "M")
+    old_x = _get(employee, "experience", "N")
     changes = {
         "moral_change": 0,
         "xp_change": 0,
-        "old_moral": employee.morale,
-        "new_moral": employee.morale,
-        "old_xp": employee.experience,
-        "new_xp": employee.experience,
-        "messages": []
+        "old_moral": old_m,
+        "new_moral": old_m,
+        "old_xp": old_x,
+        "new_xp": old_x,
+        "messages": [],
     }
-    
-    # --- REGLAS DE MORAL ---
-    # Ganancia: Total >= 10
-    # Pérdida: Total <= 4
-    
-    current_moral_idx = MORAL_MAP.get(employee.morale, 1)  # Por defecto M si desconocido
+
+    current_moral_idx = MORAL_MAP.get(old_m, 1)
     new_moral_idx = current_moral_idx
-    
+
     if final_result <= 4:
-        # Pérdida de moral por resultado bajo
-        if new_moral_idx > 0:  # Verificar que no esté ya en el mínimo
+        if new_moral_idx > 0:
             new_moral_idx -= 1
             changes["moral_change"] = -1
             changes["messages"].append("Moral disminuye por resultado bajo (<= 4).")
     elif final_result >= 10:
-        # Ganancia de moral por buen resultado
-        if new_moral_idx < 2:  # Verificar que no esté ya en el máximo
+        if new_moral_idx < 2:
             new_moral_idx += 1
             changes["moral_change"] = 1
             changes["messages"].append("Moral aumenta por buen resultado (>= 10).")
-            
-    # Aplicar cambio de moral si hubo modificación
-    if new_moral_idx != current_moral_idx:
-        employee.morale = MORAL_LEVELS[new_moral_idx]
-        changes["new_moral"] = employee.morale
 
-    # --- REGLAS DE EXPERIENCIA ---
-    # Ganancia: Doble 6 natural (6, 6) en los dados
-    
+    if new_moral_idx != current_moral_idx:
+        _set(employee, "morale", MORAL_LEVELS[new_moral_idx])
+        changes["new_moral"] = MORAL_LEVELS[new_moral_idx]
+
     is_double_six = len(dice_values) == 2 and dice_values[0] == 6 and dice_values[1] == 6
-    
     if is_double_six:
-        current_xp_idx = EXP_MAP.get(employee.experience, 0)  # Por defecto N
-        if current_xp_idx < 2:  # Verificar que no esté ya en el máximo (Veterano)
+        current_xp_idx = EXP_MAP.get(old_x, 0)
+        if current_xp_idx < 2:
             current_xp_idx += 1
             changes["xp_change"] = 1
-            employee.experience = EXP_LEVELS[current_xp_idx]
-            changes["new_xp"] = employee.experience
+            _set(employee, "experience", EXP_LEVELS[current_xp_idx])
+            changes["new_xp"] = EXP_LEVELS[current_xp_idx]
             changes["messages"].append("¡Experiencia aumenta por Doble 6 natural!")
-            
+
     return changes

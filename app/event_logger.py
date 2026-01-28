@@ -72,22 +72,13 @@ class EventLogger:
         # Get current real timestamp
         timestamp = datetime.now().isoformat()
         
-        # Create event entry
         event = {
             "game_date": game_date,
             "timestamp": timestamp,
             "message": message,
             "type": event_type
         }
-        
-        # Initialize logs array if it doesn't exist
-        if "event_logs" not in self.game.state:
-            self.game.state["event_logs"] = []
-        
-        # Add event to logs
-        self.game.state["event_logs"].append(event)
-        
-        # Save game state
+        self.game.append_event_log(event)
         self.game.save()
     
     def get_logs(self, limit: Optional[int] = None, event_type: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -158,22 +149,13 @@ class EventLogger:
         # Get current real timestamp
         timestamp = datetime.now().isoformat()
         
-        # Create event entry
         event = {
             "game_date": game_date,
             "timestamp": timestamp,
             "message": message,
             "type": event_type
         }
-        
-        # Initialize logs array if it doesn't exist
-        if "event_logs" not in game.state:
-            game.state["event_logs"] = []
-        
-        # Add event to logs
-        game.state["event_logs"].append(event)
-        
-        # Save game state
+        game.append_event_log(event)
         game.save()
     
     # Funciones helper de formato - Proporcionan mensajes consistentes para eventos comunes
