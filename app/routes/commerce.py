@@ -282,8 +282,8 @@ async def execute_passenger_transport(
     base_revenue = boarding_passengers * multiplier
     
     # Adjustments: -5 per Novice Aux, +5 per Veteran Aux
-    novice_penalty = sum(5 for a in flight_attendants if a.experience == "N")
-    veteran_bonus = sum(5 for a in flight_attendants if a.experience == "V")
+    novice_penalty = sum(5 for a in flight_attendants if a.get("experience") == "N")
+    veteran_bonus = sum(5 for a in flight_attendants if a.get("experience") == "V")
     
     final_revenue = base_revenue - novice_penalty + veteran_bonus
     final_revenue = max(0, final_revenue)
@@ -297,20 +297,17 @@ async def execute_passenger_transport(
     # Mark as unavailable until next travel
     game.state["passenger_transport_available"] = False
     
-    # Log Transaction
-    if "transactions" not in game.state:
-        game.state["transactions"] = []
-    
-    game.state["transactions"].append({
-        "date": GameCalendar.date_to_string(game.state.get("year", 1), game.state.get("month", 1), game.state.get("day", 1)),
+    game_date = GameCalendar.date_to_string(
+        game.state.get("year", 1), game.state.get("month", 1), game.state.get("day", 1)
+    )
+    game.append_transaction({
+        "date": game_date,
         "amount": final_revenue,
         "category": "comercio",
-        "description": f"Transporte de {boarding_passengers} pasajeros"
+        "description": f"Transporte de {boarding_passengers} pasajeros",
     })
-    
     game.record_dice_roll(2, dice_values, is_manual, "passenger_transport")
     game.save()
-    db.commit()
     
     # Log Event
     EventLogger._log_to_game(
